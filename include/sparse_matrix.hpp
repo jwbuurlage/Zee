@@ -120,7 +120,7 @@ class DSparseMatrix
 };
 
 // Create identity matrix
-DSparseMatrix<double>* eye(int32_t n)
+DSparseMatrix<double> eye(int32_t n)
 {
     // construct coefficients
     vector< Triplet<double> > coefficients;
@@ -136,4 +136,7 @@ DSparseMatrix<double>* eye(int32_t n)
     return A;
 }
 
+DSparseMatrix<double> rand(int32_t n, int32_t m, double fill_in)
+{
+    return 0;
 }
