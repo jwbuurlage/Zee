@@ -26,12 +26,16 @@ template <typename TVal, typename TIdx = int32_t>
 class DVector : DMatrixBase<TVal, TIdx>
 {
     public:
+        DVector(TIdx n) : DMatrixBase<TVal, TIdx>(n, 1)
+        {}
+
     private:
 };
 
 DVector<double> rand(int32_t n)
 {
-    return 0;
+    DVector<double> v(n);
+    return v;
 }
 
 }

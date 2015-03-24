@@ -21,6 +21,7 @@ using std::vector;
 namespace Zee
 {
 
+template <typename TVal, typename TIdx = int32_t>
 class DMatrixBase
 {
     public:
@@ -30,7 +31,7 @@ class DMatrixBase
             _cols = cols;
         }
 
-        virtual ~DMatrixBase();
+        virtual ~DMatrixBase() { };
 
     protected:
         TIdx _rows;

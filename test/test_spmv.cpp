@@ -11,7 +11,7 @@ int main()
     double fill_in = 0.1;
 
     DSparseMatrix<double> A(n, m);
-    A = rand(n, m, fill_in);
+     //A = rand(n, m, fill_in);
 
     // 4. Multiply A with some dense vector and store the result
 //    DVector<double> v = rand(n);
@@ -20,5 +20,5 @@ int main()
 //    // compute spmv
 //    SpMV<P_CPP>(A, v, u);
 
-    return 0;
+   return 0;
 }

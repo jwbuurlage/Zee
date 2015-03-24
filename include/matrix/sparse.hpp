@@ -14,12 +14,22 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
+
 #include <vector>
 using std::vector;
 
+#include <iterator>
+using std::iterator;
+using std::forward_iterator_tag;
+
+#include <matrix/base.hpp>
+#include <matrix/dense.hpp>
 
 namespace Zee
 {
+
+template <typename TVal, typename TIdx = int32_t>
+class DSparseMatrixImage;
 
 /** A (matrix) triplet is a tuplet (i, j, a_ij), representing an entry in a
   * matrix. It is particularly useful in the representation of sparse matrices.
@@ -35,7 +45,7 @@ class Triplet
             _value = value;
         };
 
-        ~Triplet();
+        ~Triplet() { };
 
         /** @return the value for this triplet */
         inline TVal value() const
@@ -67,8 +77,8 @@ class Triplet
 enum InitialPartitioning
 {
     RANDOM_PARTITIONING,
-    1D_CYCLIC_PARTITIONING,
-    1D_BLOCK_PARTITIONING
+    ONED_CYCLIC_PARTITIONING,
+    ONED_BLOCK_PARTITIONING
 };
 
 /** The class DSparseMatrix is a distributed matrix type inspired by 
@@ -79,10 +89,10 @@ class DSparseMatrix : DMatrixBase<TVal, TIdx>
 {
     public:
         DSparseMatrix(TIdx rows, TIdx cols) :
-            DMatrixBase(rows, cols)
+            DMatrixBase<TVal, TIdx>(rows, cols)
         { };
 
-        ~DSparseMatrix();
+        ~DSparseMatrix() { };
 
         /** Move constructor
           * FIXME: COPY RESOURCES
@@ -92,9 +102,9 @@ class DSparseMatrix : DMatrixBase<TVal, TIdx>
         //---------------------------------------------------------------------
         // Operations
         //---------------------------------------------------------------------
-        DVector operator*(const DVector& v) const
+        DVector<TVal, TIdx> operator*(const DVector<TVal, TIdx>& v) const
         {
-            DVector u(rows());
+            DVector<TVal, TIdx> u(rows());
             // how is u distributed, depends on left hand side.. very weird
             // construction, but interesting. Should return expression template
             // here
@@ -132,10 +142,13 @@ class DSparseMatrix : DMatrixBase<TVal, TIdx>
             return -1;
         }
 
-        void setFromTriplets(const iterator<Triplet> begin,
-            const iterator<Triplet> end)
+        template<typename TII>
+        void setFromTriplets(
+            const TII begin,
+            const TII end)
         {
-
+            //TODO: implement
+            return;
         }
 
     private:
@@ -156,7 +169,7 @@ enum StorageType
 
 // created and owned by a processor. It is a submatrix, which holds the actual
 // data, the 'global' DSparseMatrix can be seen as the sum of these images.
-template <typename TVal, typename TIdx = int32_t>
+template <typename TVal, typename TIdx>
 class DSparseMatrixImage
 {
     public:
@@ -176,10 +189,10 @@ DSparseMatrix<double> eye(int32_t n)
     coefficients.reserve(n);
 
     for (int i = 0; i < n; ++i) {
-        coefficients.push_back(Triplet(i, i, 1.0));
+        coefficients.push_back(Triplet<double>(i, i, 1.0));
     }
 
-    DSparseMatrix A(n, n);
+    DSparseMatrix<double> A(n, n);
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     return A;
@@ -187,7 +200,10 @@ DSparseMatrix<double> eye(int32_t n)
 
 DSparseMatrix<double> rand(int32_t n, int32_t m, double fill_in)
 {
-    return 0;
+    DSparseMatrix<double> A(n, m);
+    return A;
 }
 
 //-----------------------------------------------------------------------------
+
+}

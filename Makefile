@@ -1,13 +1,16 @@
 CCPP = g++
-CCPP_FLAGS = -std=c++11
+CCPP_FLAGS = -std=c++11 -Wfatal-errors
 
 OUTPUT_DIR = bin
-INCLUDE_DIRS = include
+INCLUDE_DIRS = -Iinclude
 
-all: test_spmv
+all: dirs test_spmv
+
+dirs:
+	mkdir -p ${OUTPUT_DIR}
 
 test_spmv: test/test_spmv.cpp 
-	${CCPP} ${CCPP_FLAGS} -I${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $<
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $<
 
 docs:
 	doxygen docs/Doxyfile
