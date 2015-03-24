@@ -11,8 +11,30 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base.hpp"
-#include "matrix/sparse.hpp"
-#include "matrix/dense.hpp"
-#include "operations.hpp"
-#include "partitioner.hpp"
+#pragma once
+
+#include <cstdint>
+#include <vector>
+using std::vector;
+
+
+namespace Zee
+{
+
+class DMatrixBase
+{
+    public:
+        DMatrixBase(TIdx rows, TIdx cols)
+        {
+            _rows = rows;
+            _cols = cols;
+        }
+
+        virtual ~DMatrixBase();
+
+    protected:
+        TIdx _rows;
+        TIdx _cols;
+};
+
+}

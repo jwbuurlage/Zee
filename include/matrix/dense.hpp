@@ -11,8 +11,27 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base.hpp"
-#include "matrix/sparse.hpp"
-#include "matrix/dense.hpp"
-#include "operations.hpp"
-#include "partitioner.hpp"
+#pragma once
+
+#include <cstdint>
+#include <vector>
+using std::vector;
+
+
+namespace Zee
+{
+
+// FIXME: should be a specialization of a general dense matrix
+template <typename TVal, typename TIdx = int32_t>
+class DVector : DMatrixBase<TVal, TIdx>
+{
+    public:
+    private:
+};
+
+DVector<double> rand(int32_t n)
+{
+    return 0;
+}
+
+}

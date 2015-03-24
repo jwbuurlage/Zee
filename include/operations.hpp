@@ -11,8 +11,21 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base.hpp"
+#pragma once
+
 #include "matrix/sparse.hpp"
 #include "matrix/dense.hpp"
-#include "operations.hpp"
-#include "partitioner.hpp"
+#include "parallel.hpp"
+
+namespace Zee
+{
+
+template<ParallelProvider P>
+void SpMV<P>(DSparseMatrix& A, DVector& v, DVector& u);
+
+void SpMV<P_CPP_THREADS>(DSparseMatrix& A,DVector& v, DVector& u)
+{
+    return;
+}
+
+}

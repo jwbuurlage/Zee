@@ -11,6 +11,8 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
+#pragma once
+
 #include <cstdint>
 #include <vector>
 using std::vector;
@@ -59,20 +61,46 @@ class Triplet
         TVal _value;
 };
 
+//-----------------------------------------------------------------------------
+
+/** Different partitioning schemes */
+enum InitialPartitioning
+{
+    RANDOM_PARTITIONING,
+    1D_CYCLIC_PARTITIONING,
+    1D_BLOCK_PARTITIONING
+};
+
 /** The class DSparseMatrix is a distributed matrix type inspired by 
   * Eigen's SparseMatrix. It is distributed over multiple processing units,
   */
 template <typename TVal, typename TIdx = int32_t>
-class DSparseMatrix
+class DSparseMatrix : DMatrixBase<TVal, TIdx>
 {
     public:
-        DSparseMatrix(TIdx rows, TIdx cols)
-        {
-            _rows = rows;
-            _cols = cols;
-        };
+        DSparseMatrix(TIdx rows, TIdx cols) :
+            DMatrixBase(rows, cols)
+        { };
 
         ~DSparseMatrix();
+
+        /** Move constructor
+          * FIXME: COPY RESOURCES
+          */
+        DSparseMatrix(DSparseMatrix&& o) = default;
+
+        //---------------------------------------------------------------------
+        // Operations
+        //---------------------------------------------------------------------
+        DVector operator*(const DVector& v) const
+        {
+            DVector u(rows());
+            // how is u distributed, depends on left hand side.. very weird
+            // construction, but interesting. Should return expression template
+            // here
+            // distributed shit
+            return u;
+        }
 
         //---------------------------------------------------------------------
         // Information on size of matrix
@@ -114,12 +142,33 @@ class DSparseMatrix
         TIdx _rows;
         TIdx _cols;
 
-        vector< Triplet<TVal, TIdx> > _elements;
         // TODO: how do we reference other processors that store (part) of spm
-        //vector< > _siblings;
+        TIdx _procs;
+        vector< DSparseMatrixImage<TVal, TIdx> > _subs;
 };
 
-// Create identity matrix
+/** Storage type for sparse matrix (image). */
+enum StorageType
+{
+    COMPRESSED_ROW,
+    COMPRESSED_COLUMN
+};
+
+// created and owned by a processor. It is a submatrix, which holds the actual
+// data, the 'global' DSparseMatrix can be seen as the sum of these images.
+template <typename TVal, typename TIdx = int32_t>
+class DSparseMatrixImage
+{
+    public:
+    private:
+        // Compressed Row Storage or Compressed Column Storage
+};
+
+//-----------------------------------------------------------------------------
+// Convenience functions (MATLAB syntax)
+//-----------------------------------------------------------------------------
+
+// Create identity matrix as sparse matrix
 DSparseMatrix<double> eye(int32_t n)
 {
     // construct coefficients
@@ -140,3 +189,5 @@ DSparseMatrix<double> rand(int32_t n, int32_t m, double fill_in)
 {
     return 0;
 }
+
+//-----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "sparse_matrix.h"
+#include "matrix/sparse.hpp"
 
 
 namespace Zee
@@ -34,11 +34,12 @@ class Partitioner
         }
 };
 
-class CyclicPartitioner : partitioner
+template <typename TVal, typename TIdx = int32_t>
+class CyclicPartitioner : Partitioner<TVal, TIdx>
 {
     public:
-        Partitioner();
-        ~Partitioner();
+        CyclicPartitioner();
+        ~CyclicPartitioner();
 };
 
 }

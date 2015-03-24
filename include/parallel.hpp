@@ -11,8 +11,17 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base.hpp"
-#include "matrix/sparse.hpp"
-#include "matrix/dense.hpp"
-#include "operations.hpp"
-#include "partitioner.hpp"
+#pragma once
+
+namespace Zee
+{
+
+    // Parallel providers
+enum ParallelProvider {
+    P_CPP,
+    P_BSP,
+    P_MPI
+    // ...
+}
+
+}
