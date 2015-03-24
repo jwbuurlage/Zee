@@ -21,6 +21,7 @@ using std::vector;
 namespace Zee
 {
 
+/** Base class for matrices */
 template <typename TVal, typename TIdx = int32_t>
 class DMatrixBase
 {
@@ -32,6 +33,15 @@ class DMatrixBase
         }
 
         virtual ~DMatrixBase() { };
+
+        /** @return the total number of (possible) entries of the matrix  */
+        inline TIdx size() const { return _rows * _cols; }
+
+        /** @return the number of rows of the matrix */
+        inline TIdx rows() const { return _rows; }
+
+        /** @return the number of columns of the matrix */
+        inline TIdx cols() const { return _cols; }
 
     protected:
         TIdx _rows;

@@ -10,8 +10,7 @@ int main()
     int32_t m = 1000;
     double fill_in = 0.1;
 
-    DSparseMatrix<double> A(n, m);
-     //A = rand(n, m, fill_in);
+    DSparseMatrix<double> A = rand(n, m, fill_in);
 
     // 4. Multiply A with some dense vector and store the result
 //    DVector<double> v = rand(n);

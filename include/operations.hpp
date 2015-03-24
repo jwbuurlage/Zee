@@ -23,7 +23,7 @@ namespace Zee
 template<ParallelProvider P>
 void SpMV<P>(DSparseMatrix& A, DVector& v, DVector& u);
 
-void SpMV<P_CPP_THREADS>(DSparseMatrix& A,DVector& v, DVector& u)
+void SpMV<P_CPP>(DSparseMatrix& A,DVector& v, DVector& u)
 {
     return;
 }
