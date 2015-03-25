@@ -1,5 +1,5 @@
 #include <zee.h>
-#include <cstdint.h>
+#include <cstdint>
 
 using namespace Zee;
 
