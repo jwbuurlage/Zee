@@ -26,15 +26,96 @@ namespace Zee
 template <typename TVal, typename TIdx>
 class Triplet;
 
-/** Storage type for sparse matrix (image). */
-enum StorageType
-{
-    S_TRIPLETS,
-    S_COMPRESSED_ROW, // CRS
-    S_COMPRESSED_COLUMN // CCS
+template <typename TVal, typename TIdx>
+class DSparseStorageTriplets;
+
+template <typename TVal, typename TIdx,
+         class Derived = DSparseStorageTriplets<TVal, TIdx>>
+class DSparseStorage;
+
+/** FIXME: There should be a base class for storage iteration */
+template <typename TVal, typename TIdx, bool const_iter = true>
+class storage_iterator_triplets:
+    public std::iterator<
+        std::bidirectional_iterator_tag,
+        Triplet<TVal, TIdx>> {
+    public:
+        // Define whether our data type is constant
+        typedef typename std::conditional<const_iter,
+                const DSparseStorageTriplets<TVal, TIdx>*,
+                DSparseStorageTriplets<TVal, TIdx>*>::type
+                    StoragePointer;
+
+        typedef typename std::conditional<const_iter,
+                const Triplet<TVal, TIdx>&,
+                Triplet<TVal, TIdx>&>::type TripletReference;
+
+        /** Default constructor */
+        storage_iterator_triplets(StoragePointer storage, TIdx i) :
+            _storage(storage),
+            _i(i) { }
+
+        /** Copy constructor (const <-> regular conversion) */
+        storage_iterator_triplets(
+                const storage_iterator_triplets<TVal, TIdx, false>& other) :
+            _storage(other._storage),
+            _i(other._i)  { }
+
+        storage_iterator_triplets& operator--(int)
+        {
+            // copy iterator, decrease this and return old copy
+            const storage_iterator_triplets old(*this);
+            --(*this);
+            return old;
+        }
+
+        storage_iterator_triplets& operator++(int)
+        {
+            // copy iterator, increase this and return old copy
+            const storage_iterator_triplets old(*this);
+            ++(*this);
+            return old;
+        }
+
+        bool operator== (const storage_iterator_triplets& other) const
+        {
+            return (_i == other._i);
+        }
+
+        /** Comparison operator for not equal
+          * @see operator==(const dual_iterator& other) const */
+        bool operator!= (const storage_iterator_triplets& other) const
+        {
+            return !(*this == other);
+        }
+
+        TripletReference operator*()
+        {
+            return _storage->_triplets[_i];
+        }
+
+        storage_iterator_triplets& operator--() {
+            _i--;
+            return *this;
+        }
+
+        storage_iterator_triplets& operator++()
+        {
+            _i++;
+            return *this;
+        }
+
+       /* now the copy constructor can access _storage for 
+        * conversion */
+       friend class storage_iterator_triplets<TVal, TIdx, true>; 
+
+    private:
+        StoragePointer _storage;
+        TIdx _i;
 };
 
-template <typename TVal, typename TIdx>
+
+template <typename TVal, typename TIdx, class TIterator>
 class DSparseStorage
 {
     public:
@@ -45,119 +126,33 @@ class DSparseStorage
 
         /** We define iterators and constant iterators for getting out
           * triplets */
-        typedef std::iterator<
-                std::bidirectional_iterator_tag,
-                Triplet<TVal, TIdx>> iterator;
-
-        // We want to get triplets out of this
-        virtual iterator& begin() = 0;
-        virtual iterator& end() = 0;
+        virtual TIterator begin() = 0;
+        virtual TIterator end() = 0;
 };
 
 template <typename TVal, typename TIdx>
-class DSparseStorageTriplets : public DSparseStorage<TVal, TIdx>
+class DSparseStorageTriplets :
+    public DSparseStorage<TVal, TIdx,
+        storage_iterator_triplets<TVal, TIdx, false>>
 {
     public:
-
-        /** Base class for storage iteration */
-        template <bool const_iter = true>
-        class dual_iterator :
-            public std::iterator<
-                std::bidirectional_iterator_tag,
-                Triplet<TVal, TIdx>> {
-            public:
-                // Define whether our data type is constant
-                typedef typename std::conditional<const_iter,
-                        const DSparseStorage<TVal, TIdx>*,
-                        DSparseStorage<TVal, TIdx>*>::type StoragePointer;
-
-                typedef typename std::conditional<const_iter,
-                        const Triplet<TVal, TIdx>&,
-                        Triplet<TVal, TIdx>&>::type TripletReference;
-
-                /** Default constructor */
-                dual_iterator(StoragePointer storage, TIdx i) :
-                    _storage(storage),
-                    _i(i) { }
-
-                /** Copy constructor (const <-> regular conversion) */
-                dual_iterator(const dual_iterator<false>& other) :
-                    _storage(other._storage),
-                    _i(other._i)  { }
-
-                dual_iterator& operator--(int)
-                {
-                    // copy iterator, decrease this and return old copy
-                    const dual_iterator old(*this);
-                    --(*this);
-                    return old;
-                }
-
-                dual_iterator& operator++(int)
-                {
-                    // copy iterator, increase this and return old copy
-                    const dual_iterator old(*this);
-                    ++(*this);
-                    return old;
-                }
-
-                bool operator== (const dual_iterator& other) const
-                {
-                    return (_i == other._i);
-                }
-
-                /** Comparison operator for not equal
-                  * @see operator==(const dual_iterator& other) const */
-                bool operator!= (const dual_iterator& other) const
-                {
-                    return !(*this == other);
-                }
-
-                TripletReference operator*()
-                {
-                    return &_storage._triplets[_i];
-                }
-
-                dual_iterator& operator--() {
-                    _i--;
-                    return *this;
-                }
-
-                dual_iterator& operator++()
-                {
-                    _i++;
-                    return *this;
-                }
-
-               /* now the copy constructor can access _storage for 
-                * conversion */
-               friend class dual_iterator<true>; 
-
-            private:
-                StoragePointer _storage;
-                TIdx _i;
-        };
-
-
         /** We define iterators and constant iterators for getting out
           * triplets */
-        typedef dual_iterator<false> iterator_ts;
-        typedef dual_iterator<true> const_iterator_ts;
+        typedef storage_iterator_triplets<TVal, TIdx, false> iterator;
+        typedef storage_iterator_triplets<TVal, TIdx, true> const_iterator;
 
-        iterator_ts& begin()
+        iterator begin()
         {
-            // FIXME smart pointer???
-            return *(new iterator_ts(this, 0));
+            return iterator(this, 0);
         }
 
-        iterator_ts& end()
+        iterator end()
         {
-            // FIXME smart pointer???
-            return *(new iterator_ts(this, _triplets.size()));
+            return iterator(this, _triplets.size());
         }
 
-        DSparseStorageTriplets() { };
-        ~DSparseStorageTriplets() { };
+        DSparseStorageTriplets() { }
+        ~DSparseStorageTriplets() { }
 
         void pushTriplet(Triplet<TVal, TIdx> t)
         {
@@ -165,6 +160,9 @@ class DSparseStorageTriplets : public DSparseStorage<TVal, TIdx>
             _triplets.push_back(t);
         }
         
+        friend iterator;
+        friend const_iterator;
+
     private:
         // FIXME: proper wasy to store this (reference?)
         vector<Triplet<TVal, TIdx>> _triplets;

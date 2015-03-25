@@ -31,7 +31,8 @@ using std::vector;
 namespace Zee
 {
 
-template <typename TVal, typename TIdx = int32_t>
+template <typename TVal, typename TIdx = uint32_t,
+         class TIterator = storage_iterator_triplets<TVal, TIdx, false>>
 class DSparseMatrixImage;
 
 /** A (matrix) triplet is a tuplet (i, j, a_ij), representing an entry in a
@@ -166,20 +167,16 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // FIXME: delete
         void debugOutput()
         {
+            int i = 0;
             for (auto& sub : _subs)
             {
-                DSparseStorageTriplets::iterator test = 
-                    (DSparseStorageTriplets::iterator)sub.begin();
-
-
-//                for (auto& trip : sub)
-//                {
-//                    cout << trip.col() << endl;
-//                }
-//                cout << "(" << (*it).col() <<
-//                    ", " << (*it).row() <<
-//                    ", " << (*it).value() << ")" << endl;
-
+                for(storage_iterator_triplets<TVal, TIdx, false> it = sub.begin();
+                        it != sub.end(); ++it) {
+                    cout << "(" << (*it).col() <<
+                        ", " << (*it).row() <<
+                        ", " << (*it).value() << ") " << i << endl;
+                }
+                ++i;
             }
         }
 
@@ -194,12 +191,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
 // Owned by a processor. It is a submatrix, which holds the actual
 // data, the 'global' DSparseMatrix can be seen as the sum of these images.
-template <typename TVal, typename TIdx>
+template <typename TVal, typename TIdx, class TIterator>
 class DSparseMatrixImage
 {
     public:
-
-
         /** Default constructor */
         DSparseMatrixImage() :
             _storage(new DSparseStorageTriplets<TVal, TIdx>())
@@ -219,9 +214,7 @@ class DSparseMatrixImage
             _storage->pushTriplet(t);
         }
 
-        typedef std::iterator<
-                std::bidirectional_iterator_tag,
-                Triplet<TVal, TIdx>> iterator;
+        typedef storage_iterator_triplets<TVal, TIdx, false> iterator;
 
         iterator begin()
         {
@@ -235,7 +228,7 @@ class DSparseMatrixImage
 
     private:
         // Triplets, CRS or CCS
-        unique_ptr<DSparseStorage<TVal, TIdx>> _storage;
+        unique_ptr<DSparseStorage<TVal, TIdx, TIterator>> _storage;
 };
 
 //-----------------------------------------------------------------------------
@@ -260,7 +253,7 @@ DSparseMatrix<double> eye(TIdx n)
 
 /** Create a random sparse (n x m) matrix */
 template <typename TIdx>
-DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, double fill_in)
+DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
 {
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
@@ -269,6 +262,8 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, double fill_in)
         coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
 
     DSparseMatrix<double, TIdx> A(n, m);
+    A.setDistributionScheme(ONE_D_CYCLIC_PARTITIONING, procs);
+
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     return A;
