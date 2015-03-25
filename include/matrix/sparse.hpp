@@ -26,6 +26,7 @@ using std::vector;
 
 #include <matrix/base.hpp>
 #include <matrix/dense.hpp>
+#include <matrix/storage.hpp>
 
 namespace Zee
 {
@@ -77,8 +78,8 @@ enum InitialPartitioning
 /** The class DSparseMatrix is a distributed matrix type inspired by 
   * Eigen's SparseMatrix. It is distributed over multiple processing units,
   */
-template <typename TVal, typename TIdx = int32_t>
-class DSparseMatrix : DMatrixBase<TVal, TIdx>
+template <typename TVal, typename TIdx = uint32_t>
+class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 {
     public:
         /** Initialize an (empty) sparse (rows x cols) oatrix */
@@ -129,22 +130,57 @@ class DSparseMatrix : DMatrixBase<TVal, TIdx>
             const TInputIterator& begin,
             const TInputIterator& end)
         {
-            if(!_subs.empty()) {
+            if (!_subs.empty())
+            {
                 _subs.clear();
                 _nz = 0;
             }
 
-            //TODO: implement
+            for (TIdx i = 0; i < _procs; ++i)
+                _subs.push_back(DSparseMatrixImage<TVal, TIdx>());
+
             for (TInputIterator it = begin; it != end; it++)
             {
-                cout << "(" << (*it).col() <<
-                    ", " << (*it).row() <<
-                    ", " << (*it).value() << ")" << endl;
+                TIdx target_proc = 0;
+                switch (_partitioning)
+                {
+                case ONE_D_CYCLIC_PARTITIONING:
+                    target_proc = (*it).row() % _procs;
+                    break;
 
+                case ONE_D_BLOCK_PARTITIONING:
+                    target_proc = (_procs * (*it).row()) / this->rows();
+                    break;
+
+                default:
+                    // Fall back to 1D cyclic
+                    target_proc = (*it).row() % _procs;
+                    break;
+                }
+
+                _subs[target_proc].pushTriplet(*it);
                 _nz++;
             }
+        }
 
-            return;
+        // FIXME: delete
+        void debugOutput()
+        {
+            for (auto& sub : _subs)
+            {
+                DSparseStorageTriplets::iterator test = 
+                    (DSparseStorageTriplets::iterator)sub.begin();
+
+
+//                for (auto& trip : sub)
+//                {
+//                    cout << trip.col() << endl;
+//                }
+//                cout << "(" << (*it).col() <<
+//                    ", " << (*it).row() <<
+//                    ", " << (*it).value() << ")" << endl;
+
+            }
         }
 
     private:
@@ -156,57 +192,83 @@ class DSparseMatrix : DMatrixBase<TVal, TIdx>
         vector<DSparseMatrixImage<TVal, TIdx>> _subs;
 };
 
-/** Storage type for sparse matrix (image). */
-enum StorageType
-{
-    COMPRESSED_ROW,
-    COMPRESSED_COLUMN
-};
-
-// created and owned by a processor. It is a submatrix, which holds the actual
+// Owned by a processor. It is a submatrix, which holds the actual
 // data, the 'global' DSparseMatrix can be seen as the sum of these images.
 template <typename TVal, typename TIdx>
 class DSparseMatrixImage
 {
     public:
-        DSparseMatrixImage() { }
+
+
+        /** Default constructor */
+        DSparseMatrixImage() :
+            _storage(new DSparseStorageTriplets<TVal, TIdx>())
+        {
+            // FIXME: Switch cases between different storage types
+        }
+
+        // Because we are using a unique pointer we need to move ownership
+        // upon copying
+        DSparseMatrixImage(DSparseMatrixImage&& other) :
+            _storage(std::move(other._storage)) { }
+
         ~DSparseMatrixImage() { }
 
+        void pushTriplet(Triplet<TVal, TIdx> t) {
+            assert(_storage);
+            _storage->pushTriplet(t);
+        }
+
+        typedef std::iterator<
+                std::bidirectional_iterator_tag,
+                Triplet<TVal, TIdx>> iterator;
+
+        iterator begin()
+        {
+            return _storage->begin();
+        }
+
+        iterator end()
+        {
+            return _storage->end();
+        }
+
     private:
-        // Compressed Row Storage or Compressed Column Storage
+        // Triplets, CRS or CCS
+        unique_ptr<DSparseStorage<TVal, TIdx>> _storage;
 };
 
 //-----------------------------------------------------------------------------
 // Convenience functions (MATLAB syntax)
 //-----------------------------------------------------------------------------
 
-// Create identity matrix as sparse matrix
-DSparseMatrix<double> eye(int32_t n)
+/** Create identity matrix as sparse matrix */
+template <typename TIdx>
+DSparseMatrix<double> eye(TIdx n)
 {
-    // construct coefficients
-    vector<Triplet<double>> coefficients;
+    vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
-    for (int i = 0; i < n; ++i)
-        coefficients.push_back(Triplet<double>(i, i, 1.0));
+    for (TIdx i = 0; i < n; ++i)
+        coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
 
-    DSparseMatrix<double> A(n, n);
+    DSparseMatrix<double, TIdx> A(n, n);
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     return A;
 }
 
-DSparseMatrix<double> rand(int32_t n, int32_t m, double fill_in)
+/** Create a random sparse (n x m) matrix */
+template <typename TIdx>
+DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, double fill_in)
 {
-    // TODO: fill with random stuff, use storage
-
-    vector<Triplet<double>> coefficients;
+    vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
-    for (int i = 0; i < n; ++i)
-        coefficients.push_back(Triplet<double>(i, i, 1.0));
+    for (TIdx i = 0; i < n; ++i)
+        coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
 
-    DSparseMatrix<double> A(n, m);
+    DSparseMatrix<double, TIdx> A(n, m);
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     return A;

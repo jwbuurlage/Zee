@@ -1,4 +1,4 @@
-CCPP = g++
+CCPP = clang++
 CCPP_FLAGS = -std=c++11 -Wfatal-errors -Wall
 
 OUTPUT_DIR = bin
