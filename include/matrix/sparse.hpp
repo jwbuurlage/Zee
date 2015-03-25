@@ -24,6 +24,8 @@ using std::endl;
 #include <vector>
 using std::vector;
 
+#include <random>
+
 #include <matrix/base.hpp>
 #include <matrix/dense.hpp>
 #include <matrix/storage.hpp>
@@ -87,7 +89,6 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         DSparseMatrix(TIdx rows, TIdx cols) :
             DMatrixBase<TVal, TIdx>(rows, cols)
         {
-            _procs = 1;
             _partitioning = ONE_D_CYCLIC_PARTITIONING;
         }
 
@@ -104,7 +105,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 TIdx procs)
         {
             _partitioning = partitioning;
-            _procs = procs;
+            this->_procs = procs;
         }
 
         /** Multiply a sparse matrix with a dense vector */
@@ -137,7 +138,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 _nz = 0;
             }
 
-            for (TIdx i = 0; i < _procs; ++i)
+            for (TIdx i = 0; i < this->procs(); ++i)
                 _subs.push_back(DSparseMatrixImage<TVal, TIdx>());
 
             for (TInputIterator it = begin; it != end; it++)
@@ -146,16 +147,16 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 switch (_partitioning)
                 {
                 case ONE_D_CYCLIC_PARTITIONING:
-                    target_proc = (*it).row() % _procs;
+                    target_proc = (*it).row() % this->procs();
                     break;
 
                 case ONE_D_BLOCK_PARTITIONING:
-                    target_proc = (_procs * (*it).row()) / this->rows();
+                    target_proc = (this->procs() * (*it).row()) / this->rows();
                     break;
 
                 default:
                     // Fall back to 1D cyclic
-                    target_proc = (*it).row() % _procs;
+                    target_proc = (*it).row() % this->procs();
                     break;
                 }
 
@@ -163,6 +164,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 _nz++;
             }
         }
+
+        vector<DSparseMatrixImage<TVal, TIdx>>& getImages() { return _subs; }
 
         // FIXME: delete
         void debugOutput()
@@ -183,8 +186,6 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
     private:
         TIdx _nz;
 
-        // TODO: how do we reference other processors that store (part) of spm
-        TIdx _procs;
         InitialPartitioning _partitioning;
         vector<DSparseMatrixImage<TVal, TIdx>> _subs;
 };
@@ -258,8 +259,18 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
     for (TIdx i = 0; i < n; ++i)
-        coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
+        for (TIdx j = 0; j < n; ++j) {
+            if (dist(mt) > fill_in)
+                continue;
+
+            coefficients.push_back(Triplet<double, TIdx>(i, j,
+                    (1.0 + 10.0 * dist(mt))));
+        }
 
     DSparseMatrix<double, TIdx> A(n, m);
     A.setDistributionScheme(ONE_D_CYCLIC_PARTITIONING, procs);

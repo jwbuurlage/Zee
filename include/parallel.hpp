@@ -22,6 +22,6 @@ enum ParallelProvider {
     P_BSP,
     P_MPI
     // ...
-}
+};
 
 }

@@ -30,6 +30,7 @@ class DMatrixBase
         {
             _rows = rows;
             _cols = cols;
+            _procs = 1;
         }
 
         virtual ~DMatrixBase() { };
@@ -43,9 +44,14 @@ class DMatrixBase
         /** @return the number of columns of the matrix */
         inline TIdx cols() const { return _cols; }
 
+        /** @return the number of columns of the matrix */
+        inline TIdx procs() const { return _procs; }
+
     protected:
+        TIdx _procs;
         TIdx _rows;
         TIdx _cols;
+
 };
 
 }
