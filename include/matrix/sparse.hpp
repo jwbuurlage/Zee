@@ -44,7 +44,7 @@ template <typename TVal, typename TIdx = int32_t>
 class Triplet 
 {
     public:
-        Triplet(TIdx i, TIdx j, TIdx value)
+        Triplet(TIdx i, TIdx j, TVal value)
         {
             _i = i;
             _j = j;
@@ -122,8 +122,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         /** @return the number of non-zero entries in the matrix */
         TIdx nonZeros() const
         {
-            // TODO: implement
-            return -1;
+            return _nz;
         }
 
         /** Construct a matrix from a set of triplets */
@@ -135,8 +134,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             if (!_subs.empty())
             {
                 _subs.clear();
-                _nz = 0;
             }
+            _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
                 _subs.push_back(DSparseMatrixImage<TVal, TIdx>());
@@ -168,7 +167,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         vector<DSparseMatrixImage<TVal, TIdx>>& getImages() { return _subs; }
 
         // FIXME: delete
-        void debugOutput()
+        void prettyPrint()
         {
             int i = 0;
             for (auto& sub : _subs)
@@ -181,6 +180,42 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 }
                 ++i;
             }
+        }
+
+        void spy()
+        {
+            cout << "Matrix sparsity: " <<
+                this->nonZeros() / (double)(this->size()) << endl;
+
+            TIdx max_size = 100;
+            if (this->rows() > max_size || this->cols() > max_size) {
+                // FIXME: should just down scale large matrix to
+                // 'any point in region'
+                cout << "Can not spy large matrices" << endl;
+                return;
+            }
+
+            char* output = new char[this->size()];
+            for (TIdx i = 0; i < this->size(); ++i) {
+                output[i] = ' ';
+            }
+
+            for (auto& sub : _subs)
+            {
+                for (auto it = sub.begin();
+                        it != sub.end(); ++it) {
+                    output[(*it).row() * this->cols() + (*it).col()] = '.';
+                }
+
+            }
+
+            for (TIdx i = 0; i < this->rows(); ++i) {
+                for (TIdx j = 0; j < this->cols(); ++j) {
+                    cout << output[i * this->cols() + j] << ' ';
+                }
+                cout << endl;
+            }
+
         }
 
     private:
@@ -259,18 +294,31 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
+    double mu = 1.0 / fill_in;
+    double sigma = 0.5 * mu;
+
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::normal_distribution<double> gauss(mu, sigma);
 
+    // FIXME: This is now O(n^2), update to use fill_in based on e.g. CCS 
+    // we want to skip on average (1 / fill_in) elements
+    TIdx j = 0;
     for (TIdx i = 0; i < n; ++i)
-        for (TIdx j = 0; j < n; ++j) {
-            if (dist(mt) > fill_in)
-                continue;
+    {
+        j = j % n;
+        while(true)
+        {
+            j += gauss(mt);
+
+            if(j > n)
+                break;
 
             coefficients.push_back(Triplet<double, TIdx>(i, j,
                     (1.0 + 10.0 * dist(mt))));
         }
+    }
 
     DSparseMatrix<double, TIdx> A(n, m);
     A.setDistributionScheme(ONE_D_CYCLIC_PARTITIONING, procs);

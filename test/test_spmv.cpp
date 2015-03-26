@@ -9,12 +9,13 @@ using namespace Zee;
 int main()
 {
     // 1. Initialize a random n*m sparse matrix with set fillin
-    uint32_t n = 10000;
-    uint32_t m = 10000;
+    uint32_t n = 40;
+    uint32_t m = 40;
     uint32_t p = 4;
-    double fill_in = 0.01;
+    double fill_in = 0.4;
 
     DSparseMatrix<double> A = rand(n, m, p, fill_in);
+    A.spy();
 
     // A.debugOutput();
 
@@ -25,8 +26,9 @@ int main()
     // 4. Multiply A with some dense vector and store the result
     spmv_cpp<double, uint32_t>(A, v, u);
 
-    for (uint32_t i = 0; i < n; ++i)
-        cerr << "u[" << i << "] = " << u[i] << endl;
+    // for (uint32_t i = 0; i < n; ++i)
+        // cerr << "u[" << i << "] = " << u[i] << endl;
+
 
    return 0;
 }
