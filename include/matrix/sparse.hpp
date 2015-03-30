@@ -14,24 +14,26 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cassert>
-
-#include <iostream>
-using std::cout;
-using std::endl;
-
 #include <cstdint>
 
+#include <iostream>
+#include <algorithm>
 #include <vector>
-using std::vector;
-
 #include <random>
 
-#include <matrix/base.hpp>
-#include <matrix/dense.hpp>
-#include <matrix/storage.hpp>
+#include "matrix/base.hpp"
+#include "matrix/dense.hpp"
+#include "matrix/storage.hpp"
+#include "color_output.hpp"
 
 namespace Zee
 {
+
+using std::cout;
+using std::endl;
+using std::max;
+using std::min;
+using std::vector;
 
 template <typename TVal, typename TIdx = uint32_t,
          class TIterator = storage_iterator_triplets<TVal, TIdx, false>>
@@ -71,11 +73,12 @@ class Triplet
 //-----------------------------------------------------------------------------
 
 /** Different partitioning schemes */
-enum InitialPartitioning
+enum class Partitioning
 {
-    ONE_D_CYCLIC_PARTITIONING,
-    ONE_D_BLOCK_PARTITIONING,
-    RANDOM_PARTITIONING
+    cyclic,
+    block,
+    random,
+    custom
 };
 
 /** The class DSparseMatrix is a distributed matrix type inspired by 
@@ -89,19 +92,17 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         DSparseMatrix(TIdx rows, TIdx cols) :
             DMatrixBase<TVal, TIdx>(rows, cols)
         {
-            _partitioning = ONE_D_CYCLIC_PARTITIONING;
+            _partitioning = Partitioning::cyclic;
         }
 
         /** Default deconstructor */
-        ~DSparseMatrix() { }
+        ~DSparseMatrix() = default;
 
-        /** Move constructor
-          * FIXME: COPY RESOURCES
-          */
+        /** Move constructor */
         DSparseMatrix(DSparseMatrix&& o) = default;
 
         /** Sets the distribution scheme for this matrix */
-        void setDistributionScheme(InitialPartitioning partitioning,
+        void setDistributionScheme(Partitioning partitioning,
                 TIdx procs)
         {
             _partitioning = partitioning;
@@ -131,10 +132,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             const TInputIterator& begin,
             const TInputIterator& end)
         {
-            if (!_subs.empty())
-            {
-                _subs.clear();
-            }
+            _subs.clear();
+
             _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
@@ -145,11 +144,11 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 TIdx target_proc = 0;
                 switch (_partitioning)
                 {
-                case ONE_D_CYCLIC_PARTITIONING:
+                case Partitioning::cyclic:
                     target_proc = (*it).row() % this->procs();
                     break;
 
-                case ONE_D_BLOCK_PARTITIONING:
+                case Partitioning::block:
                     target_proc = (this->procs() * (*it).row()) / this->rows();
                     break;
 
@@ -166,62 +165,76 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
         vector<DSparseMatrixImage<TVal, TIdx>>& getImages() { return _subs; }
 
-        // FIXME: delete
-        void prettyPrint()
-        {
-            int i = 0;
-            for (auto& sub : _subs)
-            {
-                for(storage_iterator_triplets<TVal, TIdx, false> it = sub.begin();
-                        it != sub.end(); ++it) {
-                    cout << "(" << (*it).col() <<
-                        ", " << (*it).row() <<
-                        ", " << (*it).value() << ") " << i << endl;
-                }
-                ++i;
-            }
-        }
-
         void spy()
         {
-            cout << "Matrix sparsity: " <<
+            cout << "Sparsity pattern of matrix" << endl;
+            cout << " - rows: " << this->rows() << endl;
+            cout << " - cols: " << this->cols() << endl;
+            cout << " - non-zeros: " << this->nonZeros() << endl;
+            cout << " - Matrix sparsity: " <<
                 this->nonZeros() / (double)(this->size()) << endl;
 
             TIdx max_size = 100;
-            if (this->rows() > max_size || this->cols() > max_size) {
+            if (this->rows() > max_size || this->cols() > max_size)
+            {
                 // FIXME: should just down scale large matrix to
                 // 'any point in region'
                 cout << "Can not spy large matrices" << endl;
                 return;
             }
 
-            char* output = new char[this->size()];
-            for (TIdx i = 0; i < this->size(); ++i) {
-                output[i] = ' ';
-            }
-
-            for (auto& sub : _subs)
+            if (this->procs() > 4)
             {
-                for (auto it = sub.begin();
-                        it != sub.end(); ++it) {
-                    output[(*it).row() * this->cols() + (*it).col()] = '.';
-                }
-
+                cout << "Spy only supports showing <= 4 procs" << endl;
+                return;
             }
+
+            vector<int> output(this->size(), -1);
+            for (TIdx i = 0; i < this->size(); ++i)
+                output[i] = -1;
+
+            int p = 0;
+            for (auto& image : _subs)
+            {
+                for (auto& triplet : image)
+                    output[triplet.row() * this->cols() + triplet.col()] = p;
+                ++p;
+            }
+
+            for (TIdx i = 0; i < this->cols() + 2; ++i)
+                cout << "__";
+            cout << endl;
+
+            static const Color colors[4] = {
+                Color::red,
+                Color::blue,
+                Color::yellow,
+                Color::green
+            };
 
             for (TIdx i = 0; i < this->rows(); ++i) {
-                for (TIdx j = 0; j < this->cols(); ++j) {
-                    cout << output[i * this->cols() + j] << ' ';
-                }
-                cout << endl;
+                cout << "| ";
+                for (TIdx j = 0; j < this->cols(); ++j)
+                    if (output[i * this->cols() + j] >= 0) {
+                        cout << colorOutput(
+                                colors[output[i * this->cols() + j]]);
+                        cout << output[i * this->cols() + j] << ' ';
+                        cout << colorOutput(Color::clear);
+                    }
+                    else
+                        cout << "  ";
+                cout << " |" << endl;
             }
 
+            for (TIdx i = 0; i < this->cols() + 2; ++i)
+                cout << "--";
+            cout << endl;
         }
 
     private:
         TIdx _nz;
 
-        InitialPartitioning _partitioning;
+        Partitioning _partitioning;
         vector<DSparseMatrixImage<TVal, TIdx>> _subs;
 };
 
@@ -243,14 +256,14 @@ class DSparseMatrixImage
         DSparseMatrixImage(DSparseMatrixImage&& other) :
             _storage(std::move(other._storage)) { }
 
-        ~DSparseMatrixImage() { }
+        ~DSparseMatrixImage() = default;
 
         void pushTriplet(Triplet<TVal, TIdx> t) {
             assert(_storage);
             _storage->pushTriplet(t);
         }
 
-        typedef storage_iterator_triplets<TVal, TIdx, false> iterator;
+        using iterator = storage_iterator_triplets<TVal, TIdx, false>;
 
         iterator begin()
         {
@@ -273,7 +286,7 @@ class DSparseMatrixImage
 
 /** Create identity matrix as sparse matrix */
 template <typename TIdx>
-DSparseMatrix<double> eye(TIdx n)
+DSparseMatrix<double> eye(TIdx n, TIdx procs)
 {
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
@@ -282,6 +295,8 @@ DSparseMatrix<double> eye(TIdx n)
         coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
 
     DSparseMatrix<double, TIdx> A(n, n);
+    A.setDistributionScheme(Partitioning::cyclic, procs);
+
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
     return A;
@@ -294,7 +309,7 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
-    double mu = 1.0 / fill_in;
+    double mu = 1.0 / fill_in + 0.5;
     double sigma = 0.5 * mu;
 
     std::random_device rd;
@@ -302,26 +317,31 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
     std::uniform_real_distribution<double> dist(0.0, 1.0);
     std::normal_distribution<double> gauss(mu, sigma);
 
-    // FIXME: This is now O(n^2), update to use fill_in based on e.g. CCS 
-    // we want to skip on average (1 / fill_in) elements
-    TIdx j = 0;
-    for (TIdx i = 0; i < n; ++i)
+    TIdx j = (int)gauss(mt) / 2;
+    j = max(j, (TIdx)1);
+    TIdx i = 0;
+    while (true)
     {
-        j = j % n;
-        while(true)
+        coefficients.push_back(Triplet<double, TIdx>(j, i,
+                (1.0 + 10.0 * dist(mt))));
+
+        int offset = (int)gauss(mt);
+        offset = max(offset, 1);
+        j += offset;
+
+        while (j >= n)
         {
-            j += gauss(mt);
-
-            if(j > n)
-                break;
-
-            coefficients.push_back(Triplet<double, TIdx>(i, j,
-                    (1.0 + 10.0 * dist(mt))));
+            j = j - n;
+            i++;
         }
+
+        if (i >= n)
+            break;
+
     }
 
     DSparseMatrix<double, TIdx> A(n, m);
-    A.setDistributionScheme(ONE_D_CYCLIC_PARTITIONING, procs);
+    A.setDistributionScheme(Partitioning::cyclic, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 

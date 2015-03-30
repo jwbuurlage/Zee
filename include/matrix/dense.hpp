@@ -14,13 +14,14 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
-#include <vector>
-using std::vector;
 
+#include <vector>
 #include <random>
 
 namespace Zee
 {
+
+using std::vector;
 
 // FIXME: should be a specialization of a general dense matrix
 template <typename TVal, typename TIdx = int32_t>

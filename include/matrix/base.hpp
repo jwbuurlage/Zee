@@ -15,11 +15,11 @@ License, or (at your option) any later version.
 
 #include <cstdint>
 #include <vector>
-using std::vector;
-
 
 namespace Zee
 {
+
+using std::vector;
 
 /** Base class for matrices */
 template <typename TVal, typename TIdx = int32_t>
@@ -48,9 +48,9 @@ class DMatrixBase
         inline TIdx procs() const { return _procs; }
 
     protected:
-        TIdx _procs;
-        TIdx _rows;
-        TIdx _cols;
+        TIdx _procs = 0;
+        TIdx _rows = 0;
+        TIdx _cols = 0;
 
 };
 

@@ -13,32 +13,29 @@ License, or (at your option) any later version.
 
 #pragma once
 
+#include <vector>
+#include <thread>
+#include <iostream>
+
 #include "matrix/sparse.hpp"
 #include "matrix/dense.hpp"
 #include "parallel.hpp"
 
-#include <vector>
-using std::vector;
-
-#include <thread>
-using std::thread;
-
-#include <iostream>
-using std::cerr;
-using std::endl;
-
 namespace Zee
 {
+
+using std::vector;
+using std::thread;
+using std::cerr;
+using std::endl;
 
 template <typename TVal, typename TIdx>
 void spmv_image_cpp(DSparseMatrixImage<TVal, TIdx>& A,
         DVector<TVal>& v,
         DVector<TVal>& u)
 {
-    for(storage_iterator_triplets<TVal, TIdx, false> it = A.begin();
-            it != A.end(); ++it) {
-        u[(*it).row()] += (*it).value() * v[(*it).col()];
-    }
+    for (auto& triplet : A)
+        u[triplet.row()] += triplet.value() * v[triplet.col()];
 }
 
 template <typename TVal, typename TIdx>

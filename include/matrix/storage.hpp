@@ -15,13 +15,12 @@ License, or (at your option) any later version.
 
 #include <iterator>
 #include <type_traits>
-
 #include <memory>
-using std::unique_ptr;
-
 
 namespace Zee
 {
+
+using std::unique_ptr;
 
 template <typename TVal, typename TIdx>
 class Triplet;
@@ -41,14 +40,13 @@ class storage_iterator_triplets:
         Triplet<TVal, TIdx>> {
     public:
         // Define whether our data type is constant
-        typedef typename std::conditional<const_iter,
+        using StoragePointer = typename std::conditional<const_iter,
                 const DSparseStorageTriplets<TVal, TIdx>*,
-                DSparseStorageTriplets<TVal, TIdx>*>::type
-                    StoragePointer;
+                DSparseStorageTriplets<TVal, TIdx>*>::type;
 
-        typedef typename std::conditional<const_iter,
+        using TripletReference = typename std::conditional<const_iter,
                 const Triplet<TVal, TIdx>&,
-                Triplet<TVal, TIdx>&>::type TripletReference;
+                Triplet<TVal, TIdx>&>::type;
 
         /** Default constructor */
         storage_iterator_triplets(StoragePointer storage, TIdx i) :
@@ -122,12 +120,13 @@ class DSparseStorage
         DSparseStorage() { }
         virtual ~DSparseStorage() { }
 
-        virtual void pushTriplet(Triplet<TVal, TIdx> t) { }
+        virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
 
         /** We define iterators and constant iterators for getting out
           * triplets */
         virtual TIterator begin() = 0;
         virtual TIterator end() = 0;
+        //FIXME: fix template and declare cbegin, cend
 };
 
 template <typename TVal, typename TIdx>
@@ -138,15 +137,15 @@ class DSparseStorageTriplets :
     public:
         /** We define iterators and constant iterators for getting out
           * triplets */
-        typedef storage_iterator_triplets<TVal, TIdx, false> iterator;
-        typedef storage_iterator_triplets<TVal, TIdx, true> const_iterator;
+        using iterator = storage_iterator_triplets<TVal, TIdx, false>;
+        using const_iterator = storage_iterator_triplets<TVal, TIdx, true>;
 
-        iterator begin()
+        iterator begin() override
         {
             return iterator(this, 0);
         }
 
-        iterator end()
+        iterator end() override
         {
             return iterator(this, _triplets.size());
         }
@@ -154,7 +153,7 @@ class DSparseStorageTriplets :
         DSparseStorageTriplets() { }
         ~DSparseStorageTriplets() { }
 
-        void pushTriplet(Triplet<TVal, TIdx> t)
+        void pushTriplet(Triplet<TVal, TIdx> t) override
         {
             // FIXME: does this get copied? want by ref, move?
             _triplets.push_back(t);
