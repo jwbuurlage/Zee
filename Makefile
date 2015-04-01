@@ -6,13 +6,19 @@ INCLUDE_DIRS = -Iinclude
 
 LIB_DEPS = -lpthread
 
-all: dirs test_spmv
+all: dirs spmv
 
 dirs:
 	mkdir -p ${OUTPUT_DIR}
 
-test_spmv: test/test_spmv.cpp 
+spmv: examples/spmv.cpp 
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
+lint:
+	./script/cpplint.py --filter=-whitespace,-build/c++11 --extensions=hpp include/*.hpp include/*/*.hpp
+
+test:
+	./script/test.py
 
 docs:
 	doxygen docs/Doxyfile

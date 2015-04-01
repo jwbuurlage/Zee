@@ -12,10 +12,12 @@ int main()
     uint32_t n = 30;
     uint32_t m = 30;
     uint32_t p = 4;
-    double fill_in = 0.1;
+    double fill_in = 0.4;
 
+    auto I = eye(n, p);
     DSparseMatrix<double> A = rand(n, m, p, fill_in);
-    // auto A = eye(n, p);
+ 
+    I.spy();
     A.spy();
 
     // for now vectors are not distributed

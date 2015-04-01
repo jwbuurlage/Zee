@@ -14,8 +14,7 @@ License, or (at your option) any later version.
 #include "matrix/sparse.hpp"
 
 
-namespace Zee
-{
+namespace Zee {
     
 template <typename TVal, typename TIdx = int32_t>
 class Partitioner

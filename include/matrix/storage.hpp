@@ -16,73 +16,119 @@ License, or (at your option) any later version.
 #include <iterator>
 #include <type_traits>
 #include <memory>
+#include <vector>
 
-namespace Zee
-{
+namespace Zee {
 
 using std::unique_ptr;
+using std::vector;
 
 template <typename TVal, typename TIdx>
 class Triplet;
 
+//-----------------------------------------------------------------------------
+
+template <typename TVal, typename TIdx, bool const_iter>
+class StorageIterator;
+
+template <typename TVal, typename TIdx, class ItTraits>
+class DSparseStorage;
+
+//-----------------------------------------------------------------------------
+
 template <typename TVal, typename TIdx>
-class DSparseStorageTriplets;
+struct TraitsTriplets;
 
 template <typename TVal, typename TIdx,
-         class Derived = DSparseStorageTriplets<TVal, TIdx>>
-class DSparseStorage;
+         class ItTraits = TraitsTriplets<TVal, TIdx>>
+class StorageTriplets;
+
+//-----------------------------------------------------------------------------
+
+template <typename TVal, typename TIdx>
+struct TraitsCCS;
+
+template <typename TVal, typename TIdx>
+struct TraitsRCS;
+
+template <typename TVal, typename TIdx, class ItTraits>
+class DSparseStorageCompressed;
+
+template <typename TVal, typename TIdx, class ItTraits>
+using ColumnCompressedStorage =
+    DSparseStorageCompressed<TVal, TIdx, TraitsCCS<TVal, TIdx>>;
+
+template <typename TVal, typename TIdx, class ItTraits>
+using RowCompressedStorage =
+    DSparseStorageCompressed<TVal, TIdx, TraitsRCS<TVal, TIdx>>;
+
+//-----------------------------------------------------------------------------
+// Base iterator
+//-----------------------------------------------------------------------------
+
+template <typename TVal, typename TIdx, bool const_iter = true>
+class StorageIterator:
+    public std::iterator<
+        std::bidirectional_iterator_tag,
+        Triplet<TVal, TIdx>>
+{
+    // TODO: Move whatever possible here from below
+};
+
+//-----------------------------------------------------------------------------
+// Triplet Storage
+//-----------------------------------------------------------------------------
 
 /** FIXME: There should be a base class for storage iteration */
 template <typename TVal, typename TIdx, bool const_iter = true>
-class storage_iterator_triplets:
-    public std::iterator<
-        std::bidirectional_iterator_tag,
-        Triplet<TVal, TIdx>> {
+class StorageIteratorTriplets:
+    public StorageIterator<TVal, TIdx, const_iter>
+{
     public:
         // Define whether our data type is constant
         using StoragePointer = typename std::conditional<const_iter,
-                const DSparseStorageTriplets<TVal, TIdx>*,
-                DSparseStorageTriplets<TVal, TIdx>*>::type;
+                const StorageTriplets<TVal, TIdx>*,
+                StorageTriplets<TVal, TIdx>*>::type;
 
         using TripletReference = typename std::conditional<const_iter,
                 const Triplet<TVal, TIdx>&,
                 Triplet<TVal, TIdx>&>::type;
 
         /** Default constructor */
-        storage_iterator_triplets(StoragePointer storage, TIdx i) :
+        StorageIteratorTriplets(StoragePointer storage, TIdx i) :
             _storage(storage),
             _i(i) { }
 
         /** Copy constructor (const <-> regular conversion) */
-        storage_iterator_triplets(
-                const storage_iterator_triplets<TVal, TIdx, false>& other) :
+        StorageIteratorTriplets(
+                const StorageIteratorTriplets<TVal, TIdx, false>& other) :
             _storage(other._storage),
             _i(other._i)  { }
 
-        storage_iterator_triplets& operator--(int)
+        StorageIteratorTriplets& operator--(int)
         {
             // copy iterator, decrease this and return old copy
-            const storage_iterator_triplets old(*this);
+            const StorageIteratorTriplets old(*this);
             --(*this);
             return old;
         }
 
-        storage_iterator_triplets& operator++(int)
+        StorageIteratorTriplets& operator++(int)
         {
             // copy iterator, increase this and return old copy
-            const storage_iterator_triplets old(*this);
+            const StorageIteratorTriplets old(*this);
             ++(*this);
             return old;
         }
 
-        bool operator== (const storage_iterator_triplets& other) const
+        bool operator== (const StorageIteratorTriplets& other) const
         {
             return (_i == other._i);
         }
 
         /** Comparison operator for not equal
           * @see operator==(const dual_iterator& other) const */
-        bool operator!= (const storage_iterator_triplets& other) const
+        bool operator!= (const StorageIteratorTriplets& other) const
         {
             return !(*this == other);
         }
@@ -92,12 +138,12 @@ class storage_iterator_triplets:
             return _storage->_triplets[_i];
         }
 
-        storage_iterator_triplets& operator--() {
+        StorageIteratorTriplets& operator--() {
             _i--;
             return *this;
         }
 
-        storage_iterator_triplets& operator++()
+        StorageIteratorTriplets& operator++()
         {
             _i++;
             return *this;
@@ -105,7 +151,7 @@ class storage_iterator_triplets:
 
        /* now the copy constructor can access _storage for 
         * conversion */
-       friend class storage_iterator_triplets<TVal, TIdx, true>; 
+       friend class StorageIteratorTriplets<TVal, TIdx, true>; 
 
     private:
         StoragePointer _storage;
@@ -113,32 +159,26 @@ class storage_iterator_triplets:
 };
 
 
-template <typename TVal, typename TIdx, class TIterator>
-class DSparseStorage
+// We put traits in separate struct to avoid deadly diamond
+template <typename TVal, typename TIdx>
+struct TraitsTriplets
 {
-    public:
-        DSparseStorage() { }
-        virtual ~DSparseStorage() { }
-
-        virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
-
-        /** We define iterators and constant iterators for getting out
-          * triplets */
-        virtual TIterator begin() = 0;
-        virtual TIterator end() = 0;
-        //FIXME: fix template and declare cbegin, cend
+        typedef StorageIteratorTriplets<TVal, TIdx, false>
+            iterator;
+        typedef StorageIteratorTriplets<TVal, TIdx, true>
+            const_iterator;
 };
 
-template <typename TVal, typename TIdx>
-class DSparseStorageTriplets :
-    public DSparseStorage<TVal, TIdx,
-        storage_iterator_triplets<TVal, TIdx, false>>
+template <typename TVal, typename TIdx, class ItTraits>
+class StorageTriplets :
+    public DSparseStorage<TVal, TIdx, ItTraits>
 {
     public:
         /** We define iterators and constant iterators for getting out
           * triplets */
-        using iterator = storage_iterator_triplets<TVal, TIdx, false>;
-        using const_iterator = storage_iterator_triplets<TVal, TIdx, true>;
+        typedef ItTraits it_traits;
+        typedef typename ItTraits::iterator iterator;
+        typedef typename ItTraits::const_iterator const_iterator;
 
         iterator begin() override
         {
@@ -150,8 +190,18 @@ class DSparseStorageTriplets :
             return iterator(this, _triplets.size());
         }
 
-        DSparseStorageTriplets() { }
-        ~DSparseStorageTriplets() { }
+        const_iterator cbegin() const override
+        {
+            return const_iterator(this, 0);
+        }
+
+        const_iterator cend() const override
+        {
+            return const_iterator(this, _triplets.size());
+        }
+
+        StorageTriplets() = default;
+        ~StorageTriplets() = default;
 
         void pushTriplet(Triplet<TVal, TIdx> t) override
         {
@@ -167,4 +217,34 @@ class DSparseStorageTriplets :
         vector<Triplet<TVal, TIdx>> _triplets;
 };
 
-}
+//-----------------------------------------------------------------------------
+// Compressed Storage
+//-----------------------------------------------------------------------------
+
+// TODO: implement
+
+//-----------------------------------------------------------------------------
+// Base Storage
+//-----------------------------------------------------------------------------
+
+template <typename TVal, typename TIdx, class ItTraits>
+class DSparseStorage
+{
+    public:
+        typedef typename ItTraits::iterator iterator;
+        typedef typename ItTraits::const_iterator const_iterator;
+
+        DSparseStorage() = default;
+        virtual ~DSparseStorage() = default;
+
+        virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
+
+        /** We define iterators and constant iterators for getting out
+          * triplets */
+        virtual iterator begin() = 0;
+        virtual iterator end() = 0;
+        virtual const_iterator cbegin() const = 0;
+        virtual const_iterator cend() const = 0;
+};
+
+} // namespace Zee

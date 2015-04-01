@@ -14,17 +14,12 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
-#include <vector>
 
-namespace Zee
-{
-
-using std::vector;
+namespace Zee {
 
 /** Base class for matrices */
 template <typename TVal, typename TIdx = int32_t>
-class DMatrixBase
-{
+class DMatrixBase {
     public:
         DMatrixBase(TIdx rows, TIdx cols)
         {
@@ -33,25 +28,36 @@ class DMatrixBase
             _procs = 1;
         }
 
-        virtual ~DMatrixBase() { };
+        virtual ~DMatrixBase() = default;
 
         /** @return the total number of (possible) entries of the matrix  */
-        inline TIdx size() const { return _rows * _cols; }
+        inline TIdx size() const
+        {
+            return _rows * _cols;
+        }
 
         /** @return the number of rows of the matrix */
-        inline TIdx rows() const { return _rows; }
+        inline TIdx rows() const
+        {
+            return _rows;
+        }
 
         /** @return the number of columns of the matrix */
-        inline TIdx cols() const { return _cols; }
+        inline TIdx cols() const
+        {
+            return _cols;
+        }
 
         /** @return the number of columns of the matrix */
-        inline TIdx procs() const { return _procs; }
+        inline TIdx procs() const
+        {
+            return _procs;
+        }
 
     protected:
         TIdx _procs = 0;
         TIdx _rows = 0;
         TIdx _cols = 0;
-
 };
 
-}
+} // namespace Zee

@@ -26,8 +26,7 @@ License, or (at your option) any later version.
 #include "matrix/storage.hpp"
 #include "color_output.hpp"
 
-namespace Zee
-{
+namespace Zee {
 
 using std::cout;
 using std::endl;
@@ -36,7 +35,7 @@ using std::min;
 using std::vector;
 
 template <typename TVal, typename TIdx = uint32_t,
-         class TIterator = storage_iterator_triplets<TVal, TIdx, false>>
+         class Storage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
 
 /** A (matrix) triplet is a tuplet (i, j, a_ij), representing an entry in a
@@ -163,16 +162,19 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
         }
 
-        vector<DSparseMatrixImage<TVal, TIdx>>& getImages() { return _subs; }
+        const vector<DSparseMatrixImage<TVal, TIdx>>& getImages() const 
+        {
+            return _subs;
+        }
 
         void spy()
         {
-            cout << "Sparsity pattern of matrix" << endl;
+            cout << endl << "Sparsity pattern of matrix" << endl;
             cout << " - rows: " << this->rows() << endl;
             cout << " - cols: " << this->cols() << endl;
             cout << " - non-zeros: " << this->nonZeros() << endl;
             cout << " - Matrix sparsity: " <<
-                this->nonZeros() / (double)(this->size()) << endl;
+                this->nonZeros() / static_cast<double>(this->size()) << endl;
 
             TIdx max_size = 100;
             if (this->rows() > max_size || this->cols() > max_size)
@@ -240,13 +242,13 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
 // Owned by a processor. It is a submatrix, which holds the actual
 // data, the 'global' DSparseMatrix can be seen as the sum of these images.
-template <typename TVal, typename TIdx, class TIterator>
+template <typename TVal, typename TIdx, class Storage>
 class DSparseMatrixImage
 {
     public:
         /** Default constructor */
         DSparseMatrixImage() :
-            _storage(new DSparseStorageTriplets<TVal, TIdx>())
+            _storage(new Storage())
         {
             // FIXME: Switch cases between different storage types
         }
@@ -263,21 +265,21 @@ class DSparseMatrixImage
             _storage->pushTriplet(t);
         }
 
-        using iterator = storage_iterator_triplets<TVal, TIdx, false>;
+        using iterator = typename Storage::it_traits::iterator;
 
-        iterator begin()
+        iterator begin() const
         {
             return _storage->begin();
         }
 
-        iterator end()
+        iterator end() const
         {
             return _storage->end();
         }
 
     private:
         // Triplets, CRS or CCS
-        unique_ptr<DSparseStorage<TVal, TIdx, TIterator>> _storage;
+        unique_ptr<Storage> _storage;
 };
 
 //-----------------------------------------------------------------------------
@@ -317,7 +319,7 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
     std::uniform_real_distribution<double> dist(0.0, 1.0);
     std::normal_distribution<double> gauss(mu, sigma);
 
-    TIdx j = (int)gauss(mt) / 2;
+    TIdx j = static_cast<int>(gauss(mt)) / 2;
     j = max(j, (TIdx)1);
     TIdx i = 0;
     while (true)
@@ -325,7 +327,7 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
         coefficients.push_back(Triplet<double, TIdx>(j, i,
                 (1.0 + 10.0 * dist(mt))));
 
-        int offset = (int)gauss(mt);
+        int offset = static_cast<int>(gauss(mt));
         offset = max(offset, 1);
         j += offset;
 
@@ -350,4 +352,4 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
 
 //-----------------------------------------------------------------------------
 
-}
+} // namespace Zee

@@ -15,4 +15,4 @@ License, or (at your option) any later version.
 #include "matrix/sparse.hpp"
 #include "matrix/dense.hpp"
 #include "operations.hpp"
-//#include "partitioner.hpp"
+#include "partitioner.hpp"

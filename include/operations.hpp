@@ -21,8 +21,7 @@ License, or (at your option) any later version.
 #include "matrix/dense.hpp"
 #include "parallel.hpp"
 
-namespace Zee
-{
+namespace Zee {
 
 using std::vector;
 using std::thread;
@@ -30,17 +29,17 @@ using std::cerr;
 using std::endl;
 
 template <typename TVal, typename TIdx>
-void spmv_image_cpp(DSparseMatrixImage<TVal, TIdx>& A,
-        DVector<TVal>& v,
+void spmv_image_cpp(const DSparseMatrixImage<TVal, TIdx>& A,
+        const DVector<TVal>& v,
         DVector<TVal>& u)
 {
-    for (auto& triplet : A)
+    for (const auto& triplet : A)
         u[triplet.row()] += triplet.value() * v[triplet.col()];
 }
 
 template <typename TVal, typename TIdx>
-void spmv_cpp(DSparseMatrix<TVal, TIdx>& A,
-        DVector<TVal>& v,
+void spmv_cpp(const DSparseMatrix<TVal, TIdx>& A,
+        const DVector<TVal>& v,
         DVector<TVal>& u)
 {
     vector<thread> threads;

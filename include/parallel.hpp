@@ -13,10 +13,9 @@ License, or (at your option) any later version.
 
 #pragma once
 
-namespace Zee
-{
+namespace Zee {
 
-    // Parallel providers
+// Parallel providers
 enum ParallelProvider {
     P_CPP,
     P_BSP,

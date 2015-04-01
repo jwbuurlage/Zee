@@ -13,41 +13,18 @@ License, or (at your option) any later version.
 
 #pragma once
 
+#include <iostream>
 #include <string>
+#include <chrono>
 
 namespace Zee {
 
-using std::string;
+using std::cout;
+using std::endl;
 
-enum class Color
+void logEntry(string log)
 {
-    red,
-    blue,
-    yellow,
-    green,
-    clear
-};
-
-string colorOutput(Color tc)
-{
-    switch(tc)
-    {
-        case Color::red:
-            return "\033[1;31m";
-
-        case Color::green:
-            return "\033[1;32m";
-
-        case Color::yellow:
-            return "\033[1;33m";
-
-        case Color::blue:
-            return "\033[1;34m";
-
-        case Color::clear:
-        default:
-            return "\033[0m";
-    }
+    cout << log << endl;
 }
 
-}
+} // namespace Zee

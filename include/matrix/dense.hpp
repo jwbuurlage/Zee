@@ -18,26 +18,36 @@ License, or (at your option) any later version.
 #include <vector>
 #include <random>
 
-namespace Zee
-{
+namespace Zee {
 
 using std::vector;
 
 // FIXME: should be a specialization of a general dense matrix
+// FIXME: saved as pairs? or just owners distributed cyclically
 template <typename TVal, typename TIdx = int32_t>
 class DVector : public DMatrixBase<TVal, TIdx>
 {
     public:
-        DVector(TIdx n) : DMatrixBase<TVal, TIdx>(n, 1)
+        explicit DVector(TIdx n) : DMatrixBase<TVal, TIdx>(n, 1)
         {
             _elements.resize(n);
         }
 
-        TVal& operator[] (int i) { return _elements[i]; }
+        TVal& operator[] (int i)
+        {
+            return _elements[i];
+        }
+
+        const TVal& operator[] (int i) const
+        {
+            return _elements[i];
+        }
 
     private:
         vector<TVal> _elements;
 };
+
+//-----------------------------------------------------------------------------
 
 DVector<double> zeros(int32_t n)
 {
@@ -63,4 +73,4 @@ DVector<double> rand(int32_t n)
     return v;
 }
 
-}
+} // namespace Zee

@@ -3,6 +3,7 @@
 possible level. In particular make (dense) vectors distributed and add
 dense matrix type.
 [!] Generalize (sparse) iteration, make inheritance scheme.
+[ ] Add support for compressed storage
 
 # Partitioning
 [ ] Partioners should modify or clone existing distributed structures.
@@ -18,23 +19,30 @@ Need to devise an interface that makes partitioning as general as possible.
 [ ] Add multiple parallelization providers and SpMD implementations, make sure
 it works on general systems (not only multi-core systems, or via pthreads)
 In particular implement for BSP.
-[ ] IMPORTANT: completely parallel version of SPMD, without O(n) storage
+[!] Completely parallel version of SPMD, without O(n) storage
 requirements and low computational complexity, also ability to cache?
 
 # General improvements
-[ ] Write virtual container with iterators for triplets generation
-[ ] Make triplet iteration more general, is it necessary to add iteration in
-templatized argument? Rather have storage templatized, and alias or typedef
-iteration in storage (necessary anyway).
+[!] Make Logging mechanism `logging.hpp`
 [ ] Generalize spy for large matrices
 [ ] Make operations encapsulated in objects, and only perform them at an
-= operation on a distributed type. (expression templates)  Requires careful
+= operation on a distributed type. (expression templates).  Requires careful
 design.
-[x] move `using` aliases to Zee namespace
-[ ] Make logging mechanism
+[ ] Write virtual container with iterators for triplets generation
 
-# Matrices & Testing
+# (Test) Matrices & Testing / Benchmarking
 [ ] Support for e.g. Matrix Market format
-[ ] Benchmarking `<chrono>` and (unit) testing,
+[ ] Benchmarking `<chrono>` 
+[ ] Unit testing, custom solution w/ Python
+    - Unit tests using `script/test.py [category]`
+    - Actual tests in  `test/category.c`
+    - See unit tests in `munificent/wren`
 [ ] Model communication volume and load imbalance.
+    - Do we explicitely construct (hyper)graph?
 [-] Output performance graphs, spy-ish distribution visualization
+
+# Done
+[x] move `using` aliases to Zee namespace
+[x] Make triplet iteration more general, is it necessary to add iteration in
+templatized argument? Rather have storage templatized, and alias or typedef
+iteration in storage (necessary anyway).
