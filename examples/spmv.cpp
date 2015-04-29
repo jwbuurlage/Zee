@@ -1,8 +1,7 @@
+#include <zee.hpp>
+
 #include <cstdint>
-
 #include <iostream>
-
-#include "zee.hpp"
 
 using namespace Zee;
 

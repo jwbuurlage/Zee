@@ -28,17 +28,17 @@ using std::thread;
 using std::cerr;
 using std::endl;
 
-template <typename TVal, typename TIdx>
-void spmv_image_cpp(const DSparseMatrixImage<TVal, TIdx>& A,
+template <typename TVal, typename TIdx, typename TImage>
+void spmv_image_cpp(const TImage& image,
         const DVector<TVal>& v,
         DVector<TVal>& u)
 {
-    for (const auto& triplet : A)
+    for (const auto& triplet : image)
         u[triplet.row()] += triplet.value() * v[triplet.col()];
 }
 
-template <typename TVal, typename TIdx>
-void spmv_cpp(const DSparseMatrix<TVal, TIdx>& A,
+template <typename TVal, typename TIdx, class Matrix>
+void spmv_cpp(const Matrix& A,
         const DVector<TVal>& v,
         DVector<TVal>& u)
 {
@@ -52,8 +52,8 @@ void spmv_cpp(const DSparseMatrix<TVal, TIdx>& A,
     for (auto& image : A.getImages())
     {
         threads.push_back(
-                thread(spmv_image_cpp<TVal, TIdx>,
-                    std::ref(image),
+                thread(spmv_image_cpp<TVal, TIdx, typename Matrix::image_type>,
+                    std::ref(*image),
                     std::ref(v),
                     std::ref(uis[proc++])));
     }

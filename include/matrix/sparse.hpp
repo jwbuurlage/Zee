@@ -83,10 +83,14 @@ enum class Partitioning
 /** The class DSparseMatrix is a distributed matrix type inspired by 
   * Eigen's SparseMatrix. It is distributed over multiple processing units,
   */
-template <typename TVal, typename TIdx = uint32_t>
+template <typename TVal, typename TIdx = uint32_t,
+         class Image = DSparseMatrixImage<TVal, TIdx,
+            StorageTriplets<TVal, TIdx>>>
 class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 {
     public:
+        using image_type = Image;
+            
         /** Initialize an (empty) sparse (rows x cols) oatrix */
         DSparseMatrix(TIdx rows, TIdx cols) :
             DMatrixBase<TVal, TIdx>(rows, cols)
@@ -125,6 +129,18 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _nz;
         }
 
+        /** Returns the load imbalance of the current partitioning */
+        double loadImbalance()
+        {
+            return -1.0;
+        }
+
+        /** Returns the communication volume of the current partitioning */
+        TIdx communicationVolume()
+        {
+            return -1;
+        }
+
         /** Construct a matrix from a set of triplets */
         template<typename TInputIterator>
         void setFromTriplets(
@@ -136,7 +152,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
-                _subs.push_back(DSparseMatrixImage<TVal, TIdx>());
+                _subs.push_back(std::make_unique<Image>());
 
             for (TInputIterator it = begin; it != end; it++)
             {
@@ -157,12 +173,13 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     break;
                 }
 
-                _subs[target_proc].pushTriplet(*it);
+                _subs[target_proc]->pushTriplet(*it);
                 _nz++;
             }
         }
 
-        const vector<DSparseMatrixImage<TVal, TIdx>>& getImages() const 
+        /** Obtain a list of images */
+        const vector<unique_ptr<Image>>& getImages() const 
         {
             return _subs;
         }
@@ -198,7 +215,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             int p = 0;
             for (auto& image : _subs)
             {
-                for (auto& triplet : image)
+                for (auto& triplet : *image)
                     output[triplet.row() * this->cols() + triplet.col()] = p;
                 ++p;
             }
@@ -237,7 +254,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         TIdx _nz;
 
         Partitioning _partitioning;
-        vector<DSparseMatrixImage<TVal, TIdx>> _subs;
+        vector<unique_ptr<Image>> _subs;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -306,12 +323,12 @@ DSparseMatrix<double> eye(TIdx n, TIdx procs)
 
 /** Create a random sparse (n x m) matrix */
 template <typename TIdx>
-DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double fill_in)
+DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double density)
 {
     vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
-    double mu = 1.0 / fill_in + 0.5;
+    double mu = 1.0 / density + 0.5;
     double sigma = 0.5 * mu;
 
     std::random_device rd;

@@ -11,34 +11,101 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
+#include <memory>
+
 #include "matrix/sparse.hpp"
 
-
 namespace Zee {
-    
-template <typename TVal, typename TIdx = int32_t>
+
+using std::unique_ptr;
+using std::vector;
+
+template<class TPart>
+class Factory
+{
+    public:
+        Factory() { };
+        ~Factory() { };
+
+        unique_ptr<TPart> make()
+        {
+            return unique_ptr<TPart>(new TPart());
+        }
+};
+
+/** 
+ * This class (re)partitions a sparse matrix. 
+ * FIXME: CRT for factory?
+ */
+template <class TMatrix = DSparseMatrix<double>>
 class Partitioner
 {
     public:
-        Partitioner();
-        virtual ~Partitioner();
+        Partitioner() { };
+        virtual ~Partitioner() { };
 
         // Takes one sparse matrix, partitions and redistributes it.
         // TODO: Is this possible to do "in-place?"
         // TODO: What about refinement?
-        virtual DSparseMatrix<TVal, TIdx> partition(
-                DSparseMatrix<TVal, TIdx> A)
+        virtual TMatrix& partition(
+                TMatrix& A) = 0;
+
+        /** Set the number of processors
+          * @param procs Number of processors _after_ partitioning.
+          * */
+        void setProcs(int procs)
         {
-            return -1;
+            _procs = procs;
         }
+
+    protected:
+        /* The number of processors _after_ partitioning */
+        int _procs = 0;
+
+        /* The number of processors _before_ partitioning
+         * The value 0 is used for an arbitrary number */
+        int _procs_in = 0;
 };
 
-template <typename TVal, typename TIdx = int32_t>
-class CyclicPartitioner : Partitioner<TVal, TIdx>
+template <class Matrix = DSparseMatrix<double>>
+class CyclicPartitioner : public Partitioner<Matrix>
 {
     public:
-        CyclicPartitioner();
-        ~CyclicPartitioner();
+
+        CyclicPartitioner()
+        {
+            this->_procs = 1;
+        };
+
+        CyclicPartitioner(int procs)
+        {
+            this->_procs = procs;
+        };
+
+        virtual ~CyclicPartitioner() override {
+
+        };
+
+        virtual Matrix& partition(
+                Matrix& A) override
+        {
+            using vec_images = vector<unique_ptr<typename Matrix::image_type>>;
+
+            // repartition A
+            A.setDistributionScheme(Partitioning::custom, this->_procs);
+
+            // FIXME images, flexible, type reference
+            vector<typename Matrix::image_type> _new_images;
+            _new_images.resize(this->_procs);
+
+            const vec_images& images = A.getImages();
+            for (auto& image : images)
+                for(auto& trip : *image)
+                    cout << trip.value() << endl;
+
+            cout << "Partitioning A" << endl;
+            return A;
+        }
 };
 
 }
