@@ -2,9 +2,6 @@ TODAY:
 ------
 
 Partitioners that take a matrix, and (re)partition them.
-- How do we use images, in particular -- storage!
-- First generalize the iterators to some base iterator, and get rid of templates
-- This is actually hard to do for abstract base classes....
 
 
 HIGH PRIORITY:
@@ -14,15 +11,10 @@ HIGH PRIORITY:
 [!] Generalize base class even further, add support for distribution at highest
 possible level. In particular make (dense) vectors distributed and add
 dense matrix type.
-[!] Generalize (sparse) iteration, make inheritance scheme.
-[ ] Storage type in DSparseMatrix
 [ ] Add support for compressed storage
 
 # Partitioning
-[ ] Partioners should modify or clone existing distributed structures.
-Need to devise an interface that makes partitioning as general as possible.
 [ ] Need to consider in-place (re)partitioning, reusing images in particular
-[ ] Images depend on matrix to be partitioned, can we use type aliases?
 [ ] Consider Iterative Refinement (IR) methods and how to implement them.
 
 REFINEMENT:
@@ -58,6 +50,7 @@ design.
     - OR use something like Catch, gtest, etc.
 [ ] Model communication volume and load imbalance.
     - Do we explicitely construct (hyper)graph?
+    - Possible to cache and (incrementally) update?
 [-] Output performance graphs, spy-ish distribution visualization
 
 # Done
@@ -65,3 +58,8 @@ design.
 [x] Make triplet iteration more general, is it necessary to add iteration in
 templatized argument? Rather have storage templatized, and alias or typedef
 iteration in storage (necessary anyway).
+[x] Generalize (sparse) iteration, make inheritance scheme. (solved by traits)
+[x] Storage type in DSparseMatrix
+[x] Partioners should modify or clone existing distributed structures.
+Need to devise an interface that makes partitioning as general as possible.
+[x] Images depend on matrix to be partitioned, can we use type aliases?

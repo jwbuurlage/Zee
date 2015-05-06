@@ -17,6 +17,7 @@ License, or (at your option) any later version.
 #include <cstdint>
 
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <vector>
 #include <random>
@@ -33,6 +34,11 @@ using std::endl;
 using std::max;
 using std::min;
 using std::vector;
+
+// Fwd declaring partitioner
+template <class TMatrix>
+class Partitioner;
+
 
 template <typename TVal, typename TIdx = uint32_t,
          class Storage = StorageTriplets<TVal, TIdx>>
@@ -129,16 +135,48 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _nz;
         }
 
-        /** Returns the load imbalance of the current partitioning */
+        /** Returns the load imbalance of the current partitioning.
+         * Load imbalance is defined as:
+         * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
+         * and should be smaller than some predetermined value \f$\epsilon\f$.
+         */
+        //FIXME single precision support?
         double loadImbalance()
         {
-            return -1.0;
+            double eps = 1.0;
+            for (auto& pimg : _subs)
+            {
+                double eps_i = ((double)this->_procs * pimg->nonZeros())
+                    / this->nonZeros();
+                if (eps_i > eps) {
+                    eps = eps_i;
+                }
+            }
+
+            return eps;
         }
 
-        /** Returns the communication volume of the current partitioning */
+        /** Returns the communication volume of the current Partitioning
+          * Let \f$\lambda_i\f$ be the number of processors in a (non-empty)
+          * row \f$i\f$, and \f$\mu_j\f$ be the number of processors in a
+          * (non-empty) column \f$j\f$. Then the total communication volume is:
+          * \f[ V = \sum_i (\lambda_i - 1) + \sum_j (\mu_j - 1) \f]
+          * */
         TIdx communicationVolume()
         {
-            return -1;
+            // here we assume that v_i is owned by a processor holding
+            // a_ik =/= 0 for some k, and u_j is owned by a processor 
+            // holding a_kj =/= 0 for some k.
+            //
+            // We then ask the images themselves how much communciation
+            // is necessary for spmv communication.
+            
+            V = 0;
+            // obtain lambda_i's.. 
+            for (auto& pimg : _subs) {
+            }
+
+            return 0;
         }
 
         /** Construct a matrix from a set of triplets */
@@ -184,14 +222,29 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _subs;
         }
 
+        vector<unique_ptr<Image>>& getMutableImages()
+        {
+            return _subs;
+        }
+
         void spy()
         {
             cout << endl << "Sparsity pattern of matrix" << endl;
-            cout << " - rows: " << this->rows() << endl;
-            cout << " - cols: " << this->cols() << endl;
-            cout << " - non-zeros: " << this->nonZeros() << endl;
-            cout << " - Matrix sparsity: " <<
+
+            cout << " - Rows: " << this->rows() << endl;
+            cout << " - Cols: " << this->cols() << endl;
+            cout << " - Non-zeros: " << this->nonZeros() << endl;
+
+            cout << " - Matrix sparsity: " << 
+                std::fixed << std::setprecision(4) <<
                 this->nonZeros() / static_cast<double>(this->size()) << endl;
+
+            cout << " - Load imbalance: " << 
+                std::fixed << std::setprecision(4) <<
+                this->loadImbalance() << endl;
+
+            cout << " - Communication Volume: " <<
+                this->communicationVolume() << endl;
 
             TIdx max_size = 100;
             if (this->rows() > max_size || this->cols() > max_size)
@@ -294,6 +347,11 @@ class DSparseMatrixImage
             return _storage->end();
         }
 
+        TIdx nonZeros() const 
+        {
+            return _storage->size();
+        }
+
     private:
         // Triplets, CRS or CCS
         unique_ptr<Storage> _storage;
@@ -323,10 +381,10 @@ DSparseMatrix<double> eye(TIdx n, TIdx procs)
 
 /** Create a random sparse (n x m) matrix */
 template <typename TIdx>
-DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double density)
+DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
 {
     vector<Triplet<double, TIdx>> coefficients;
-    coefficients.reserve(n);
+    coefficients.reserve((int)(n * m * density));
 
     double mu = 1.0 / density + 0.5;
     double sigma = 0.5 * mu;
@@ -341,7 +399,7 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double density)
     TIdx i = 0;
     while (true)
     {
-        coefficients.push_back(Triplet<double, TIdx>(j, i,
+        coefficients.push_back(Triplet<double, TIdx>(i, j,
                 (1.0 + 10.0 * dist(mt))));
 
         int offset = static_cast<int>(gauss(mt));
@@ -354,12 +412,11 @@ DSparseMatrix<double, TIdx> rand(TIdx n, TIdx m, TIdx procs, double density)
             i++;
         }
 
-        if (i >= n)
+        if (i >= m)
             break;
-
     }
 
-    DSparseMatrix<double, TIdx> A(n, m);
+    DSparseMatrix<double, TIdx> A(m, n);
     A.setDistributionScheme(Partitioning::cyclic, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());

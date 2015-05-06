@@ -89,21 +89,27 @@ class CyclicPartitioner : public Partitioner<Matrix>
         virtual Matrix& partition(
                 Matrix& A) override
         {
-            using vec_images = vector<unique_ptr<typename Matrix::image_type>>;
+            using Image = typename Matrix::image_type;
 
             // repartition A
             A.setDistributionScheme(Partitioning::custom, this->_procs);
 
-            // FIXME images, flexible, type reference
-            vector<typename Matrix::image_type> _new_images;
-            _new_images.resize(this->_procs);
+            vector<unique_ptr<Image>> new_images;
+            for (int i = 0; i < this->_procs; ++i)
+                new_images.push_back(std::make_unique<Image>());
 
-            const vec_images& images = A.getImages();
+            // FIXME, make this inplace for the first proc
+            auto& images = A.getMutableImages();
+            int idx = 0;
             for (auto& image : images)
-                for(auto& trip : *image)
-                    cout << trip.value() << endl;
+                for(auto& trip : *image) {
+                    new_images[idx++ % this->_procs]->pushTriplet(trip);
+                }
 
-            cout << "Partitioning A" << endl;
+            images.resize(this->_procs);
+            for(int i = 0; i < this->_procs; ++i)
+                images[i].reset(new_images[i].release());
+
             return A;
         }
 };

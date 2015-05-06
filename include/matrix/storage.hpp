@@ -208,7 +208,13 @@ class StorageTriplets :
             // FIXME: does this get copied? want by ref, move?
             _triplets.push_back(t);
         }
+
+
+        virtual TIdx size() const {
+            return _triplets.size();
+        };
         
+        // FIXME: move to getter?! although iterators truly are 'friends'
         friend iterator;
         friend const_iterator;
 
@@ -238,6 +244,8 @@ class DSparseStorage
         virtual ~DSparseStorage() = default;
 
         virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
+
+        virtual TIdx size() const = 0;
 
         /** We define iterators and constant iterators for getting out
           * triplets */
