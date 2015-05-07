@@ -17,6 +17,12 @@ dense matrix type.
 [ ] Need to consider in-place (re)partitioning, reusing images in particular
 [ ] Consider Iterative Refinement (IR) methods and how to implement them.
 
+# Images
+[ ] Need to think of an approach to make an image something more physical.
+In particular for distributed systems we require that the image is something
+which exists for longer time spans and can be reused. We want to do this in
+a portable way.
+
 REFINEMENT:
 -----------
 

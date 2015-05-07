@@ -67,6 +67,26 @@ class Partitioner
         int _procs_in = 0;
 };
 
+template <class TMatrix = DSparseMatrix<double>>
+class IterativePartitioner : Partitioner<TMatrix>
+{
+    public:
+        IterativePartitioner() { };
+        virtual ~IterativePartitioner() { };
+
+        /** Partitioning with an IP is simply refining. This function
+         * forwards to refine. */
+        virtual TMatrix& partition(
+                TMatrix& A) override
+        {
+            this->refine(std::forward(A));
+        }
+
+        virtual TMatrix& refine(TMatrix& A) = 0;
+};
+
+
+
 template <class Matrix = DSparseMatrix<double>>
 class CyclicPartitioner : public Partitioner<Matrix>
 {
