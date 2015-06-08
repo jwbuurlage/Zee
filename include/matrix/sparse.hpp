@@ -171,12 +171,12 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // We then ask the images themselves how much communciation
             // is necessary for spmv communication.
             
-            V = 0;
+            int V = 0;
             // obtain lambda_i's.. 
-            for (auto& pimg : _subs) {
-            }
+            //for (auto& pimg : _subs) {
+            //}
 
-            return 0;
+            return V;
         }
 
         /** Construct a matrix from a set of triplets */
@@ -312,6 +312,15 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
 // Owned by a processor. It is a submatrix, which holds the actual
 // data, the 'global' DSparseMatrix can be seen as the sum of these images.
+//
+// BRAINSTORM:
+// - What if every matrix image had a 'real', physical chunk of memory and
+//   a compute unit, whatever that would be
+// - Then we could let programs execute code on these images (as in, lambdas)
+// - Furthermore, different compute units could execute code remotely without
+//   the 'remote code' explicitely knowing about this.
+// - Is this flexible enough, and would this work on e.g. Cartesius?
+// - I want to try and implement a version of this
 template <typename TVal, typename TIdx, class Storage>
 class DSparseMatrixImage
 {

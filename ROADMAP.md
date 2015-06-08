@@ -22,6 +22,10 @@ dense matrix type.
 In particular for distributed systems we require that the image is something
 which exists for longer time spans and can be reused. We want to do this in
 a portable way.
+- Idea: serialize an image somehow, and extract it at a 'physical location'.
+ * not portable (because we want to do this in a distributed fashion), unless
+ * the storage is never really packed, but instead some kind of generator
+   approach is used.
 
 REFINEMENT:
 -----------

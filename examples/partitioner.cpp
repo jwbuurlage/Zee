@@ -24,21 +24,10 @@ int main()
     // pulp is 'iterative', used to refine
     A.spy();
     PulpPartioner<double> pulpPart;
-    pulpPart.refine(&A);
+    for (int i = 0; i < 1000; ++i) {
+        pulpPart.refine(A);
+    }
     A.spy();
-
-    // 2b. bisectioning partitioner (n -> 2n)
-    DSparseMatrix<double> B = rand(n, m, fill_in, p);
-
-    B.spy();
-    BisectionPartitioner<double> bisectPart;
-    bisectPart.refine(&B);
-    B.spy();
-
-    // 4. Multiply A with some dense vector and store the result
-    DDenseMatrix<double> v = rand(n, 1);
-    DDenseMatrix<double> u;
-    u = A * v;
 
     return 0;
 }

@@ -209,10 +209,13 @@ class StorageTriplets :
             _triplets.push_back(t);
         }
 
+        virtual Triplet<TVal, TIdx> getElement(TIdx i) const {
+            return _triplets[i];
+        }
 
         virtual TIdx size() const {
             return _triplets.size();
-        };
+        }
         
         // FIXME: move to getter?! although iterators truly are 'friends'
         friend iterator;
@@ -246,6 +249,9 @@ class DSparseStorage
         virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
 
         virtual TIdx size() const = 0;
+
+        // get the i-th element as triplet
+        virtual Triplet<TVal, TIdx> getElement(TIdx i) const = 0;
 
         /** We define iterators and constant iterators for getting out
           * triplets */

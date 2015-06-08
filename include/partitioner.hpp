@@ -67,6 +67,7 @@ class Partitioner
         int _procs_in = 0;
 };
 
+
 template <class TMatrix = DSparseMatrix<double>>
 class IterativePartitioner : Partitioner<TMatrix>
 {
@@ -84,7 +85,6 @@ class IterativePartitioner : Partitioner<TMatrix>
 
         virtual TMatrix& refine(TMatrix& A) = 0;
 };
-
 
 
 template <class Matrix = DSparseMatrix<double>>
