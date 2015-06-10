@@ -140,11 +140,16 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // perhaps think about pregel-like approach as well
         // FIXME: why cant I template this..
         // template<typename T>
-        vector<int> compute(std::function<int(image_type&)> func)
+        template<typename TReturn>
+        vector<TReturn> compute(std::function<TReturn(image_type&)> func)
         {
+            auto result = vector<TReturn>(this->_procs);
             // returns a vector of type T with func(Image(I)) called
-            // FIXME
-            return vector<int>(this->_procs);
+            int p = 0;
+            for (auto& image : _subs) {
+                result[p++] = func(image);
+            }
+            return result;
         }
 
         /** Returns the load imbalance of the current partitioning.
@@ -158,7 +163,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             double eps = 1.0;
             for (auto& pimg : _subs)
             {
-                double eps_i = ((double)this->_procs * pimg->nonZeros())
+                double eps_i = ((double)this->_procs * pimg.nonZeros())
                     / this->nonZeros();
                 if (eps_i > eps) {
                     eps = eps_i;
@@ -185,8 +190,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             
             int V = 0;
             // obtain lambda_i's.. 
-            //for (auto& pimg : _subs) {
-            //}
+            for (auto& pimg : _subs) {
+                // FIXME first ugly solution
+                //A.compute
+            }
 
             return V;
         }
@@ -202,7 +209,13 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
-                _subs.push_back(std::make_unique<Image>());
+                _subs.push_back(Image());
+
+            // FIXME: only if partitioning is random
+            std::random_device rd;
+            std::mt19937 mt(rd());
+            // FIXME: TIdx
+            std::uniform_int_distribution<int> randproc(0, this->procs() - 1);
 
             for (TInputIterator it = begin; it != end; it++)
             {
@@ -217,24 +230,28 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     target_proc = (this->procs() * (*it).row()) / this->rows();
                     break;
 
+                case Partitioning::random:
+                    target_proc = randproc(mt);
+                    break;
+
                 default:
                     // Fall back to 1D cyclic
                     target_proc = (*it).row() % this->procs();
                     break;
                 }
 
-                _subs[target_proc]->pushTriplet(*it);
+                _subs[target_proc].pushTriplet(*it);
                 _nz++;
             }
         }
 
         /** Obtain a list of images */
-        const vector<unique_ptr<Image>>& getImages() const 
+        const vector<Image>& getImages() const 
         {
             return _subs;
         }
 
-        vector<unique_ptr<Image>>& getMutableImages()
+        vector<Image>& getMutableImages()
         {
             return _subs;
         }
@@ -280,7 +297,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             int p = 0;
             for (auto& image : _subs)
             {
-                for (auto& triplet : *image)
+                for (auto& triplet : image)
                     output[triplet.row() * this->cols() + triplet.col()] = p;
                 ++p;
             }
@@ -319,7 +336,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         TIdx _nz;
 
         Partitioning _partitioning;
-        vector<unique_ptr<Image>> _subs;
+        vector<Image> _subs;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -350,6 +367,10 @@ class DSparseMatrixImage
             _storage(std::move(other._storage)) { }
 
         ~DSparseMatrixImage() = default;
+
+        void popElement(TIdx element) {
+            _storage->popElement(element);
+        }
 
         void pushTriplet(Triplet<TVal, TIdx> t) {
             assert(_storage);
@@ -444,7 +465,7 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
     }
 
     DSparseMatrix<double, TIdx> A(m, n);
-    A.setDistributionScheme(Partitioning::cyclic, procs);
+    A.setDistributionScheme(Partitioning::random, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 

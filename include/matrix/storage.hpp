@@ -203,6 +203,12 @@ class StorageTriplets :
         StorageTriplets() = default;
         ~StorageTriplets() = default;
 
+        void popElement(TIdx element) override
+        {
+            // FIXME: does this get copied? want by ref, move?
+            _triplets.erase(_triplets.begin() + element);
+        }
+
         void pushTriplet(Triplet<TVal, TIdx> t) override
         {
             // FIXME: does this get copied? want by ref, move?
@@ -231,6 +237,8 @@ class StorageTriplets :
 //-----------------------------------------------------------------------------
 
 // TODO: implement
+// Note: think about 'frame' table, store complete triplet every 1000 or so
+// elements allowing to binary search for elements
 
 //-----------------------------------------------------------------------------
 // Base Storage
@@ -246,6 +254,7 @@ class DSparseStorage
         DSparseStorage() = default;
         virtual ~DSparseStorage() = default;
 
+        virtual void popElement(TIdx element) = 0;
         virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
 
         virtual TIdx size() const = 0;

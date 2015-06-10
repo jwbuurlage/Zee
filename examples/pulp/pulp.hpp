@@ -1,6 +1,11 @@
 #include <zee.hpp>
 #include <random>
 
+//TMP
+#include <iostream>
+using std::cout;
+using std::endl;
+
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
 {
@@ -13,6 +18,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
             std::uniform_int_distribution<int> randmil(0, 1'000'000);
 
             auto& images = A.getMutableImages();
+            int image_index = 0;
             for(auto& image : images) {
                 // FIXME we need some kind of 'compute unit' associated with
                 // a unit, for now we simulate this here (using threads?).
@@ -46,10 +52,11 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 //
                 // can we cache this information while spmving?
 
-                auto size = image->nonZeros();
+                auto size = image.nonZeros();
+                auto element_index = randmil(mt) % size; 
 
                 // FIXME: rough sketch of code
-                auto trip = image->getElement(randmil(mt) % size);
+                auto trip = image.getElement(element_index);
                 auto col = trip.col();
                 auto row = trip.row();
 
@@ -65,10 +72,20 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                     return count;
                 };
 
-                auto counts = A.compute(countLambda);
+                auto counts = A.template compute<int>(countLambda);
 
-//                auto max = counts.maxIndex();
-//                images.yield(trip, image);
+                auto max = 0;
+                auto max_index = -1;
+                for (int i = 0; i < counts.size(); ++i) {
+                    if (counts[i] > max) {
+                        max = counts[i];
+                        max_index = i;
+                    }
+                }
+
+                // give element to max_index
+                image.popElement(element_index);
+                images[max_index].pushTriplet(trip);
             }
 
             return A;
