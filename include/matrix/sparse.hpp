@@ -135,6 +135,18 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _nz;
         }
 
+        // this is kind of like a reduce in mapreduce, implementing this such that
+        // we can get some sample code going
+        // perhaps think about pregel-like approach as well
+        // FIXME: why cant I template this..
+        // template<typename T>
+        vector<int> compute(std::function<int(image_type&)> func)
+        {
+            // returns a vector of type T with func(Image(I)) called
+            // FIXME
+            return vector<int>(this->_procs);
+        }
+
         /** Returns the load imbalance of the current partitioning.
          * Load imbalance is defined as:
          * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
@@ -360,6 +372,12 @@ class DSparseMatrixImage
         {
             return _storage->size();
         }
+
+        Triplet<TVal, TIdx> getElement(TIdx i) const {
+            return _storage->getElement(i);
+        }
+
+
 
     private:
         // Triplets, CRS or CCS

@@ -8,7 +8,7 @@ LIB_DEPS = -lpthread
 
 .PHONY: lint test docs
 
-all: dirs spmv cycpart
+all: dirs spmv cycpart part
 
 dirs:
 	mkdir -p ${OUTPUT_DIR}
@@ -17,6 +17,9 @@ spmv: examples/spmv.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 cycpart: examples/cyclic_partitioner.cpp
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
+part: examples/partitioner.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 lint:

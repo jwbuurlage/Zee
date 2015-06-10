@@ -11,6 +11,8 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
+#pragma once
+
 #include <memory>
 
 #include "matrix/sparse.hpp"
@@ -80,7 +82,7 @@ class IterativePartitioner : Partitioner<TMatrix>
         virtual TMatrix& partition(
                 TMatrix& A) override
         {
-            this->refine(std::forward(A));
+            return this->refine(A);
         }
 
         virtual TMatrix& refine(TMatrix& A) = 0;

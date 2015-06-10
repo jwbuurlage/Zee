@@ -1,11 +1,17 @@
 #include <zee.hpp>
+#include <random>
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
-class PulpPartitioner : Zee::Partitioner<TMatrix>
+class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
 {
     public:
-        virtual TMatrix& refine(TMatrix& A)
+        virtual TMatrix& refine(TMatrix& A) override
         {
+            std::random_device rd;
+            std::mt19937 mt(rd());
+            // FIXME: TIdx
+            std::uniform_int_distribution<int> randmil(0, 1'000'000);
+
             auto& images = A.getMutableImages();
             for(auto& image : images) {
                 // FIXME we need some kind of 'compute unit' associated with
@@ -40,26 +46,31 @@ class PulpPartitioner : Zee::Partitioner<TMatrix>
                 //
                 // can we cache this information while spmving?
 
+                auto size = image->nonZeros();
+
                 // FIXME: rough sketch of code
-                auto trip = image.getElement(rand() % image.size());
-                auto col = trip.getCol();
-                auto row = trip.getRow();
+                auto trip = image->getElement(randmil(mt) % size);
+                auto col = trip.col();
+                auto row = trip.row();
 
                 // put in some kind of request
-                vector<int> counts(A.getProcs() - 1, 0);
-                auto countLambda = [] (TMatrixImage _img) {
+                auto countLambda = [col_ = col, row_ = row] (typename TMatrix::image_type& _img)
+                    -> int
+                {
                     auto count = 0; // FIXME: TIdx or auto
                     for (auto& a : _img) {
-                        if (a.getCol() == col || a.getRow() == row)
+                        if (a.col() == col_ || a.row() == row_)
                             count++;
                     }
                     return count;
                 };
 
-                A.compute(countLambda, counts);
+                auto counts = A.compute(countLambda);
 
-                auto max = counts.maxIndex();
-                images.yield(trip, image);
+//                auto max = counts.maxIndex();
+//                images.yield(trip, image);
             }
+
+            return A;
         }
-}
+};

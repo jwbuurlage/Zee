@@ -209,11 +209,11 @@ class StorageTriplets :
             _triplets.push_back(t);
         }
 
-        virtual Triplet<TVal, TIdx> getElement(TIdx i) const {
+        virtual Triplet<TVal, TIdx> getElement(TIdx i) const override {
             return _triplets[i];
         }
 
-        virtual TIdx size() const {
+        virtual TIdx size() const override {
             return _triplets.size();
         }
         
