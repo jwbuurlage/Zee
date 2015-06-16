@@ -1,5 +1,5 @@
 CCPP = clang++
-CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall
+CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall -g
 
 OUTPUT_DIR = bin
 INCLUDE_DIRS = -Iinclude

@@ -4,6 +4,7 @@
 // FIXME: TMP
 #include <iostream>
 using std::cout;
+using std::cerr;
 using std::endl;
 
 #include <memory>
@@ -17,8 +18,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
         {
             std::random_device rd;
             std::mt19937 mt(rd());
-            // FIXME: TIdx
-            std::uniform_int_distribution<int> randmil(0, 1'000'000);
+            std::uniform_int_distribution<typename TMatrix::index_type>
+                randmil(0, 1'000'000);
 
             auto& images = A.getMutableImages();
             for(auto& image : images) {
@@ -55,6 +56,10 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 // can we cache this information while spmving?
 
                 auto size = image->nonZeros();
+                if (size == 0) {
+                    cerr << "ERROR: Matrix image empty!" << endl;
+                    continue;
+                }
                 auto element_index = randmil(mt) % size; 
 
                 // FIXME: rough sketch of code
@@ -63,10 +68,11 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 auto row = trip.row();
 
                 // put in some kind of request
-                auto countLambda = [col_ = col, row_ = row] (std::shared_ptr<typename TMatrix::image_type> _img)
-                    -> TIdx
+                auto countLambda = [col_ = col, row_ = row]
+                    (std::shared_ptr<typename TMatrix::image_type> _img)
+                    -> typename TMatrix::index_type
                 {
-                    TIdx count = 0;
+                    typename TMatrix::index_type count = 0;
                     for (auto& a : *_img) {
                         if (a.col() == col_ || a.row() == row_)
                             count++;
@@ -74,11 +80,13 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                     return count;
                 };
 
-                auto counts = A.template compute<TIdx>(countLambda);
+                auto counts = A.template compute<
+                    typename TMatrix::index_type>(countLambda);
 
                 auto max = 0;
                 auto max_index = -1;
-                for (TIdx i = 0; i < counts.size(); ++i) {
+                for (typename TMatrix::index_type i = 0;
+                        i < counts.size(); ++i) {
                     if (counts[i] > max) {
                         max = counts[i];
                         max_index = i;

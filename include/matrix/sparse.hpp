@@ -149,6 +149,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 {
     public:
         using image_type = Image;
+        using index_type = TIdx;
             
         /** Initialize an (empty) sparse (rows x cols) oatrix */
         DSparseMatrix(TIdx rows, TIdx cols) :
@@ -451,6 +452,7 @@ template <typename TVal, typename TIdx, class Storage>
 class DSparseMatrixImage
 {
     public:
+
         /** Default constructor */
         DSparseMatrixImage() :
             _storage(new Storage())
