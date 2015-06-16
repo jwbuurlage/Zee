@@ -21,6 +21,9 @@ License, or (at your option) any later version.
 #include <algorithm>
 #include <vector>
 #include <random>
+#include <memory>
+#include <map>
+#include <atomic>
 
 #include "matrix/base.hpp"
 #include "matrix/dense.hpp"
@@ -34,11 +37,60 @@ using std::endl;
 using std::max;
 using std::min;
 using std::vector;
+using std::atomic;
+using std::make_pair;
+using std::shared_ptr;
+using std::make_shared;
 
 // Fwd declaring partitioner
 template <class TMatrix>
 class Partitioner;
 
+// FIXME: maybe move this to common header
+template <typename T>
+class counted_set :
+    public std::map<T, T>
+{
+    public:
+        counted_set() : std::map<T, T>() { }
+
+        void raise(T key) {
+            if (this->find(key) != this->end()) {
+                (*this)[key] += 1;
+            } else {
+                this->insert(make_pair(key, 1));
+            }
+        }
+
+        void lower(T key) {
+            if ((*this)[key] > 1) {
+                (*this)[key] -= 1;
+            } else {
+                this->erase(key);
+            }
+        }
+};
+
+template <typename T>
+class atomic_wrapper
+{
+    public:
+        atomic<T> _a;
+
+        atomic_wrapper() : _a(0) { }
+
+
+        atomic_wrapper(const std::atomic<T> &a)
+            : _a(a.load()) {}
+
+        atomic_wrapper(const atomic_wrapper &other)
+            : _a(other._a.load()) {}
+
+        atomic_wrapper &operator=(const atomic_wrapper &other)
+        {
+            _a.store(other._a.load());
+        }
+};
 
 template <typename TVal, typename TIdx = uint32_t,
          class Storage = StorageTriplets<TVal, TIdx>>
@@ -163,7 +215,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             double eps = 1.0;
             for (auto& pimg : _subs)
             {
-                double eps_i = ((double)this->_procs * pimg.nonZeros())
+                double eps_i = ((double)this->_procs * pimg->nonZeros())
                     / this->nonZeros();
                 if (eps_i > eps) {
                     eps = eps_i;
@@ -187,12 +239,58 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             //
             // We then ask the images themselves how much communciation
             // is necessary for spmv communication.
+            //
+            // We preprocess a 'rows' and 'cols' vector in each image.
+            // e.g. for i in rows, send (1, i) to (i % p) proc. 
+            //
+            // proc adds 1 to lambda_i for each O(n / p) i's it owns.
+            //
+            // In the end lambda's are distributed over procs, let them compute
+            // partial sums and send it upwards.
             
-            int V = 0;
-            // obtain lambda_i's.. 
+            atomic<TIdx> V { 0 };
+
+            // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
+            vector<vector<atomic_wrapper<TIdx>>> lambda(this->_procs,
+                    vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1)); 
+            vector<vector<atomic_wrapper<TIdx>>> mu(this->_procs,
+                    vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1)); 
+
+            TIdx s = 0; 
             for (auto& pimg : _subs) {
-                // FIXME first ugly solution
-                //A.compute
+                for (auto key_count : pimg->getRows()) {
+                    auto i = key_count.first;
+
+                    lambda[i % this->_procs][i / this->_procs]._a += 1;
+
+                    //auto val = lambda[i % this->_procs][i / this->_procs];
+                    //val = val + 1;
+                }
+
+                for (auto key_count : pimg->getCols()) {
+                    auto j = key_count.first;
+                    mu[j % this->_procs][j / this->_procs]._a += 1;
+                }
+
+                ++s;
+            }
+
+            // now let each proc compute partial sum
+            
+            // sum over lambdas
+            // FIXME: can also parallelize.. O(n) -> O(n / p)
+            // with extra superstep
+            vector<int> lambda_s(this->_procs, 0);
+            for (TIdx proc = 0; proc < this->_procs; ++proc) {
+                TIdx V_s = 0;
+
+                for (int i = 0; i < lambda[proc].size(); ++i) {
+                    if (lambda[proc][i]._a > 1) {
+                        V_s += lambda[proc][i]._a - 1;
+                    }
+                }
+
+                V += V_s;
             }
 
             return V;
@@ -209,7 +307,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
-                _subs.push_back(Image());
+                _subs.push_back(make_shared<Image>());
 
             // FIXME: only if partitioning is random
             std::random_device rd;
@@ -240,18 +338,18 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     break;
                 }
 
-                _subs[target_proc].pushTriplet(*it);
+                _subs[target_proc]->pushTriplet(*it);
                 _nz++;
             }
         }
 
         /** Obtain a list of images */
-        const vector<Image>& getImages() const 
+        const vector<shared_ptr<Image>>& getImages() const 
         {
             return _subs;
         }
 
-        vector<Image>& getMutableImages()
+        vector<shared_ptr<Image>>& getMutableImages()
         {
             return _subs;
         }
@@ -297,7 +395,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             int p = 0;
             for (auto& image : _subs)
             {
-                for (auto& triplet : image)
+                for (auto& triplet : *image)
                     output[triplet.row() * this->cols() + triplet.col()] = p;
                 ++p;
             }
@@ -315,18 +413,17 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
             for (TIdx i = 0; i < this->rows(); ++i) {
                 cout << "| ";
-                for (TIdx j = 0; j < this->cols(); ++j)
+                for (TIdx j = 0; j < this->cols(); ++j) {
                     if (output[i * this->cols() + j] >= 0) {
                         cout << colorOutput(
                                 colors[output[i * this->cols() + j]]);
                         cout << output[i * this->cols() + j] << ' ';
                         cout << colorOutput(Color::clear);
-                    }
-                    else
+                    } else 
                         cout << "  ";
+                }
                 cout << " |" << endl;
             }
-
             for (TIdx i = 0; i < this->cols() + 2; ++i)
                 cout << "--";
             cout << endl;
@@ -334,9 +431,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
     private:
         TIdx _nz;
-
         Partitioning _partitioning;
-        vector<Image> _subs;
+        vector<shared_ptr<Image>> _subs;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -350,6 +446,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 //   the 'remote code' explicitely knowing about this.
 // - Is this flexible enough, and would this work on e.g. Cartesius?
 // - I want to try and implement a version of this
+
 template <typename TVal, typename TIdx, class Storage>
 class DSparseMatrixImage
 {
@@ -369,12 +466,24 @@ class DSparseMatrixImage
         ~DSparseMatrixImage() = default;
 
         void popElement(TIdx element) {
-            _storage->popElement(element);
+            auto t = _storage->popElement(element);
+            _rowset.lower(t.row());
+            _colset.lower(t.col());
         }
 
         void pushTriplet(Triplet<TVal, TIdx> t) {
             assert(_storage);
+            _rowset.raise(t.row());
+            _colset.raise(t.col());
             _storage->pushTriplet(t);
+        }
+
+        const counted_set<TIdx>& getRows() const {
+            return _rowset;
+        }
+
+        const counted_set<TIdx>& getCols() const {
+            return _colset;
         }
 
         using iterator = typename Storage::it_traits::iterator;
@@ -398,11 +507,11 @@ class DSparseMatrixImage
             return _storage->getElement(i);
         }
 
-
-
     private:
         // Triplets, CRS or CCS
         unique_ptr<Storage> _storage;
+        counted_set<TIdx> _rowset;
+        counted_set<TIdx> _colset;
 };
 
 //-----------------------------------------------------------------------------

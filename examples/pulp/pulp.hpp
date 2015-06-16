@@ -18,7 +18,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
             std::uniform_int_distribution<int> randmil(0, 1'000'000);
 
             auto& images = A.getMutableImages();
-            int image_index = 0;
             for(auto& image : images) {
                 // FIXME we need some kind of 'compute unit' associated with
                 // a unit, for now we simulate this here (using threads?).

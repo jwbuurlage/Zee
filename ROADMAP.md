@@ -1,7 +1,10 @@
 TODAY:
 ------
 
-Partitioners that take a matrix, and (re)partition them.
+[x] Consider Iterative Refinement (IR) methods and how to implement them.
+[ ] Model communication volume and load imbalance.
+    - Do we explicitely construct (hyper)graph?
+    - Possible to cache and (incrementally) update?
 
 
 HIGH PRIORITY:
@@ -15,7 +18,6 @@ dense matrix type.
 
 # Partitioning
 [ ] Need to consider in-place (re)partitioning, reusing images in particular
-[ ] Consider Iterative Refinement (IR) methods and how to implement them.
 
 # Images
 [ ] Need to think of an approach to make an image something more physical.
@@ -51,17 +53,14 @@ design.
 [ ] Write virtual container with iterators for triplets generation
 
 # (Test) Matrices & Testing / Benchmarking
-[ ] Support for e.g. Matrix Market format
-[ ] Benchmarking `<chrono>` 
-[ ] Unit testing, custom solution w/ Python
+[!] Support for e.g. Matrix Market format
+[!] Benchmarking `<chrono>` 
+[!] Output performance graphs, spy-ish distribution visualization
+[!] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
     - Actual tests in  `test/category.c`
     - See unit tests in `munificent/wren`
     - OR use something like Catch, gtest, etc.
-[ ] Model communication volume and load imbalance.
-    - Do we explicitely construct (hyper)graph?
-    - Possible to cache and (incrementally) update?
-[-] Output performance graphs, spy-ish distribution visualization
 
 # Done
 [x] move `using` aliases to Zee namespace

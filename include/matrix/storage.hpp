@@ -203,10 +203,12 @@ class StorageTriplets :
         StorageTriplets() = default;
         ~StorageTriplets() = default;
 
-        void popElement(TIdx element) override
+        Triplet<TVal, TIdx> popElement(TIdx element) override
         {
             // FIXME: does this get copied? want by ref, move?
+            Triplet<TVal, TIdx> trip = _triplets[element];
             _triplets.erase(_triplets.begin() + element);
+            return trip;
         }
 
         void pushTriplet(Triplet<TVal, TIdx> t) override
@@ -254,7 +256,7 @@ class DSparseStorage
         DSparseStorage() = default;
         virtual ~DSparseStorage() = default;
 
-        virtual void popElement(TIdx element) = 0;
+        virtual Triplet<TVal, TIdx> popElement(TIdx element) = 0;
         virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
 
         virtual TIdx size() const = 0;
