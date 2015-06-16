@@ -2,9 +2,13 @@ TODAY:
 ------
 
 [x] Consider Iterative Refinement (IR) methods and how to implement them.
-[ ] Model communication volume and load imbalance.
+[x] Model communication volume and load imbalance.
     - Do we explicitely construct (hyper)graph?
     - Possible to cache and (incrementally) update?
+[!] Support for e.g. Matrix Market format
+[!] Benchmarking `<chrono>` 
+[!] Output performance graphs, spy-ish distribution visualization
+[!] Make Logging mechanism `logging.hpp`
 
 
 HIGH PRIORITY:
@@ -45,7 +49,6 @@ In particular implement for BSP.
 requirements and low computational complexity, also ability to cache?
 
 # General improvements
-[!] Make Logging mechanism `logging.hpp`
 [ ] Generalize spy for large matrices
 [ ] Make operations encapsulated in objects, and only perform them at an
 = operation on a distributed type. (expression templates).  Requires careful
@@ -53,9 +56,6 @@ design.
 [ ] Write virtual container with iterators for triplets generation
 
 # (Test) Matrices & Testing / Benchmarking
-[!] Support for e.g. Matrix Market format
-[!] Benchmarking `<chrono>` 
-[!] Output performance graphs, spy-ish distribution visualization
 [!] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
     - Actual tests in  `test/category.c`

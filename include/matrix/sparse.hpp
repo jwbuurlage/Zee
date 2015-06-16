@@ -47,7 +47,9 @@ using std::make_shared;
 template <class TMatrix>
 class Partitioner;
 
-// FIXME: maybe move this to common header
+///////////////////////////////////////////////////////////////////////////////
+// FIXME: maybe move this section to common header
+
 template <typename T>
 class counted_set :
     public std::map<T, T>
@@ -92,6 +94,8 @@ class atomic_wrapper
             _a.store(other._a.load());
         }
 };
+
+///////////////////////////////////////////////////////////////////////////////
 
 template <typename TVal, typename TIdx = uint32_t,
          class Storage = StorageTriplets<TVal, TIdx>>
