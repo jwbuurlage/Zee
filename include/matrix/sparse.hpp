@@ -40,6 +40,7 @@ using std::vector;
 using std::atomic;
 using std::make_pair;
 using std::shared_ptr;
+using std::unique_ptr;
 using std::make_shared;
 
 // Fwd declaring partitioner
@@ -193,7 +194,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // FIXME: why cant I template this..
         // template<typename T>
         template<typename TReturn>
-        vector<TReturn> compute(std::function<TReturn(image_type&)> func)
+        vector<TReturn> compute(std::function<TReturn(shared_ptr<image_type>)> func)
         {
             auto result = vector<TReturn>(this->_procs);
             // returns a vector of type T with func(Image(I)) called
@@ -312,8 +313,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // FIXME: only if partitioning is random
             std::random_device rd;
             std::mt19937 mt(rd());
-            // FIXME: TIdx
-            std::uniform_int_distribution<int> randproc(0, this->procs() - 1);
+            std::uniform_int_distribution<TIdx> randproc(0, this->procs() - 1);
 
             for (TInputIterator it = begin; it != end; it++)
             {

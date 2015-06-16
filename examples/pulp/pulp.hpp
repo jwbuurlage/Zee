@@ -1,10 +1,13 @@
 #include <zee.hpp>
 #include <random>
 
-//TMP
+// FIXME: TMP
 #include <iostream>
 using std::cout;
 using std::endl;
+
+#include <memory>
+using std::shared_ptr;
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
@@ -51,31 +54,31 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 //
                 // can we cache this information while spmving?
 
-                auto size = image.nonZeros();
+                auto size = image->nonZeros();
                 auto element_index = randmil(mt) % size; 
 
                 // FIXME: rough sketch of code
-                auto trip = image.getElement(element_index);
+                auto trip = image->getElement(element_index);
                 auto col = trip.col();
                 auto row = trip.row();
 
                 // put in some kind of request
-                auto countLambda = [col_ = col, row_ = row] (typename TMatrix::image_type& _img)
-                    -> int
+                auto countLambda = [col_ = col, row_ = row] (std::shared_ptr<typename TMatrix::image_type> _img)
+                    -> TIdx
                 {
-                    auto count = 0; // FIXME: TIdx or auto
-                    for (auto& a : _img) {
+                    TIdx count = 0;
+                    for (auto& a : *_img) {
                         if (a.col() == col_ || a.row() == row_)
                             count++;
                     }
                     return count;
                 };
 
-                auto counts = A.template compute<int>(countLambda);
+                auto counts = A.template compute<TIdx>(countLambda);
 
                 auto max = 0;
                 auto max_index = -1;
-                for (int i = 0; i < counts.size(); ++i) {
+                for (TIdx i = 0; i < counts.size(); ++i) {
                     if (counts[i] > max) {
                         max = counts[i];
                         max_index = i;
@@ -83,8 +86,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 }
 
                 // give element to max_index
-                image.popElement(element_index);
-                images[max_index].pushTriplet(trip);
+                image->popElement(element_index);
+                images[max_index]->pushTriplet(trip);
             }
 
             return A;

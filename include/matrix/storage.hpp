@@ -20,7 +20,6 @@ License, or (at your option) any later version.
 
 namespace Zee {
 
-using std::unique_ptr;
 using std::vector;
 
 template <typename TVal, typename TIdx>
