@@ -1,13 +1,10 @@
 TODAY:
 ------
 
-[x] Consider Iterative Refinement (IR) methods and how to implement them.
-[x] Model communication volume and load imbalance.
-    - Do we explicitely construct (hyper)graph?
-    - Possible to cache and (incrementally) update?
-[!] Support for e.g. Matrix Market format
 [!] Benchmarking `<chrono>` 
 [!] Output performance graphs, spy-ish distribution visualization
+[!] Implement MG
+[!] Think of data output, write python scripts for plotting
 
 
 HIGH PRIORITY:
@@ -72,3 +69,8 @@ iteration in storage (necessary anyway).
 Need to devise an interface that makes partitioning as general as possible.
 [x] Images depend on matrix to be partitioned, can we use type aliases?
 [x] Make Logging mechanism `logging.hpp`
+[x] Support for e.g. Matrix Market format
+[x] Model communication volume and load imbalance.
+    - Do we explicitely construct (hyper)graph?
+    - Possible to cache and (incrementally) update?
+[x] Consider Iterative Refinement (IR) methods and how to implement them.

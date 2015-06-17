@@ -22,12 +22,21 @@ License, or (at your option) any later version.
 
 namespace Zee {
 
-/** Create identity matrix as sparse matrix */
+enum MMInfo : int {
+    coordinate     = 1 << 0,
+    real           = 1 << 1,
+    pattern        = 1 << 2,
+    general        = 1 << 3,
+    symmetric      = 1 << 4,
+    skew_symmetric = 1 << 5
+};
+
+/** Load a sparse matrix from MM */
 template <typename TVal, typename TIdx>
 DSparseMatrix<TVal, TIdx> fromMM(std::string file)
 {
     auto n = 40;
-    auto procs = 4;
+    auto procs = 2;
 
     logInfo("Loading matrix");
 
@@ -42,29 +51,96 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file)
     header_stream >> s >> t;
 
     if (s != "%%MatrixMarket" || t != "matrix") {
-        logError("Not a valid MM file");
+        logError("Not a valid MM file: " + file);
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 
     // now follow a sequence of keywords
+    int info = 0;
+    while (!header_stream.eof()) {
+        std::string keyword;
+        header_stream >> keyword;
 
-    line_stream >> s >> t >> u;
+        if (s == "array" ||
+                s == "complex" ||
+                s == "Hermitian" ||
+                s == "integer") {
+            logError("(as of yet) unsupported keyword: " + s);
+            return DSparseMatrix<TVal, TIdx>(1, 1);
+        }
 
-    if (s != "coordinate" || t != "real" || u != "general") {
-        logError("Currently only real matrices in general coordinate "
-                "representation are supported");
+        if (keyword == "coordinate") {
+            info |= MMInfo::coordinate;
+        } else if (keyword == "real") {
+            info |= MMInfo::real;
+        } else if (keyword == "pattern") {
+            info |= MMInfo::pattern;
+        } else if (keyword == "general") {
+            info |= MMInfo::general;
+        } else if (keyword == "symmetric") {
+            info |= MMInfo::symmetric;
+        } else if (keyword == "skew_symmetric") {
+            info |= MMInfo::skew_symmetric;
+        }
+
+    }
+
+    std::string line;
+    while (!fs.eof()) {
+        std::getline(fs, line);
+        if (line[0] != '%')
+            break;
+    }
+
+    TIdx M = 0;
+    TIdx N = 0;
+    TIdx L = 0;
+
+    std::stringstream line_stream(line);
+
+    // not a comment, if we have yet read N, M, L 
+    line_stream >> M >> N;
+    if (line_stream.eof()) {
+        // error dense matrix
+        logError("dense matrix format not supported");
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 
-    logInfo(s);
+    line_stream >> L;
 
     vector<Triplet<TVal, TIdx>> coefficients;
     coefficients.reserve(n);
 
-    for (TIdx i = 0; i < n; ++i)
-        coefficients.push_back(Triplet<TVal, TIdx>(i, i, 1.0));
+    // read matrix coordinates
+    for (TIdx i = 0; i < L; ++i) {
+        TIdx I, J;
+        TVal AIJ = (TVal)1;
 
-    DSparseMatrix<TVal, TIdx> A(n, n);
+        std::getline(fs, line);
+        std::stringstream line_stream(line);
+        line_stream >> I >> J;
+
+        if (!(info & MMInfo::pattern)) {
+            line_stream >> AIJ;
+        }
+
+        coefficients.push_back(Triplet<TVal, TIdx>(I - 1, J - 1, AIJ));
+    }
+
+    if (info & MMInfo::symmetric) {
+        logInfo("symm");
+        for (auto& trip : coefficients) {
+            coefficients.push_back(Triplet<TVal, TIdx>(
+                trip.col(), trip.row(), trip.value()));
+        }
+    } else if (info & MMInfo::skew_symmetric) {
+        for (auto& trip : coefficients) {
+            coefficients.push_back(Triplet<TVal, TIdx>(
+                trip.col(), trip.row(), -trip.value()));
+        }
+    }
+
+    DSparseMatrix<TVal, TIdx> A(M, N);
     A.setDistributionScheme(Partitioning::cyclic, procs);
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 

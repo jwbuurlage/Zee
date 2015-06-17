@@ -296,6 +296,12 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     }
                 }
 
+                for (int i = 0; i < mu[proc].size(); ++i) {
+                    if (mu[proc][i]._a > 1) {
+                        V_s += mu[proc][i]._a - 1;
+                    }
+                }
+
                 V += V_s;
             }
 
