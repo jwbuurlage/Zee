@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/logging.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -9,22 +9,27 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License (LGPL)
 as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
+
+This file has been adapted from the Arya game engine.
 */
 
 #pragma once
 
 #include <iostream>
 #include <string>
-#include <chrono>
 
 namespace Zee {
 
+using std::cerr;
 using std::cout;
 using std::endl;
 
-void logEntry(string log)
-{
-    cout << log << endl;
+void logError(string s) {
+    cerr << "ERROR: " << s << endl;
+}
+
+void logInfo(string s) {
+    cout << "INFO: " << s << endl;
 }
 
 } // namespace Zee

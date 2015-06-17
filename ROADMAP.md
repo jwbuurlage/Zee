@@ -8,7 +8,6 @@ TODAY:
 [!] Support for e.g. Matrix Market format
 [!] Benchmarking `<chrono>` 
 [!] Output performance graphs, spy-ish distribution visualization
-[!] Make Logging mechanism `logging.hpp`
 
 
 HIGH PRIORITY:
@@ -72,3 +71,4 @@ iteration in storage (necessary anyway).
 [x] Partioners should modify or clone existing distributed structures.
 Need to devise an interface that makes partitioning as general as possible.
 [x] Images depend on matrix to be partitioned, can we use type aliases?
+[x] Make Logging mechanism `logging.hpp`

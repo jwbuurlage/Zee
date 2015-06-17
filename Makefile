@@ -22,6 +22,9 @@ cycpart: examples/cyclic_partitioner.cpp
 part: examples/partitioner.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
+mm: examples/matrix_market.cpp
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
 lint:
 	./script/cpplint.py --filter=-whitespace,-build/c++11 --extensions=hpp include/*.hpp include/*/*.hpp
 

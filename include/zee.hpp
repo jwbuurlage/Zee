@@ -16,3 +16,5 @@ License, or (at your option) any later version.
 #include "matrix/dense.hpp"
 #include "operations.hpp"
 #include "partitioner.hpp"
+#include "matrix_market.hpp"
+#include "logging.hpp"
