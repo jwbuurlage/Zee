@@ -19,7 +19,7 @@ int main()
     //double fill_in = 0.4;
     //DSparseMatrix<double> A = rand(n, m, p, fill_in);
 
-    DSparseMatrix<double, int> A = fromMM<double, int>("data/karate.mtx");
+    DSparseMatrix<double, int> A = fromMM<double, int>("data/matrices/karate.mtx", 1);
 
     cout << A.loadImbalance() << endl;
     cout << A.communicationVolume() << endl;
@@ -27,11 +27,10 @@ int main()
     A.spy();
     //PulpPartitioner<decltype(A)> partitioner;
     MGPartitioner<decltype(A)> partitioner;
-    for (int i = 0; i < 100; ++i) {
-        if (i % 100 == 0) cout << i << endl;
-        partitioner.refine(A);
-    }
-    A.spy();
+    partitioner.initialize(A);
+
+    auto& B = partitioner.partition(A);
+    B.spy();
 
     return 0;
 }

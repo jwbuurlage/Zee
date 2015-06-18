@@ -43,20 +43,21 @@ template <class TMatrix = DSparseMatrix<double>>
 class Partitioner
 {
     public:
-        Partitioner() { };
+        Partitioner() { }
+
         virtual ~Partitioner() { };
 
         // Takes one sparse matrix, partitions and redistributes it.
         // TODO: Is this possible to do "in-place?"
-        // TODO: What about refinement?
         virtual TMatrix& partition(
                 TMatrix& A) = 0;
+
+        virtual void initialize(TMatrix& A) = 0;
 
         /** Set the number of processors
           * @param procs Number of processors _after_ partitioning.
           * */
-        void setProcs(int procs)
-        {
+        void setProcs(int procs) {
             _procs = procs;
         }
 
@@ -89,8 +90,8 @@ class IterativePartitioner : Partitioner<TMatrix>
 };
 
 
-template <class Matrix = DSparseMatrix<double>>
-class CyclicPartitioner : public Partitioner<Matrix>
+template <class TMatrix = DSparseMatrix<double>>
+class CyclicPartitioner : public Partitioner<TMatrix>
 {
     public:
 
@@ -108,28 +109,29 @@ class CyclicPartitioner : public Partitioner<Matrix>
 
         };
 
-        virtual Matrix& partition(
-                Matrix& A) override
+        virtual TMatrix& partition(
+                TMatrix& A) override
         {
-            using Image = typename Matrix::image_type;
+            using TIdx = typename TMatrix::index_type;
+            using TImage = typename TMatrix::image_type;
 
             // repartition A
             A.setDistributionScheme(Partitioning::custom, this->_procs);
 
-            vector<unique_ptr<Image>> new_images;
-            for (int i = 0; i < this->_procs; ++i)
-                new_images.push_back(std::make_unique<Image>());
+            vector<unique_ptr<TImage>> new_images;
+            for (TIdx i = 0; i < this->_procs; ++i)
+                new_images.push_back(std::make_unique<TImage>());
 
             // FIXME, make this inplace for the first proc
             auto& images = A.getMutableImages();
-            int idx = 0;
+            TIdx idx = 0;
             for (auto& image : images)
                 for(auto& trip : *image) {
                     new_images[idx++ % this->_procs]->pushTriplet(trip);
                 }
 
             images.resize(this->_procs);
-            for(int i = 0; i < this->_procs; ++i)
+            for(TIdx i = 0; i < this->_procs; ++i)
                 images[i].reset(new_images[i].release());
 
             return A;

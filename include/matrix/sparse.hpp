@@ -22,13 +22,12 @@ License, or (at your option) any later version.
 #include <vector>
 #include <random>
 #include <memory>
-#include <map>
-#include <atomic>
 
 #include "matrix/base.hpp"
 #include "matrix/dense.hpp"
 #include "matrix/storage.hpp"
 #include "color_output.hpp"
+#include "common.hpp"
 
 namespace Zee {
 
@@ -37,8 +36,6 @@ using std::endl;
 using std::max;
 using std::min;
 using std::vector;
-using std::atomic;
-using std::make_pair;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::make_shared;
@@ -47,55 +44,6 @@ using std::make_shared;
 template <class TMatrix>
 class Partitioner;
 
-///////////////////////////////////////////////////////////////////////////////
-// FIXME: maybe move this section to common header
-
-template <typename T>
-class counted_set :
-    public std::map<T, T>
-{
-    public:
-        counted_set() : std::map<T, T>() { }
-
-        void raise(T key) {
-            if (this->find(key) != this->end()) {
-                (*this)[key] += 1;
-            } else {
-                this->insert(make_pair(key, 1));
-            }
-        }
-
-        void lower(T key) {
-            if ((*this)[key] > 1) {
-                (*this)[key] -= 1;
-            } else {
-                this->erase(key);
-            }
-        }
-};
-
-template <typename T>
-class atomic_wrapper
-{
-    public:
-        atomic<T> _a;
-
-        atomic_wrapper() : _a(0) { }
-
-
-        atomic_wrapper(const std::atomic<T> &a)
-            : _a(a.load()) {}
-
-        atomic_wrapper(const atomic_wrapper &other)
-            : _a(other._a.load()) {}
-
-        atomic_wrapper &operator=(const atomic_wrapper &other)
-        {
-            _a.store(other._a.load());
-        }
-};
-
-///////////////////////////////////////////////////////////////////////////////
 
 template <typename TVal, typename TIdx = uint32_t,
          class Storage = StorageTriplets<TVal, TIdx>>
@@ -104,7 +52,7 @@ class DSparseMatrixImage;
 /** A (matrix) triplet is a tuplet (i, j, a_ij), representing an entry in a
   * matrix. It is particularly useful in the representation of sparse matrices.
   */
-template <typename TVal, typename TIdx = int32_t>
+template <typename TVal, typename TIdx = uint32_t>
 class Triplet 
 {
     public:
@@ -154,6 +102,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
     public:
         using image_type = Image;
         using index_type = TIdx;
+        using value_type = TVal;
             
         /** Initialize an (empty) sparse (rows x cols) oatrix */
         DSparseMatrix(TIdx rows, TIdx cols) :
@@ -262,18 +211,15 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             vector<vector<atomic_wrapper<TIdx>>> mu(this->_procs,
                     vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1)); 
 
+            // FIXME: parallelize, using generalized compute
             TIdx s = 0; 
             for (auto& pimg : _subs) {
-                for (auto key_count : pimg->getRows()) {
+                for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
-
                     lambda[i % this->_procs][i / this->_procs]._a += 1;
-
-                    //auto val = lambda[i % this->_procs][i / this->_procs];
-                    //val = val + 1;
                 }
 
-                for (auto key_count : pimg->getCols()) {
+                for (auto key_count : pimg->getColSet()) {
                     auto j = key_count.first;
                     mu[j % this->_procs][j / this->_procs]._a += 1;
                 }
@@ -284,6 +230,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // now let each proc compute partial sum
             
             // sum over lambdas
+            // FIXME: parallelize, using generalized compute
             // FIXME: can also parallelize.. O(n) -> O(n / p)
             // with extra superstep
             vector<int> lambda_s(this->_procs, 0);
@@ -490,11 +437,11 @@ class DSparseMatrixImage
             _storage->pushTriplet(t);
         }
 
-        const counted_set<TIdx>& getRows() const {
+        const counted_set<TIdx>& getRowSet() const {
             return _rowset;
         }
 
-        const counted_set<TIdx>& getCols() const {
+        const counted_set<TIdx>& getColSet() const {
             return _colset;
         }
 

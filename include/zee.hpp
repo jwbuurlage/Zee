@@ -18,3 +18,4 @@ License, or (at your option) any later version.
 #include "partitioner.hpp"
 #include "matrix_market.hpp"
 #include "logging.hpp"
+#include "common.hpp"

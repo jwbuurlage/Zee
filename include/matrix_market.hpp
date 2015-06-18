@@ -33,10 +33,9 @@ enum MMInfo : int {
 
 /** Load a sparse matrix from MM */
 template <typename TVal, typename TIdx>
-DSparseMatrix<TVal, TIdx> fromMM(std::string file)
+DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
 {
     auto n = 40;
-    auto procs = 2;
 
     logInfo("Loading matrix");
 
