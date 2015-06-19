@@ -52,7 +52,7 @@ class Partitioner
         virtual TMatrix& partition(
                 TMatrix& A) = 0;
 
-        virtual void initialize(TMatrix& A) = 0;
+        virtual void initialize(TMatrix& A) { }
 
         /** Set the number of processors
           * @param procs Number of processors _after_ partitioning.
@@ -89,6 +89,11 @@ class IterativePartitioner : Partitioner<TMatrix>
         virtual TMatrix& refine(TMatrix& A) = 0;
 };
 
+enum CyclicType {
+    row,
+    column,
+    element_wise
+};
 
 template <class TMatrix = DSparseMatrix<double>>
 class CyclicPartitioner : public Partitioner<TMatrix>
@@ -104,6 +109,14 @@ class CyclicPartitioner : public Partitioner<TMatrix>
         {
             this->_procs = procs;
         };
+
+        CyclicPartitioner(int procs, CyclicType type)
+        {
+            this->_procs = procs;
+            this->_type = type;
+        };
+
+
 
         virtual ~CyclicPartitioner() override {
 
@@ -123,11 +136,19 @@ class CyclicPartitioner : public Partitioner<TMatrix>
                 new_images.push_back(std::make_unique<TImage>());
 
             // FIXME, make this inplace for the first proc
+            // FIXME: revert if/for
             auto& images = A.getMutableImages();
-            TIdx idx = 0;
+            TIdx cur = 0;
             for (auto& image : images)
                 for(auto& trip : *image) {
-                    new_images[idx++ % this->_procs]->pushTriplet(trip);
+                    if (_type == CyclicType::row) {
+                        new_images[trip.row() % this->_procs]->pushTriplet(trip);
+                    } else  if (_type == CyclicType::column) {
+                        new_images[trip.col() % this->_procs]->pushTriplet(trip);
+                    } else  if (_type == CyclicType::element_wise) {
+                        new_images[cur++ % this->_procs]->pushTriplet(trip);
+                    }
+
                 }
 
             images.resize(this->_procs);
@@ -136,6 +157,9 @@ class CyclicPartitioner : public Partitioner<TMatrix>
 
             return A;
         }
+
+    private:
+        CyclicType _type = CyclicType::row;
 };
 
 }

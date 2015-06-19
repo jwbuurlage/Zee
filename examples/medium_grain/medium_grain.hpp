@@ -49,8 +49,14 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             using TImage = typename TMatrix::image_type;
 
             // PHASE 1: explicitely construct matrix B
-            // (alternative: do column partitioning implicitely)
-
+            // we allow this to be distributed for generalizing to parallel
+            // for now just put A^c and A^r on differnt procs (and diagonal
+            // elements)
+            // ALTERNATIVE: do column partitioning implicitely),
+            // atm I think this is worse for a number of reasons:
+            // - less flexibility (can easily switch (1D) partitioners for B
+            //   if we explicitely construct it)
+            // - cluttered code here
             vector<unique_ptr<TImage>> new_images;
             for (TIdx i = 0; i < this->_procs; ++i)
                 new_images.push_back(std::make_unique<TImage>());
@@ -64,12 +70,11 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
                     if ((*_bit_in_row)[s][cur++]._a)
                         new_images[0]->pushTriplet(
                                 Zee::Triplet<TVal, TIdx>(
-                                    t.row(), A.cols() + t.col(), t.value()));
+                                    t.col(), A.cols() + t.row(), t.value()));
                     else
                         new_images[1]->pushTriplet(
                                 Zee::Triplet<TVal, TIdx>(
                                     A.rows() + t.row(), t.col(), t.value()));
-
                 }
                 ++s;
             }
@@ -98,7 +103,16 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
 
             // PHASE 2: call column partitioner
             // (we now partition B)
+            //
+            // do we multilevel here?
+            // first just do cyclic
+            //
+            //
+            Zee::CyclicPartitioner<decltype(B)> cycPart(this->_procs,
+                    Zee::CyclicType::column);
+            cycPart.partition(B);
 
+            B.spy();
 
             // convert back partitioning to A
 
