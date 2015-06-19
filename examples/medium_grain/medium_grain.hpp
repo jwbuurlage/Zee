@@ -106,8 +106,6 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             //
             // do we multilevel here?
             // first just do cyclic
-            //
-            //
             Zee::CyclicPartitioner<decltype(B)> cycPart(this->_procs,
                     Zee::CyclicType::column);
             cycPart.partition(B);
@@ -115,6 +113,18 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             B.spy();
 
             // convert back partitioning to A
+            // note that each image in B has a map proc -> col(s)
+            // (distributed by proc) we want to construct from this a
+            // (distributed) map col -> proc of size O(2n / p) per proc
+            // lets just do this explicitely here
+            vector<vector<int>> proc_for_col(this->_procs,
+                    vector<int>(B.rows(), -1));
+            for (auto& sub_matrix : B.getImages()) {
+                for (auto& col_with_count : sub_matrix->getColSet()) {
+
+                }
+            }
+
 
             return A;
         }
