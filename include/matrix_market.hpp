@@ -112,18 +112,18 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
 
     // read matrix coordinates
     for (TIdx i = 0; i < L; ++i) {
-        TIdx I, J;
-        TVal AIJ = (TVal)1;
+        TIdx row, col;
+        TVal value = (TVal)1;
 
         std::getline(fs, line);
         std::stringstream line_stream(line);
-        line_stream >> I >> J;
+        line_stream >> row >> col;
 
         if (!(info & MMInfo::pattern)) {
-            line_stream >> AIJ;
+            line_stream >> value;
         }
 
-        coefficients.push_back(Triplet<TVal, TIdx>(I - 1, J - 1, AIJ));
+        coefficients.push_back(Triplet<TVal, TIdx>(row - 1, col - 1, value));
     }
 
     if (info & MMInfo::symmetric) {
