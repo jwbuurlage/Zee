@@ -103,24 +103,20 @@ class CyclicPartitioner : public Partitioner<TMatrix>
         CyclicPartitioner()
         {
             this->_procs = 1;
-        };
+        }
 
         CyclicPartitioner(int procs)
         {
             this->_procs = procs;
-        };
+        }
 
         CyclicPartitioner(int procs, CyclicType type)
         {
             this->_procs = procs;
             this->_type = type;
-        };
+        }
 
-
-
-        virtual ~CyclicPartitioner() override {
-
-        };
+        virtual ~CyclicPartitioner() override = default;
 
         virtual TMatrix& partition(
                 TMatrix& A) override

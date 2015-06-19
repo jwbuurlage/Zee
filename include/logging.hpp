@@ -18,6 +18,8 @@ This file has been adapted from the Arya game engine.
 #include <iostream>
 #include <string>
 
+#include "color_output.hpp"
+
 namespace Zee {
 
 using std::cerr;
@@ -25,11 +27,13 @@ using std::cout;
 using std::endl;
 
 void logError(string s) {
-    cerr << "ERROR: " << s << endl;
+    cerr << colorOutput(Color::red) << 
+        "ERROR: " << colorOutput(Color::clear) << s << endl;
 }
 
 void logInfo(string s) {
-    cout << "INFO: " << s << endl;
+    cout << colorOutput(Color::yellow) << "INFO: " << 
+        colorOutput(Color::clear) << s << endl;
 }
 
 } // namespace Zee

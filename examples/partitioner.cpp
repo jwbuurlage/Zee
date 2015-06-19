@@ -21,16 +21,20 @@ int main()
 
     DSparseMatrix<double, int> A = fromMM<double, int>("data/matrices/karate.mtx", 1);
 
-    cout << A.loadImbalance() << endl;
-    cout << A.communicationVolume() << endl;
-
     A.spy();
+
+    logError("phony");
+
     //PulpPartitioner<decltype(A)> partitioner;
     MGPartitioner<decltype(A)> partitioner;
     partitioner.initialize(A);
 
     auto& B = partitioner.partition(A);
     B.spy();
+
+    Zee::CyclicPartitioner<decltype(A)> cyclicPartitioner(2, CyclicType::column);
+    auto& C = cyclicPartitioner.partition(A);
+    C.spy();
 
     return 0;
 }

@@ -40,6 +40,8 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
          * using information about the distribution of A */
         virtual TMatrix& partition(TMatrix& A) override
         {
+            // FIXME: many of these operations can be done in place
+
             if (!initialized) {
                 Zee::logError("Trying to partition with uninitialized partitioner");
             }
@@ -47,6 +49,8 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             using TIdx = typename TMatrix::index_type;
             using TVal = typename TMatrix::value_type;
             using TImage = typename TMatrix::image_type;
+
+            auto p = this->_procs;
 
             // PHASE 1: explicitely construct matrix B
             // we allow this to be distributed for generalizing to parallel
@@ -58,12 +62,12 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             //   if we explicitely construct it)
             // - cluttered code here
             vector<unique_ptr<TImage>> new_images;
-            for (TIdx i = 0; i < this->_procs; ++i)
+            for (TIdx i = 0; i < p; ++i)
                 new_images.push_back(std::make_unique<TImage>());
 
             auto& images = A.getMutableImages();
 
-            TIdx s = 0; 
+            TIdx s = 0;
             for (auto& pimg : images) {
                 TIdx cur = 0;
                 for (auto t : *pimg) {
@@ -91,12 +95,11 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
                 }
             }
             
-            
             auto B = TMatrix(2 * A.rows(), 2 * A.cols());
 
             auto& b_images = B.getMutableImages();
-            b_images.resize(this->_procs);
-            for(TIdx i = 0; i < this->_procs; ++i)
+            b_images.resize(p);
+            for(TIdx i = 0; i < p; ++i)
                 b_images[i].reset(new_images[i].release());
 
             B.spy();
@@ -106,7 +109,7 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             //
             // do we multilevel here?
             // first just do cyclic
-            Zee::CyclicPartitioner<decltype(B)> cycPart(this->_procs,
+            Zee::CyclicPartitioner<decltype(B)> cycPart(p,
                     Zee::CyclicType::column);
             cycPart.partition(B);
 
@@ -117,14 +120,40 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             // (distributed by proc) we want to construct from this a
             // (distributed) map col -> proc of size O(2n / p) per proc
             // lets just do this explicitely here
-            vector<vector<int>> proc_for_col(this->_procs,
-                    vector<int>(B.rows(), -1));
+            vector<vector<int>> proc_for_col(p,
+                    vector<int>(B.rows() / p + 1, -1));
+            s = 0;
             for (auto& sub_matrix : B.getImages()) {
                 for (auto& col_with_count : sub_matrix->getColSet()) {
+                    auto col = col_with_count.first;
+                    proc_for_col[col % p][col / p] = s;
+                }
+                ++s;
+            }
 
+            vector<unique_ptr<TImage>> a_new_images;
+            for (TIdx i = 0; i < p; ++i)
+                a_new_images.push_back(std::make_unique<TImage>());
+
+            // now we modify A
+            s = 0;
+            for (auto& pimg : images) {
+                TIdx cur = 0;
+                for (auto triplet : *pimg) {
+                    auto target_proc = 0;
+                    if ((*_bit_in_row)[s][cur++]._a) {
+                        auto p_col = triplet.col() + A.cols();
+                        target_proc = proc_for_col[p_col % p][p_col / p];
+                    } else {
+                        target_proc = proc_for_col[triplet.col() % p][triplet.col() / p];
+                    }
+                    a_new_images[target_proc]->pushTriplet(triplet);
                 }
             }
 
+            images.resize(this->_procs);
+            for(TIdx i = 0; i < this->_procs; ++i)
+                images[i].reset(a_new_images[i].release());
 
             return A;
         }

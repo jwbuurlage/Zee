@@ -17,6 +17,8 @@ License, or (at your option) any later version.
 #include <cstdint>
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <iomanip>
 #include <algorithm>
 #include <vector>
@@ -27,11 +29,13 @@ License, or (at your option) any later version.
 #include "matrix/dense.hpp"
 #include "matrix/storage.hpp"
 #include "color_output.hpp"
+#include "logging.hpp"
 #include "common.hpp"
 
 namespace Zee {
 
 using std::cout;
+using std::ofstream;
 using std::endl;
 using std::max;
 using std::min;
@@ -312,79 +316,35 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _subs;
         }
 
-        void spy()
+        void spy(std::string title = "anonymous")
         {
-            cout << endl << "Sparsity pattern of matrix" << endl;
+            auto filename = "data/spies/" + title + ".spy";
+            // FIXME: if exists add _1
+            ofstream fout(filename);
 
-            cout << " - Rows: " << this->rows() << endl;
-            cout << " - Cols: " << this->cols() << endl;
-            cout << " - Non-zeros: " << this->nonZeros() << endl;
-
-            cout << " - Matrix sparsity: " << 
+            fout << "# Matrix sparsity:      " << 
                 std::fixed << std::setprecision(4) <<
                 this->nonZeros() / static_cast<double>(this->size()) << endl;
 
-            cout << " - Load imbalance: " << 
+            fout << "# Load imbalance:       " << 
                 std::fixed << std::setprecision(4) <<
                 this->loadImbalance() << endl;
 
-            cout << " - Communication Volume: " <<
+            fout << "# Communication Volume: " <<
                 this->communicationVolume() << endl;
+            fout << title << endl;
 
-            TIdx max_size = 100;
-            if (this->rows() > max_size || this->cols() > max_size)
-            {
-                // FIXME: should just down scale large matrix to
-                // 'any point in region'
-                cout << "Can not spy large matrices" << endl;
-                return;
-            }
+            fout << this->rows() << " " << this->cols() << " " << this->nonZeros() << endl;
 
-            if (this->procs() > 4)
-            {
-                cout << "Spy only supports showing <= 4 procs" << endl;
-                return;
-            }
-
-            vector<int> output(this->size(), -1);
-            for (TIdx i = 0; i < this->size(); ++i)
-                output[i] = -1;
-
-            int p = 0;
-            for (auto& image : _subs)
-            {
-                for (auto& triplet : *image)
-                    output[triplet.row() * this->cols() + triplet.col()] = p;
-                ++p;
-            }
-
-            for (TIdx i = 0; i < this->cols() + 2; ++i)
-                cout << "__";
-            cout << endl;
-
-            static const Color colors[4] = {
-                Color::red,
-                Color::blue,
-                Color::yellow,
-                Color::green
-            };
-
-            for (TIdx i = 0; i < this->rows(); ++i) {
-                cout << "| ";
-                for (TIdx j = 0; j < this->cols(); ++j) {
-                    if (output[i * this->cols() + j] >= 0) {
-                        cout << colorOutput(
-                                colors[output[i * this->cols() + j]]);
-                        cout << output[i * this->cols() + j] << ' ';
-                        cout << colorOutput(Color::clear);
-                    } else 
-                        cout << "  ";
+            TIdx s = 0;
+            for (auto& image : _subs) {
+                for (auto& triplet : *image) {
+                    fout << triplet.row() << " " << triplet.col() << " " << s << endl;
                 }
-                cout << " |" << endl;
+                ++s;
             }
-            for (TIdx i = 0; i < this->cols() + 2; ++i)
-                cout << "--";
-            cout << endl;
+
+            logInfo("Spy saved to file: " + filename);
         }
 
     private:

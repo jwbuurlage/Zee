@@ -37,7 +37,7 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
 {
     auto n = 40;
 
-    logInfo("Loading matrix");
+    logInfo("Loading matrix from file: " + file);
 
     std::ifstream fs(file);
 
@@ -127,7 +127,6 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
     }
 
     if (info & MMInfo::symmetric) {
-        logInfo("symm");
         for (auto& trip : coefficients) {
             coefficients.push_back(Triplet<TVal, TIdx>(
                 trip.col(), trip.row(), trip.value()));

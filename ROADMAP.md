@@ -2,9 +2,12 @@ TODAY:
 ------
 
 [!] Benchmarking `<chrono>` 
-[!] Output performance graphs, spy-ish distribution visualization
-[!] Implement MG
+[!] Output performance graphs
+    - need to define filetypes for output data (see e.g. spy)
+    o spy-ish distribution visualization
+    o plots for communication volume
 [!] Think of data output, write python scripts for plotting
+[ ] Implement Multi-Level KL with row-net.
 
 
 HIGH PRIORITY:
@@ -74,3 +77,4 @@ Need to devise an interface that makes partitioning as general as possible.
     - Do we explicitely construct (hyper)graph?
     - Possible to cache and (incrementally) update?
 [x] Consider Iterative Refinement (IR) methods and how to implement them.
+[x] Implement MG
