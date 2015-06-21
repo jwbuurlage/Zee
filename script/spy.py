@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # spy reads a descriptive .spy file and plots this using matplotlib
 # the spy format is as follows (based on MM format):
 # | # information on matrix
@@ -88,4 +90,5 @@ with open(args.spy_file, 'r') as fin:
             i + marker_offset),
             marker_size, marker_size, color=color_of_proc(p)))
 
-    plt.show()
+    #plt.show()
+    plt.savefig(args.spy_file[:-3] + "pdf")

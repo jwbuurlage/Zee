@@ -102,8 +102,6 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             for(TIdx i = 0; i < p; ++i)
                 b_images[i].reset(new_images[i].release());
 
-            B.spy();
-
             // PHASE 2: call column partitioner
             // (we now partition B)
             //
@@ -112,8 +110,6 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             Zee::CyclicPartitioner<decltype(B)> cycPart(p,
                     Zee::CyclicType::column);
             cycPart.partition(B);
-
-            B.spy();
 
             // convert back partitioning to A
             // note that each image in B has a map proc -> col(s)

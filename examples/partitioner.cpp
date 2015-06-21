@@ -21,17 +21,17 @@ int main()
 
     DSparseMatrix<double, int> A = fromMM<double, int>("data/matrices/mesh1e1.mtx", 1);
 
-    A.spy();
+    A.spy("mesh");
 
     //PulpPartitioner<decltype(A)> partitioner;
     MGPartitioner<decltype(A)> partitioner;
     partitioner.initialize(A);
     auto& B = partitioner.partition(A);
-    B.spy();
+    B.spy("mesh_mg");
 
     Zee::CyclicPartitioner<decltype(A)> cyclicPartitioner(8, CyclicType::column);
     auto& C = cyclicPartitioner.partition(A);
-    C.spy();
+    C.spy("mesh_cyclic");
 
     return 0;
 }
