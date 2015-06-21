@@ -318,8 +318,16 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
         void spy(std::string title = "anonymous")
         {
-            auto filename = "data/spies/" + title + ".spy";
-            // FIXME: if exists add _1
+            std::stringstream ss;
+            ss << "data/spies/" << title << ".spy";
+            auto filename = ss.str();
+            int i = 1;
+            while(fileExists(filename)) {
+                ss.str("");
+                ss.clear();
+                ss << "data/spies/" << title << "_" << i++ << ".spy";
+                filename = ss.str();
+            }
             ofstream fout(filename);
 
             fout << "# Matrix sparsity:      " << 

@@ -16,6 +16,8 @@ License, or (at your option) any later version.
 #include <map>
 #include <atomic>
 
+#include <sys/stat.h>
+
 namespace Zee {
 
 using std::make_pair;
@@ -69,5 +71,11 @@ class atomic_wrapper
             _a.store(other._a.load());
         }
 };
+
+bool fileExists(std::string path)
+{
+    struct stat fileInfo;
+    return stat(path.c_str(), &fileInfo) == 0;
+}
 
 } // namespace Zee
