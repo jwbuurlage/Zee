@@ -41,8 +41,8 @@ class Logger {
         Logger();
         ~Logger();
 
-        operator Logger <<(std::string rhs) {
-
+        operator Logger& <<(std::string rhs) {
+            return *this;
         }
 };
 
