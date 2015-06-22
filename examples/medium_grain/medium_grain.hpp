@@ -107,6 +107,8 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             //
             // do we multilevel here?
             // first just do cyclic
+            //
+            // TODO: CHANGE THIS TO ANOTHER PARTITIONER
             Zee::CyclicPartitioner<decltype(B)> cycPart(p,
                     Zee::CyclicType::column);
             cycPart.partition(B);

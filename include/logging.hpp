@@ -36,4 +36,14 @@ void logInfo(string s) {
         colorOutput(Color::clear) << s << endl;
 }
 
+class Logger {
+    public:
+        Logger();
+        ~Logger();
+
+        operator Logger <<(std::string rhs) {
+
+        }
+};
+
 } // namespace Zee

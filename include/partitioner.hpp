@@ -16,24 +16,12 @@ License, or (at your option) any later version.
 #include <memory>
 
 #include "matrix/sparse.hpp"
+#include "common.hpp"
 
 namespace Zee {
 
 using std::unique_ptr;
 using std::vector;
-
-template<class TPart>
-class Factory
-{
-    public:
-        Factory() { };
-        ~Factory() { };
-
-        unique_ptr<TPart> make()
-        {
-            return unique_ptr<TPart>(new TPart());
-        }
-};
 
 /** 
  * This class (re)partitions a sparse matrix. 

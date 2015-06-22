@@ -72,6 +72,22 @@ class atomic_wrapper
         }
 };
 
+//* General factory class */
+template<class TPart>
+class Factory
+{
+    public:
+        Factory() { };
+        ~Factory() { };
+
+        unique_ptr<TPart> make()
+        {
+            return unique_ptr<TPart>(new TPart());
+        }
+};
+
+
+
 bool fileExists(std::string path)
 {
     struct stat fileInfo;
