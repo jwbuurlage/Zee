@@ -1,14 +1,6 @@
 #!/usr/bin/python3
 
-# spy reads a descriptive .spy file and plots this using matplotlib
-# the spy format is as follows (based on MM format):
-# | # information on matrix
-# | # ...
-# | Title
-# | m n z procs
-# | i_1 j_1 p_1
-# | ...
-# | i_z j_z p_z
+# spy reads a descriptive .emtx file and plots this using matplotlib
 #
 # I think it would be cool if we would use full spectrum of colors, and sample uniformly
 # using the tree:
@@ -42,7 +34,7 @@ marker_size = 0.8
 marker_offset = 0.5 * (1 - marker_size)
 
 parser = argparse.ArgumentParser(description=
-    "This script reads one or multiple .spy file, and outputs"
+    "This script reads one or multiple .emtx file(s), and outputs"
     " a spy plot to screen or as a .pdf file")
 
 parser.add_argument('spy_file', type=str, help=
@@ -73,11 +65,11 @@ for i in range(0, 100):
 
 with open(args.spy_file, 'r') as fin:
     line = fin.readline()
-    while (len(line) == 0 or line[0] == '#'):
+    while (len(line) == 0 or line[0] == '%'):
         line = fin.readline()
     title = line
 
-    m, n, nz = map(int, fin.readline().split(' '))
+    m, n, nz, p = map(int, fin.readline().split(' '))
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, aspect='equal')
@@ -87,8 +79,8 @@ with open(args.spy_file, 'r') as fin:
     ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
 
     # set the appropriate limits
-    plt.xlim([1, n])
-    plt.ylim([m, 1])
+    plt.xlim([0, n])
+    plt.ylim([m, 0])
 
     for _ in range(0, nz):
         i, j, p = map(int, fin.readline().split(' '))
@@ -99,4 +91,4 @@ with open(args.spy_file, 'r') as fin:
     if args.show:
         plt.show()
     else:
-        plt.savefig(args.spy_file[:-3] + args.filetype)
+        plt.savefig(args.spy_file[:-4] + args.filetype)

@@ -334,30 +334,33 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         void spy(std::string title = "anonymous")
         {
             std::stringstream ss;
-            ss << "data/spies/" << title << ".spy";
+            ss << "data/spies/" << title << ".emtx";
             auto filename = ss.str();
             int i = 1;
             while(fileExists(filename)) {
                 ss.str("");
                 ss.clear();
-                ss << "data/spies/" << title << "_" << i++ << ".spy";
+                ss << "data/spies/" << title << "_" << i++ << ".emtx";
                 filename = ss.str();
             }
             ofstream fout(filename);
 
-            fout << "# Matrix sparsity:      " << 
+            fout << "%%Extended-MatrixMarket distributed-matrix coordinate pattern general" << endl;
+
+            fout << "% Matrix sparsity:      " << 
                 std::fixed << std::setprecision(4) <<
                 this->nonZeros() / static_cast<double>(this->size()) << endl;
 
-            fout << "# Load imbalance:       " << 
+            fout << "% Load imbalance:       " << 
                 std::fixed << std::setprecision(4) <<
                 this->loadImbalance() << endl;
 
-            fout << "# Communication Volume: " <<
+            fout << "% Communication Volume: " <<
                 this->communicationVolume() << endl;
             fout << title << endl;
 
-            fout << this->rows() << " " << this->cols() << " " << this->nonZeros() << endl;
+            fout << this->rows() << " " << this->cols() << " " << this->nonZeros() <<
+                " " << this->procs() << endl;
 
             TIdx s = 0;
             for (auto& image : _subs) {

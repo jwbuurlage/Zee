@@ -150,8 +150,10 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 //            }
             // seems to be..
 
+            vector<typename std::list<TIdx>::iterator> listElements(M.cols());
             for (TIdx j = 0; j < M.cols(); ++j) {
                 buckets[vertexGain[j] + max_size].push_back(j);
+                listElements[j] = --buckets[vertexGain[j] + max_size].end();
             }
             
 //            auto bucket_idx  = -max_size;
@@ -164,7 +166,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 //            }
 
             // choose the base cell (e.g. tail of highest non-trivial list)
-            for (auto iter = 0; iter < 1; ++iter) {
+            for (auto iter = 0; iter < 4; ++iter) {
                 auto base_cell = -1;
                 for (auto bucket = buckets.size() - 1; bucket >= 0; --bucket) {
                     if (!buckets[bucket].empty()) {
@@ -186,6 +188,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                         columnInA[base_cell] ? -1 : 1;
                     
                     // then for each element in row we need to update
+                    // need ptrs
+                    // got 'em
                 }
 
                 // we flip base_cell
