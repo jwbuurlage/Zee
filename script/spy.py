@@ -48,6 +48,12 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('spy_file', type=str, help=
     "The .spy file to use as input")
 
+parser.add_argument('--show', action='store_true',
+        help="show output on screen instead of to file")
+
+parser.add_argument('--filetype', type=str, default='pdf',
+        help="(also) show output on screen")
+
 args = parser.parse_args()
 
 def color_of_proc(proc):
@@ -90,5 +96,7 @@ with open(args.spy_file, 'r') as fin:
             i + marker_offset),
             marker_size, marker_size, color=color_of_proc(p)))
 
-    #plt.show()
-    plt.savefig(args.spy_file[:-3] + "pdf")
+    if args.show:
+        plt.show()
+    else:
+        plt.savefig(args.spy_file[:-3] + args.filetype)

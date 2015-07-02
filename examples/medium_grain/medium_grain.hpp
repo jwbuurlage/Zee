@@ -1,5 +1,5 @@
 /* MG partitioner splits A into a 'column' and 'row' part, and then applies
- * a row partitioning. The identity blocks are implied, and use for computing
+ * a row partitioning. The identity blocks are implied, and used for computing
  * communication volume.
  * 
  * A = A_r + A_c
@@ -20,6 +20,8 @@ using std::make_unique;
 
 #include <atomic>
 using std::atomic;
+
+#include "../multi_level/multi_level.hpp"
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MGPartitioner : Zee::Partitioner<TMatrix>
@@ -43,7 +45,7 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             // FIXME: many of these operations can be done in place
 
             if (!initialized) {
-                Zee::logError("Trying to partition with uninitialized partitioner");
+                ZeeInfoLog << "Trying to partition with uninitialized partitioner" << endLog;
             }
 
             using TIdx = typename TMatrix::index_type;
@@ -97,10 +99,7 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             
             auto B = TMatrix(2 * A.rows(), 2 * A.cols());
 
-            auto& b_images = B.getMutableImages();
-            b_images.resize(p);
-            for(TIdx i = 0; i < p; ++i)
-                b_images[i].reset(new_images[i].release());
+            B.resetImages(new_images);
 
             // PHASE 2: call column partitioner
             // (we now partition B)
@@ -112,6 +111,10 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             Zee::CyclicPartitioner<decltype(B)> cycPart(p,
                     Zee::CyclicType::column);
             cycPart.partition(B);
+
+            MultiLevelOneD<decltype(B)> mlPart{};
+            mlPart.initialize(B);
+            mlPart.partition(B);
 
             // convert back partitioning to A
             // note that each image in B has a map proc -> col(s)
@@ -149,9 +152,7 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
                 }
             }
 
-            images.resize(this->_procs);
-            for(TIdx i = 0; i < this->_procs; ++i)
-                images[i].reset(a_new_images[i].release());
+            A.resetImages(a_new_images);
 
             return A;
         }

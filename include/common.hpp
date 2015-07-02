@@ -15,6 +15,7 @@ License, or (at your option) any later version.
 
 #include <map>
 #include <atomic>
+#include <memory>
 
 #include <sys/stat.h>
 
@@ -22,6 +23,7 @@ namespace Zee {
 
 using std::make_pair;
 using std::atomic;
+using std::unique_ptr;
 
 template <typename T>
 class counted_set :

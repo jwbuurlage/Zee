@@ -15,10 +15,17 @@ This file has been adapted from the Arya game engine.
 
 #pragma once
 
+#include <sstream>
 #include <iostream>
 #include <string>
 
 #include "color_output.hpp"
+
+#define ZeeInfoLog (Zee::Logger() << Zee::LogType::info)
+#define ZeeWarningLog (Zee::Logger() << Zee::LogType::warning)
+#define ZeeErrorLog (Zee::Logger() << Zee::LogType::error)
+
+#define endLog Zee::Logger::end()
 
 namespace Zee {
 
@@ -26,24 +33,55 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-void logError(string s) {
-    cerr << colorOutput(Color::red) << 
-        "ERROR: " << colorOutput(Color::clear) << s << endl;
-}
-
-void logInfo(string s) {
-    cout << colorOutput(Color::yellow) << "INFO: " << 
-        colorOutput(Color::clear) << s << endl;
-}
+enum LogType {
+    info,
+    warning,
+    error
+};
 
 class Logger {
-    public:
-        Logger();
-        ~Logger();
 
-        operator Logger& <<(std::string rhs) {
+    public:
+        struct end { };
+
+        Logger& operator <<(LogType t) {
+            _t = t;
             return *this;
         }
+
+        template <typename T>
+        Logger& operator <<(T rhs) {
+            ss << rhs;
+            return *this;
+        }
+
+        void operator <<(end) {
+            // output ss
+            switch (_t) {
+                case LogType::info:
+                    cout << colorOutput(Color::yellow) << "INFO: ";
+                    break;
+
+                case LogType::warning:
+                    cout << colorOutput(Color::blue) << "WARNING: ";
+                    break;
+
+                case LogType::error:
+                    cout << colorOutput(Color::red) << "ERROR: ";
+                    break;
+
+                default:
+                    break;
+            }
+
+            cout << colorOutput(Color::clear);
+            cout << ss.str() << endl;
+        }
+
+    private:
+        std::stringstream ss;
+        LogType _t = LogType::info;
 };
+
 
 } // namespace Zee

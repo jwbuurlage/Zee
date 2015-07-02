@@ -305,6 +305,21 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
         }
 
+        void resetImages(vector<unique_ptr<Image>>& new_images)
+        {
+            _subs.resize(new_images.size());
+            for(TIdx i = 0; i < new_images.size(); ++i)
+                _subs[i].reset(new_images[i].release());
+
+            // update _nz
+            _nz = 0;
+            for (auto& pimg : _subs) {
+                _nz += pimg->nonZeros();
+            }
+        }
+
+
+
         /** Obtain a list of images */
         const vector<shared_ptr<Image>>& getImages() const 
         {
@@ -352,7 +367,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 ++s;
             }
 
-            logInfo("Spy saved to file: " + filename);
+            ZeeInfoLog << "Spy saved to file: " << filename << Logger::end();
         }
 
     private:

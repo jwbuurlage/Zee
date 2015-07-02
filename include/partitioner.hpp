@@ -134,10 +134,8 @@ class CyclicPartitioner : public Partitioner<TMatrix>
                     }
 
                 }
-
-            images.resize(this->_procs);
-            for(TIdx i = 0; i < this->_procs; ++i)
-                images[i].reset(new_images[i].release());
+            
+            A.resetImages(new_images);
 
             return A;
         }

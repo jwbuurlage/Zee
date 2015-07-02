@@ -33,11 +33,11 @@ enum MMInfo : int {
 
 /** Load a sparse matrix from MM */
 template <typename TVal, typename TIdx>
-DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
+DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
 {
     auto n = 40;
 
-    logInfo("Loading matrix from file: " + file);
+    ZeeInfoLog << "Loading matrix from file: " << file << Logger::end();
 
     std::ifstream fs(file);
 
@@ -50,7 +50,7 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
     header_stream >> s >> t;
 
     if (s != "%%MatrixMarket" || t != "matrix") {
-        logError("Not a valid MM file: " + file);
+        ZeeErrorLog << "Not a valid MM file: " << file << Logger::end();
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 
@@ -64,7 +64,7 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
                 s == "complex" ||
                 s == "Hermitian" ||
                 s == "integer") {
-            logError("(as of yet) unsupported keyword: " + s);
+            ZeeErrorLog << "Unsupported keyword encountered: " << s << Logger::end();
             return DSparseMatrix<TVal, TIdx>(1, 1);
         }
 
@@ -101,7 +101,7 @@ DSparseMatrix<TVal, TIdx> fromMM(std::string file, TIdx procs)
     line_stream >> M >> N;
     if (line_stream.eof()) {
         // error dense matrix
-        logError("dense matrix format not supported");
+        ZeeErrorLog << "Dense matrix format not supported" << Logger::end();
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 
