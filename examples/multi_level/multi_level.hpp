@@ -54,7 +54,6 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             }
 
             using TIdx = typename TMatrix::index_type;
-            using TVal = typename TMatrix::value_type;
             using TImage = typename TMatrix::image_type;
 
             auto p = 2;
