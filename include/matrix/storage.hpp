@@ -239,12 +239,15 @@ class StorageTriplets :
 
 // TODO: implement
 // Note: think about 'frame' table, store complete triplet every 1000 or so
-// elements allowing to binary search for elements
+// elements allowing to binary search for elements (amortized constant time?)
 
 //-----------------------------------------------------------------------------
 // Base Storage
 //-----------------------------------------------------------------------------
 
+/** A pure abstract base class which serves as a storage concept.
+ * Allows iteration of the underlying matrix elements. Is constructed by feeding
+ * triplets. */
 template <typename TVal, typename TIdx, class ItTraits>
 class DSparseStorage
 {
@@ -255,15 +258,21 @@ class DSparseStorage
         DSparseStorage() = default;
         virtual ~DSparseStorage() = default;
 
+        /** Removes the triplet at index element and returns it. */
         virtual Triplet<TVal, TIdx> popElement(TIdx element) = 0;
+
+        /** Adds the triplet t to the storage */
         virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
 
+        /** The number of matrix elements stored. */
         virtual TIdx size() const = 0;
 
-        // get the i-th element as triplet
+        /** Obtain the i-th element as a triplet.
+         *  @note Complexity depends on implementation.
+         *  @return triplet at index i */
         virtual Triplet<TVal, TIdx> getElement(TIdx i) const = 0;
 
-        /** We define iterators and constant iterators for getting out
+        /** We define iterators and constant iterators for iterating over
           * triplets */
         virtual iterator begin() = 0;
         virtual iterator end() = 0;
