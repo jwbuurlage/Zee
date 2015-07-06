@@ -53,7 +53,7 @@ template <typename TVal, typename TIdx = uint32_t,
          class Storage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
 
-/** A (matrix) triplet is a tuplet (i, j, a_ij), representing an entry in a
+/** A (matrix) triplet is a tuplet \f$(i, j, a_{ij})\f$, representing an entry in a
   * matrix. It is particularly useful in the representation of sparse matrices.
   */
 template <typename TVal, typename TIdx = uint32_t>
@@ -149,13 +149,12 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // this is kind of like a reduce in mapreduce, implementing this such that
         // we can get some sample code going
         // perhaps think about pregel-like approach as well
-        // FIXME: why cant I template this..
-        // template<typename T>
         template<typename TReturn>
         vector<TReturn> compute(std::function<TReturn(shared_ptr<image_type>)> func)
         {
             auto result = vector<TReturn>(this->_procs);
             // returns a vector of type T with func(Image(I)) called
+            // FIXME: parallelize
             int p = 0;
             for (auto& image : _subs) {
                 result[p++] = func(image);
@@ -522,8 +521,6 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
 
     return A;
 }
-
-
 
 //-----------------------------------------------------------------------------
 
