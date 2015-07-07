@@ -21,6 +21,10 @@ template <class TMatrix = Zee::DSparseMatrix<double>>
 class MultiLevelOneD : Zee::Partitioner<TMatrix>
 {
     public:
+        using TIdx = typename TMatrix::index_type;
+        using TImage = typename TMatrix::image_type;
+
+
         MultiLevelOneD() {
             this->_procs = 2;
             this->_procs_in = 1;
@@ -29,181 +33,248 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         virtual void initialize(TMatrix& A) override
         {
             initialized = true;
-
-            // do we coarsen graph here?
-            // lets just explicitely use KL, maybe look up paper that specializes
-            // it to HGs
-            //
-            // We use the row-net model since we partition by column
-            // H_0 = ( V = columns, E = rows )
-            // We need to recursively find columns that match and merge them
-            //
-            // is KL used for partitioning or for coarsening?
-            //
-            // ignore coarsening
+            initializeHypergraph(A);
         }
 
-        /** For MG refine is actually a repartitioning into A^c + A^r
-         * using information about the distribution of A */
-        virtual TMatrix& partition(TMatrix& M) override
+        void initializeHypergraph(TMatrix& M)
         {
-            ZeeInfoLog << "Partitioning using FM heuristic" << endLog;
+            // We use the row-net model since we partition by column
+            // H_0 = ( V = columns, E = rows )
+            // The colNets are used in particular to update 'dirty pins'
 
-            if (!initialized) {
-                ZeeInfoLog << "Trying to partition with uninitialized partitioner" << endLog;
-            }
-
-            using TIdx = typename TMatrix::index_type;
-            using TImage = typename TMatrix::image_type;
-
-            auto p = 2;
-
-            // perform KL on HG
-            // Start with random partitioning of HG
-            //
-            // lets obtain the row-nets centrally for now
-            // and also the rows for each column (identical to col-nets)
-            vector<vector<TIdx>> rowNets(M.rows());
-            vector<vector<TIdx>> colNets(M.cols());
+            // The row nets and column nets are initialized
+            // Can be used for coarsening as well as partitioning
+            rowNets.resize(M.rows());
+            colNets.resize(M.cols());
             for (auto& pimg : M.getImages()) {
                 for (auto& triplet : *pimg) {
                     rowNets[triplet.row()].push_back(triplet.col());
                     colNets[triplet.col()].push_back(triplet.row());
                 }
             }
+        }
 
-
-            // our heuristic implementation revolves around a bucketlist for the range
-            // ( -m, ..., +m )
-            // where m = max_i n_i
-            //
-            // We partition (V = ) C = A cup B
-            // therefore we call the matrix M
-
-            // first start with a random distribution
-            // this vector says for each column if it is in "A"
-            vector<TIdx> columnInA(M.cols(), 0);
+        vector<bool> randomColumnDistribution(TIdx cols)
+        {
+            // We uniformly distribute the pins over A and B
+            vector<bool> columnInA(cols, 0);
 
             std::random_device rd;
             std::mt19937 mt(rd());
             std::uniform_int_distribution<TIdx> randbool(0, 1);
 
-            for (auto& col : columnInA) {
-                col = randbool(mt);
+            for (TIdx col = 0; col < columnInA.size(); ++col) {
+                columnInA[col] = (bool)randbool(mt);
             }
 
-            // store the degree of each vertex
-            vector<TIdx> columnDegrees(M.cols());
+            return columnInA;
+        }
 
-            // store the distribution for each net 
-            // rND[row] = #elements in A
-            vector<TIdx> rowNetDistribution(rowNets.size());
+        vector<TIdx> obtainRowCountA(const vector<bool>& columnInA)
+        {
+            vector<TIdx> rowCountA(rowNets.size());
             auto r_idx = 0;
             for (auto& rowNet : rowNets) {
                 for (auto& pin : rowNet) {
                     if (columnInA[pin] == 1) {
-                        rowNetDistribution[r_idx]++;
+                        rowCountA[r_idx]++;
                     }
-                    columnDegrees[pin]++;
                 }
                 r_idx++;
             }
+            return rowCountA;
+        }
 
-            // max_size is the maximum degree of a column
-            auto max_size = *std::max_element(columnDegrees.begin(),
-                    columnDegrees.end());
+        TIdx gainForPinInRow(bool columnInA, TIdx count, TIdx size)
+        {
+            if ((columnInA && count == 1)
+                    || (!columnInA && count == size - 1)) {
+                return 1;
+            } else if (count == 0 || count == size) {
+                return -1;
+            }
+            return 0;
+        }
 
-            // now lets make the bucketed lists.
+        /** For MG refine is actually a repartitioning into A^c + A^r
+         * using information about the distribution of A */
+        // We partition (V = ) C = A cup B
+        // therefore we call the matrix M
+        virtual TMatrix& partition(TMatrix& M) override
+        {
+            ZeeInfoLog << "Partitioning using FM heuristic" << endLog;
+
+            // We check if everything has been initialized properly
+            if (!initialized) {
+                ZeeErrorLog << "Trying to partition with uninitialized partitioner." << endLog;
+                return M;
+            }
+
+            // We bipartition
+            auto p = 2;
+
+            // The allowed load imbalance
+            double epsilon = 0.03;
+            TIdx allowedSize = (TIdx)(0.5 * M.cols() * (1 + epsilon));
+
+            // First start with a random distribution
+            // This vector says for each column if it is in "A"
+            vector<bool> columnInA = randomColumnDistribution(M.cols());
+
+            // We need to make sure the distribution satisfies the imbalance
+            // otherwise we flip the first `x` until it does
+            TIdx countInA = 0;
+            for (auto inA : columnInA)
+                if (inA)
+                    countInA++;
+
+            ZeeInfoLog << "|A| = " << countInA << endLog;
+            ZeeInfoLog << "|B| = " << M.cols() - countInA << endLog;
+            ZeeInfoLog << "allowed |A, B| = " << allowedSize << endLog;
+
+            // Store the distribution for each net 
+            // rowCountA[row] yields the #elements in A in row
+            vector<TIdx> rowCountA = obtainRowCountA(columnInA);
+
+            // `max_size` is the maximum degree of a column
+            // This is equal to the maximum size of a colNet
+            auto max_size = std::accumulate(colNets.begin(),
+                    colNets.end(), (TIdx)0, 
+                    [] (TIdx rhs, const vector<TIdx>& elem) {
+                        return (rhs > elem.size()) ? rhs : elem.size();
+                    });
+
+            // Next we make the bucketed lists.
             // We need a vector of size 2*m + 1 containing lists
             vector<list<TIdx>> buckets(2 * max_size + 1);
+            vector<TIdx> vertexGains(M.cols());
 
-            // next we loop over all vertices, obtaining vertex gain
+            // Next we loop over all vertices, obtaining vertex gain
             // if it is the *only* element of {A, B} in a net, a gain of 1
             // if the net is and stays mixed then a gain of 0
             // if the net is pure then flipping it is a gain of -1
-            vector<TIdx> vertexGain(M.cols());
-            for (TIdx i = 0; i < M.cols(); ++i) {
-                for (auto& pin : rowNets[i]) {
-                    if (columnInA[pin] && rowNetDistribution[i] == 1)
-                        vertexGain[pin] += 1;
-                    else if (!columnInA[pin] &&
-                            rowNetDistribution[i] == rowNets[i].size() - 1)
-                        vertexGain[pin] += 1;
-                    else if (rowNetDistribution[i] == 0 ||
-                            rowNetDistribution[i] == rowNets[i].size())
-                        vertexGain[pin] -= 1;
+            for (TIdx row = 0; row < M.rows(); ++row) {
+                for (auto& pin : rowNets[row]) {
+                    vertexGains[pin] += gainForPinInRow(columnInA[pin],
+                            rowCountA[row],
+                            rowNets[row].size());
                 }
             }
 
-            // let's see if this vertex gain shit is correct
-//            for (auto& rowNet : rowNets) {
-//                cout << "[ ";
-//                for (auto& col : rowNet) {
-//                    cout << "(" << col << ", " << columnInA[col] << "), ";
-//                }
-//                cout << "]" << endl;
-//            }
-//
-//            for (TIdx j = 0; j < M.cols(); ++j) {
-//                cout << j << ", " << vertexGain[j] << endl;
-//            }
-            // seems to be..
-
+            // We initialize the buckets, and store the list elements for each
+            // column in M
             vector<typename std::list<TIdx>::iterator> listElements(M.cols());
             for (TIdx j = 0; j < M.cols(); ++j) {
-                buckets[vertexGain[j] + max_size].push_back(j);
-                listElements[j] = --buckets[vertexGain[j] + max_size].end();
+                buckets[vertexGains[j] + max_size].push_back(j);
+                listElements[j] = --buckets[vertexGains[j] + max_size].end();
             }
             
-//            auto bucket_idx  = -max_size;
-//            for (auto& bucket : buckets) {
-//                cout << bucket_idx++ << " = [ ";
-//                for (auto& col : bucket) {
-//                    cout << col << ", ";
-//                }
-//                cout << "]" << endl;
-//            }
+            // Store the pins that become 'dirty' after a flip
+            set<std::pair<TIdx, TIdx>> verticesToUpdate;
 
-            // choose the base cell (e.g. tail of highest non-trivial list)
-            for (auto iter = 0; iter < 4; ++iter) {
-                auto base_cell = -1;
-                for (auto bucket = buckets.size() - 1; bucket >= 0; --bucket) {
+            // We need to choose A or B at random if they tie for an elements
+            // with largest gain
+            std::random_device rd;
+            std::mt19937 mt(rd());
+            std::uniform_int_distribution<TIdx> randbool(0, 1);
+
+            // We copy the bool vector to store the best split
+            vector<bool> bestSplit = columnInA;
+
+            // We maintain the current and maximum net gain
+            TIdx netGain = 0;
+            TIdx maxNetGain = 0;
+
+            // Choose the base cell (e.g. tail of highest non-trivial list)
+            for (auto iter = 0; iter < 100; ++iter) {
+                TIdx baseCell = -1;
+                // FIXME can we do this in constant time? the loop is possibly
+                // unnecessary.. maybe linked list as well
+                for (TIdx bucket = buckets.size() - 1; bucket >= 0; --bucket) {
                     if (!buckets[bucket].empty()) {
-                        base_cell = buckets[bucket].back();
+                        // FIXME: this is why two buckets for A and B both
+                        baseCell = buckets[bucket].back();
+                        netGain += bucket - max_size;
                         break;
                     }
                 }
 
-                // terminate if no more cells are found
-                if (base_cell == -1)
-                    break;
+                // We found the baseCell
+                // At the start of each iteration we need to clear the dirty vertices
+                // i.e. the pins for which the vertexGains is not correct anymore
+                verticesToUpdate.clear();
 
-                // for each net belonging to base_cell ..
-                // and update other cells' gain
-                for (auto& row : colNets[base_cell]) {
-                    // need to update these rows
-                    // first update distribution
-                    rowNetDistribution[row] +=
-                        columnInA[base_cell] ? -1 : 1;
-                    
-                    // then for each element in row we need to update
-                    // need ptrs
-                    // got 'em
+                for (auto row : colNets[baseCell]) {
+                    for (auto pin : rowNets[row]) {
+                        verticesToUpdate.insert(std::make_pair(pin, vertexGains[pin]));
+                    }
                 }
 
-                // we flip base_cell
-                columnInA[base_cell] = !columnInA[base_cell];
+ 
+                // If rowCountA changes 'type', then we need to update pins
+                // The types are:   
+                // (1) 'almost' A or B (1 or size - 1)
+                // (2) 'completely' A or B (0 or size)
+                // (3) mixed
+                // Note: if we are now at (2), we *must* have come from (1)
+                // but if we got to (1) we *might* have gotten from (2)
+                //
+                // first we nullify the effects of the effected nets (if necessary)
+                for (auto row : colNets[baseCell]) {
+                    // case (1)
+                    if ((columnInA[baseCell] && rowCountA[row] == 1)
+                            || (!columnInA[baseCell] && rowCountA[row] == rowNets[row].size() - 1)) {
+                        // from positive gain to neutral gain
+                        vertexGains[baseCell] -= 1;
+                    }
+                    // case (2)
+                    else if ((columnInA[baseCell] && rowCountA[row] == rowNets[row].size())
+                            || (columnInA[baseCell] && rowCountA[row] == 0)) {
+                        // from negative gain, to neutral gain
+                        for (auto pin : rowNets[row]) {
+                            vertexGains[pin] += 1;
+                        }
+                    }
+                    rowCountA[row] += columnInA[baseCell] ? -1 : 1;
+                }
+
+                // We flip the base cell
+                columnInA[baseCell] = !columnInA[baseCell];
+
+                // We fix the gains in the affected rows
+                for (auto row : colNets[baseCell]) {
+                    // FIXME can probably be made more efficient, similar to nullifying step
+                    for (auto pin : rowNets[row]) {
+                        vertexGains[pin] += gainForPinInRow(columnInA[pin],
+                                rowCountA[row],
+                                rowNets[row].size());
+                    }
+                }
+
+                for (auto pPinGain : verticesToUpdate) {
+                    // remove and reinsert
+                    auto originalBucket = pPinGain.second + max_size;
+                    auto newBucket = vertexGains[pPinGain.first] + max_size;
+                    buckets[originalBucket].erase(listElements[pPinGain.first]);
+                    buckets[newBucket].push_back(pPinGain.first);
+                    listElements[pPinGain.first] = --buckets[newBucket].end();
+                }
+
+                // We update max gain, and copy columnInA again if it is better
+                if (netGain > maxNetGain) {
+                    maxNetGain = netGain;
+                    bestSplit = columnInA;
+                }
             }
 
-
-            // obtain partitioning on A from HG
+            // Obtain partitioning on A from Hg partitioning
             vector<unique_ptr<TImage>> new_images;
             for (TIdx i = 0; i < p; ++i)
                 new_images.push_back(std::make_unique<TImage>());
             
             for (auto& pimg : M.getImages()) {
                 for (auto& triplet : *pimg) {
-                    new_images[columnInA[triplet.col()]]->pushTriplet(triplet);
+                    new_images[(TIdx)(bestSplit[triplet.col()])]->pushTriplet(triplet);
                 }
             }
 
@@ -214,9 +285,18 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
         void coarsen(TMatrix& A)
         {
+            ZeeWarningLog << "Multi-level coarsening not implemented yet." << endLog;
             // coarsen graph A and store HG
+            //
+            // We need to recursively find columns that *match* and merge them
+            //
+            // is KL used for partitioning or for coarsening?
         }
 
     private:
         bool initialized = false;
+
+        // The nets corresponding to the hypergraph model(s)
+        vector<vector<TIdx>> rowNets;
+        vector<vector<TIdx>> colNets;
 };

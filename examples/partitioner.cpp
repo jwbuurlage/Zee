@@ -48,6 +48,5 @@ int main()
 
     ZeeInfoLog << "ML: \t" << D.communicationVolume() << endLog;
 
-
     return 0;
 }
