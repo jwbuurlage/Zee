@@ -107,11 +107,6 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
             // do we multilevel here?
             // first just do cyclic
             //
-            // TODO: CHANGE THIS TO ANOTHER PARTITIONER
-            Zee::CyclicPartitioner<decltype(B)> cycPart(p,
-                    Zee::CyclicType::column);
-            cycPart.partition(B);
-
             MultiLevelOneD<decltype(B)> mlPart{};
             mlPart.initialize(B);
             mlPart.partition(B);
@@ -143,7 +138,7 @@ class MGPartitioner : Zee::Partitioner<TMatrix>
                 for (auto triplet : *pimg) {
                     auto target_proc = 0;
                     if ((*_bit_in_row)[s][cur++]._a) {
-                        auto p_col = triplet.col() + A.cols();
+                        auto p_col = triplet.row() + A.cols();
                         target_proc = proc_for_col[p_col % p][p_col / p];
                     } else {
                         target_proc = proc_for_col[triplet.col() % p][triplet.col() / p];
