@@ -76,7 +76,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             auto r_idx = 0;
             for (auto& rowNet : rowNets) {
                 for (auto& pin : rowNet) {
-                    if (columnInA[pin] == 1) {
+                    if (columnInA[pin] == true) {
                         rowCountA[r_idx]++;
                     }
                 }
@@ -87,7 +87,9 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
         TIdx gainForPinInRow(bool columnInA, TIdx count, TIdx size)
         {
-            if ((columnInA && count == 1)
+            if (size == 1) {
+                return 0;
+            } else if ((columnInA && count == 1)
                     || (!columnInA && count == size - 1)) {
                 return 1;
             } else if (count == 0 || count == size) {
@@ -102,6 +104,9 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         // therefore we call the matrix M
         virtual TMatrix& partition(TMatrix& M) override
         {
+            // TODO:
+            // - Row nets of size 1 can be removed
+
             ZeeInfoLog << "Partitioning using FM heuristic" << endLog;
 
             // We check if everything has been initialized properly
@@ -113,24 +118,38 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             // We bipartition
             auto p = 2;
 
-            // The allowed load imbalance
+            // The allowed load imbalance FIXME as param
             double epsilon = 0.03;
-            TIdx allowedSize = (TIdx)(0.5 * M.cols() * (1 + epsilon));
+
+            TIdx allowedSize = (TIdx)(0.5 * M.nonZeros() * (1 + epsilon));
 
             // First start with a random distribution
             // This vector says for each column if it is in "A"
             vector<bool> columnInA = randomColumnDistribution(M.cols());
 
+            // Weights are number of elements in each column of the matrix
+            // TODO: precompute this in matrix?
+            vector<TIdx> columnWeights(M.cols(), 0);
+            for (TIdx j = 0; j < M.cols(); ++j) {
+                columnWeights[j] = M.getColumnWeight(j);
+            }
+
             // We need to make sure the distribution satisfies the imbalance
             // otherwise we flip the first `x` until it does
-            TIdx countInA = 0;
-            for (auto inA : columnInA)
-                if (inA)
-                    countInA++;
+            TIdx counts[2] = { 0, 0 };
+            for (TIdx j = 0; j < M.cols(); ++j) {
+                if (columnInA[j]) {
+                    counts[0] += columnWeights[j];
+                } else {
+                    counts[1] += columnWeights[j];
+                }
+            }
 
-            ZeeInfoLog << "|A| = " << countInA << endLog;
-            ZeeInfoLog << "|B| = " << M.cols() - countInA << endLog;
-            ZeeInfoLog << "allowed |A, B| = " << allowedSize << endLog;
+            if (counts[0] > allowedSize) {
+                // FIXME prefix
+            } else if (counts[1] > allowedSize) {
+                // FIXME prefix
+            }
 
             // Store the distribution for each net 
             // rowCountA[row] yields the #elements in A in row
@@ -179,6 +198,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             std::uniform_int_distribution<TIdx> randbool(0, 1);
 
             // We copy the bool vector to store the best split
+            // FIXME: instead we could just store the swaps and
+            // reverse engineer
             vector<bool> bestSplit = columnInA;
 
             // We maintain the current and maximum net gain
@@ -186,17 +207,21 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             TIdx maxNetGain = 0;
 
             // Choose the base cell (e.g. tail of highest non-trivial list)
-            for (auto iter = 0; iter < 100; ++iter) {
+            for (auto iter = 0; iter < 10000; ++iter) {
                 TIdx baseCell = -1;
                 // FIXME can we do this in constant time? the loop is possibly
                 // unnecessary.. maybe linked list as well
                 for (TIdx bucket = buckets.size() - 1; bucket >= 0; --bucket) {
-                    if (!buckets[bucket].empty()) {
-                        // FIXME: this is why two buckets for A and B both
-                        baseCell = buckets[bucket].back();
+                    for (auto cell : buckets[bucket]) {
+                        if (counts[columnInA[cell] ? 1 : 0] >= allowedSize)
+                            continue;
+                        baseCell = cell;
                         netGain += bucket - max_size;
                         break;
                     }
+
+                    if (baseCell != -1)
+                        break;
                 }
 
                 // We found the baseCell
@@ -204,13 +229,17 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 // i.e. the pins for which the vertexGains is not correct anymore
                 verticesToUpdate.clear();
 
+                if (baseCell == -1) {
+                    ZeeErrorLog << "No viable base cell found." << endLog;
+                    break;
+                }
+
                 for (auto row : colNets[baseCell]) {
                     for (auto pin : rowNets[row]) {
                         verticesToUpdate.insert(std::make_pair(pin, vertexGains[pin]));
                     }
                 }
 
- 
                 // If rowCountA changes 'type', then we need to update pins
                 // The types are:   
                 // (1) 'almost' A or B (1 or size - 1)
@@ -221,25 +250,37 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 //
                 // first we nullify the effects of the effected nets (if necessary)
                 for (auto row : colNets[baseCell]) {
-                    // case (1)
-                    if ((columnInA[baseCell] && rowCountA[row] == 1)
-                            || (!columnInA[baseCell] && rowCountA[row] == rowNets[row].size() - 1)) {
-                        // from positive gain to neutral gain
-                        vertexGains[baseCell] -= 1;
+                    for (auto pin : rowNets[row]) {
+                        vertexGains[pin] -= gainForPinInRow(columnInA[pin],
+                                rowCountA[row],
+                                rowNets[row].size());
                     }
-                    // case (2)
-                    else if ((columnInA[baseCell] && rowCountA[row] == rowNets[row].size())
-                            || (columnInA[baseCell] && rowCountA[row] == 0)) {
-                        // from negative gain, to neutral gain
-                        for (auto pin : rowNets[row]) {
-                            vertexGains[pin] += 1;
-                        }
-                    }
+
                     rowCountA[row] += columnInA[baseCell] ? -1 : 1;
+
+                    if (rowNets[row].size() == 1)
+                        continue;
+
+                    //// FIXME can probably be made more efficient, similar to nullifying step
+                    //// case (1)
+                    //if ((columnInA[baseCell] && rowCountA[row] == 1)
+                    //        || (!columnInA[baseCell] && rowCountA[row] == rowNets[row].size() - 1)) {
+                    //    // from positive gain to neutral gain
+                    //    vertexGains[baseCell] -= 1;
+                    //}
+                    //// case (2)
+                    //else if (rowCountA[row] == rowNets[row].size() || rowCountA[row] == 0) {
+                    //    // from negative gain, to neutral gain
+                    //    for (auto pin : rowNets[row]) {
+                    //        vertexGains[pin] += 1;
+                    //    }
+                    //}
                 }
 
                 // We flip the base cell
                 columnInA[baseCell] = !columnInA[baseCell];
+                counts[columnInA[baseCell] ? 0 : 1] += columnWeights[baseCell];
+                counts[columnInA[baseCell] ? 1 : 0] -= columnWeights[baseCell];
 
                 // We fix the gains in the affected rows
                 for (auto row : colNets[baseCell]) {
@@ -255,6 +296,17 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                     // remove and reinsert
                     auto originalBucket = pPinGain.second + max_size;
                     auto newBucket = vertexGains[pPinGain.first] + max_size;
+                    if (newBucket < 0 || newBucket > 2 * max_size) {
+                        ZeeErrorLog << "Invalid bucket" << endLog;
+                        ZeeInfoLog << "(pin, gain) = " << pPinGain.first << ", " << pPinGain.second << endLog;
+                        for (auto& row : colNets[pPinGain.first]) {
+                            for (auto& col : rowNets[row]) {
+                                ZeeInfoLog << "(" << col << "," << columnInA[col] << ")" << endLog;
+                            }
+                            ZeeInfoLog << "----" << endLog;
+                        }
+                        exit(-1);
+                    }
                     buckets[originalBucket].erase(listElements[pPinGain.first]);
                     buckets[newBucket].push_back(pPinGain.first);
                     listElements[pPinGain.first] = --buckets[newBucket].end();
@@ -279,6 +331,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             }
 
             M.resetImages(new_images);
+
+            ZeeInfoLog << "FM partitioned into sizes: " << counts[0] << " " << counts[1] << endLog;
 
             return M;
         }

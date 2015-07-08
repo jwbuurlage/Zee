@@ -35,6 +35,8 @@ int main()
     auto& B = partitioner.partition(A);
     B.spy(matrix + "_mg");
 
+    ZeeInfoLog << "MG: \t" << B.communicationVolume() << endLog;
+
     Zee::CyclicPartitioner<decltype(A)> cyclicPartitioner(8, CyclicType::column);
     auto& C = cyclicPartitioner.partition(A);
     C.spy(matrix + "_cyclic");
@@ -46,7 +48,7 @@ int main()
     auto& D = mlPart.partition(A);
     C.spy(matrix + "_ml");
 
-    ZeeInfoLog << "ML: \t" << D.communicationVolume() << endLog;
+    ZeeInfoLog << "ML: \t" << D.communicationVolume() << ", " << D.loadImbalance() << endLog;
 
     return 0;
 }

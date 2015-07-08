@@ -150,7 +150,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // we can get some sample code going
         // perhaps think about pregel-like approach as well
         template<typename TReturn>
-        vector<TReturn> compute(std::function<TReturn(shared_ptr<image_type>)> func)
+        vector<TReturn> compute(std::function<TReturn(shared_ptr<image_type>)> func) const
         {
             auto result = vector<TReturn>(this->_procs);
             // returns a vector of type T with func(Image(I)) called
@@ -306,7 +306,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
         void resetImages(vector<unique_ptr<Image>>& new_images)
         {
-            _subs.resize(new_images.size());
+            // update the number of processors
+            this->_procs = new_images.size();
+            _subs.resize(this->_procs);
+
             for(TIdx i = 0; i < new_images.size(); ++i)
                 _subs[i].reset(new_images[i].release());
 
@@ -317,7 +320,25 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
         }
 
+        /** Obtain the number of nonzeros in a column */
+        int getColumnWeight(TIdx j) const
+        {
+            // TODO precompute
+            // TODO optimize
+            auto columnCount =
+                [j] (shared_ptr<image_type> image) -> TIdx {
+                    TIdx count = 0;
+                    for (auto& trip : *image)
+                        if (trip.col() == j)
+                            count++;
+                    return count;
+                };
 
+            auto counts = this->template compute<TIdx>(columnCount);
+            TIdx count = std::accumulate(counts.begin(), counts.end(), (TIdx)0);
+
+            return count;
+        }
 
         /** Obtain a list of images */
         const vector<shared_ptr<Image>>& getImages() const 
