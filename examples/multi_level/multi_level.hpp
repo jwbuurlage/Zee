@@ -1,3 +1,13 @@
+// TODO:
+// [ ] Row nets of size 1 can be removed
+// [ ] Epsilon as param
+// [ ] Fix initial sizes of A, B
+// [ ] Buckets A / B, O(1) best vertex selection
+// [ ] Make vertex gain updates more efficient
+// [ ] Precompute column Weights
+// [ ] Generalize underyling hypergraph (row, column, fine)
+// [ ] What can be parallelized here?
+
 #pragma once
 
 #include <zee.hpp>
@@ -104,9 +114,6 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         // therefore we call the matrix M
         virtual TMatrix& partition(TMatrix& M) override
         {
-            // TODO:
-            // - Row nets of size 1 can be removed
-
             ZeeInfoLog << "Partitioning using FM heuristic" << endLog;
 
             // We check if everything has been initialized properly
