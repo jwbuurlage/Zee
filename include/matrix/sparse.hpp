@@ -24,6 +24,7 @@ License, or (at your option) any later version.
 #include <vector>
 #include <random>
 #include <memory>
+#include <thread>
 
 #include "matrix/base.hpp"
 #include "matrix/dense.hpp"
@@ -34,23 +35,12 @@ License, or (at your option) any later version.
 
 namespace Zee {
 
-using std::cout;
-using std::ofstream;
-using std::endl;
-using std::max;
-using std::min;
-using std::vector;
-using std::shared_ptr;
-using std::unique_ptr;
-using std::make_shared;
-
 // Fwd declaring partitioner
 template <class TMatrix>
 class Partitioner;
 
-
 template <typename TVal, typename TIdx = uint32_t,
-         class Storage = StorageTriplets<TVal, TIdx>>
+         class CStorage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
 
 /** A (matrix) triplet is a tuplet \f$(i, j, a_{ij})\f$, representing an entry in a
@@ -150,15 +140,26 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // we can get some sample code going
         // perhaps think about pregel-like approach as well
         template<typename TReturn>
-        vector<TReturn> compute(std::function<TReturn(shared_ptr<image_type>)> func) const
+        std::vector<TReturn> compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const
         {
-            auto result = vector<TReturn>(this->_procs);
-            // returns a vector of type T with func(Image(I)) called
-            // FIXME: parallelize
-            int p = 0;
-            for (auto& image : _subs) {
-                result[p++] = func(image);
+            auto result = std::vector<TReturn>(this->_procs);
+
+            auto push_result = [func, result] (TIdx proc, const std::shared_ptr<image_type>& image) mutable {
+                    result[proc] = func(image);
+                };
+
+            std::vector<std::thread> threads(this->_procs);
+
+            TIdx p = 0;
+            for (const auto& image : _subs) {
+                threads[p] = std::thread(push_result, p, image);
+                ++p;
             }
+
+            for (auto& t : threads) {
+                t.join();
+            }
+
             return result;
         }
 
@@ -209,10 +210,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             atomic<TIdx> V { 0 };
 
             // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
-            vector<vector<atomic_wrapper<TIdx>>> lambda(this->_procs,
-                    vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1)); 
-            vector<vector<atomic_wrapper<TIdx>>> mu(this->_procs,
-                    vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1)); 
+            std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->_procs,
+                    std::vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1)); 
+            std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->_procs,
+                    std::vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1)); 
 
             // FIXME: parallelize, using generalized compute
             TIdx s = 0; 
@@ -236,7 +237,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // FIXME: parallelize, using generalized compute
             // FIXME: can also parallelize.. O(n) -> O(n / p)
             // with extra superstep
-            vector<int> lambda_s(this->_procs, 0);
+            std::vector<int> lambda_s(this->_procs, 0);
             for (TIdx proc = 0; proc < this->_procs; ++proc) {
                 TIdx V_s = 0;
 
@@ -269,7 +270,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             _nz = 0;
 
             for (TIdx i = 0; i < this->procs(); ++i)
-                _subs.push_back(make_shared<Image>());
+                _subs.push_back(std::make_shared<Image>());
 
             // FIXME: only if partitioning is random
             std::random_device rd;
@@ -304,7 +305,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
         }
 
-        void resetImages(vector<unique_ptr<Image>>& new_images)
+        void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
         {
             // update the number of processors
             this->_procs = new_images.size();
@@ -326,7 +327,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // TODO precompute
             // TODO optimize
             auto columnCount =
-                [j] (shared_ptr<image_type> image) -> TIdx {
+                [j] (std::shared_ptr<image_type> image) -> TIdx {
                     TIdx count = 0;
                     for (auto& trip : *image)
                         if (trip.col() == j)
@@ -341,18 +342,20 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         /** Obtain a list of images */
-        const vector<shared_ptr<Image>>& getImages() const 
+        const std::vector<std::shared_ptr<Image>>& getImages() const 
         {
             return _subs;
         }
 
-        vector<shared_ptr<Image>>& getMutableImages()
+        std::vector<std::shared_ptr<Image>>& getMutableImages()
         {
             return _subs;
         }
 
         void spy(std::string title = "anonymous")
         {
+            using std::endl;
+
             std::stringstream ss;
             ss << "data/spies/" << title << ".emtx";
             auto filename = ss.str();
@@ -363,7 +366,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 ss << "data/spies/" << title << "_" << i++ << ".emtx";
                 filename = ss.str();
             }
-            ofstream fout(filename);
+            std::ofstream fout(filename);
 
             fout << "%%Extended-MatrixMarket distributed-matrix coordinate pattern general" << endl;
 
@@ -396,7 +399,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
     private:
         TIdx _nz;
         Partitioning _partitioning;
-        vector<shared_ptr<Image>> _subs;
+        std::vector<std::shared_ptr<Image>> _subs;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -411,14 +414,14 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 // - Is this flexible enough, and would this work on e.g. Cartesius?
 // - I want to try and implement a version of this
 
-template <typename TVal, typename TIdx, class Storage>
+template <typename TVal, typename TIdx, class CStorage>
 class DSparseMatrixImage
 {
     public:
 
         /** Default constructor */
         DSparseMatrixImage() :
-            _storage(new Storage())
+            _storage(new CStorage())
         {
             // FIXME: Switch cases between different storage types
         }
@@ -451,7 +454,7 @@ class DSparseMatrixImage
             return _colset;
         }
 
-        using iterator = typename Storage::it_traits::iterator;
+        using iterator = typename CStorage::it_traits::iterator;
 
         iterator begin() const
         {
@@ -463,20 +466,30 @@ class DSparseMatrixImage
             return _storage->end();
         }
 
+        /** @return The number of nonzeros in this image */
         TIdx nonZeros() const 
         {
             return _storage->size();
         }
 
+        /** @return The \f$i\f$-th element in this image */
         Triplet<TVal, TIdx> getElement(TIdx i) const {
             return _storage->getElement(i);
         }
 
     private:
-        // Triplets, CRS or CCS
-        unique_ptr<Storage> _storage;
+        /** We delegate the storage to a superclass (to simplify choosing
+         * a storage mechanism) */
+        std::unique_ptr<CStorage> _storage;
+
+        /** A set (with counts) that stores the non-empty rows in this image */
         counted_set<TIdx> _rowset;
+        /** A set (with counts) that stores the non-empty columns in this image */
         counted_set<TIdx> _colset;
+
+        /** We hold a reference to the other images */
+        // FIXME implement and use
+        std::vector<std::weak_ptr<DSparseMatrixImage<TVal, TIdx, CStorage>>> _images;
 };
 
 //-----------------------------------------------------------------------------
@@ -487,7 +500,7 @@ class DSparseMatrixImage
 template <typename TIdx>
 DSparseMatrix<double> eye(TIdx n, TIdx procs)
 {
-    vector<Triplet<double, TIdx>> coefficients;
+    std::vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve(n);
 
     for (TIdx i = 0; i < n; ++i)
@@ -505,7 +518,7 @@ DSparseMatrix<double> eye(TIdx n, TIdx procs)
 template <typename TIdx>
 DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
 {
-    vector<Triplet<double, TIdx>> coefficients;
+    std::vector<Triplet<double, TIdx>> coefficients;
     coefficients.reserve((int)(n * m * density));
 
     double mu = 1.0 / density + 0.5;
@@ -517,7 +530,7 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
     std::normal_distribution<double> gauss(mu, sigma);
 
     TIdx j = static_cast<int>(gauss(mt)) / 2;
-    j = max(j, (TIdx)1);
+    j = std::max(j, (TIdx)1);
     TIdx i = 0;
     while (true)
     {
@@ -525,7 +538,7 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
                 (1.0 + 10.0 * dist(mt))));
 
         int offset = static_cast<int>(gauss(mt));
-        offset = max(offset, 1);
+        offset = std::max(offset, 1);
         j += offset;
 
         while (j >= n)

@@ -6,7 +6,7 @@
 Zee; a partitioning framework for sparse matrices
 =================================================
 
-Zee is a header-only C++ library which servers as a framework for sparse matrix (SpM) operations. In particular it has been developed to ease the implementation of SpM partitioners to aid the execution speed of parallel algorithms such as the distributed SpMV algorithm and iterative solvers.
+Zee is a header-only C++ library which serves as a framework for sparse matrix (SpM) operations. In particular it has been developed to ease the implementation of SpM partitioners to aid the execution speed of parallel algorithms such as the distributed SpMV algorithm and iterative solvers.
 
 Using Zee
 ---------
@@ -40,6 +40,7 @@ API Overview
 
    DMatrixBase
    DSparseMatrix
+   DSparseMatrixImage
    DSparseStorage
    Triplet
 

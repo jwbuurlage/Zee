@@ -1,2 +1,2 @@
-Distributed Storage
+Distributed storage
 ===================
