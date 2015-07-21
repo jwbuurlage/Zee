@@ -23,8 +23,8 @@ namespace Zee {
 using std::unique_ptr;
 using std::vector;
 
-/** 
- * This class (re)partitions a sparse matrix. 
+/**
+ * This class (re)partitions a sparse matrix.
  * FIXME: CRT for factory?
  */
 template <class TMatrix = DSparseMatrix<double>>
@@ -60,14 +60,14 @@ class Partitioner
 
 
 template <class TMatrix = DSparseMatrix<double>>
-class IterativePartitioner : Partitioner<TMatrix>
+class IterativePartitioner : public Partitioner<TMatrix>
 {
     public:
         IterativePartitioner() { };
         virtual ~IterativePartitioner() { };
 
-        /** Partitioning with an IP is simply refining. This function
-         * forwards to refine. */
+        /** Partitioning with an IP means the initial partitioning. A call to this function is optional.
+          * Default behaviour is to forward to refine. */
         virtual TMatrix& partition(
                 TMatrix& A) override
         {
@@ -134,7 +134,7 @@ class CyclicPartitioner : public Partitioner<TMatrix>
                     }
 
                 }
-            
+
             A.resetImages(new_images);
 
             return A;

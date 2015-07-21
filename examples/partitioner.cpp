@@ -16,31 +16,36 @@ int main()
 {
     std::string matrix = "karate";
 
-    ZeeInfoLog << "Starting partitioning example" << endLog;
+    ZeeLogInfo << "-- Starting partitioning example" << endLog;
 
-    DSparseMatrix<double, int> A = fromMatrixMarket<double, int>("data/matrices/" + matrix  + ".mtx", 1);
+    // Initialize the centralized base matrix from file
+    DSparseMatrix<double, int> baseMatrix =
+        fromMatrixMarket<double, int>("data/matrices/" + matrix  + ".mtx", 1);
+    baseMatrix.spy("karate");
+    auto& A = baseMatrix;
 
-    A.spy("karate");
+    //-------------------------------------------------------------------------
+    // MEDIUM GRAIN
+    MGPartitioner<decltype(baseMatrix)> mgPartitioner;
+    mgPartitioner.partition(A);
+    A.spy(matrix + "_mg");
 
-    MGPartitioner<decltype(A)> partitioner;
-    partitioner.initialize(A);
-    auto& B = partitioner.partition(A);
-    B.spy(matrix + "_mg");
+    ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
+    while (!mgPartitioner.locallyOptimal()) {
+        mgPartitioner.refine(A);
+    }
 
-    ZeeInfoLog << "MG: \t" << B.communicationVolume() << endLog;
-
-    Zee::CyclicPartitioner<decltype(A)> cyclicPartitioner(8, CyclicType::column);
-    auto& C = cyclicPartitioner.partition(A);
-    C.spy(matrix + "_cyclic");
-
-    ZeeInfoLog << "Cyclic: \t" << C.communicationVolume() << endLog;
-
-    MultiLevelOneD<decltype(A)> mlPart{};
+    //-------------------------------------------------------------------------
+    // 1D MULTILEVEL COLUMN
+    MultiLevelOneD<decltype(baseMatrix)> mlPart{};
     mlPart.initialize(A);
     auto& D = mlPart.partition(A);
-    C.spy(matrix + "_ml");
+    D.spy(matrix + "_ml");
 
-    ZeeInfoLog << "ML: \t" << D.communicationVolume() << ", " << D.loadImbalance() << endLog;
+    ZeeLogInfo << "ML: \t" << D.communicationVolume() << ", " <<
+        D.loadImbalance() << endLog;
+
+    ZeeLogInfo << "-- Ending partitioning example" << endLog;
 
     return 0;
 }

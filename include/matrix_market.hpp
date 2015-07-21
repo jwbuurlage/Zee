@@ -11,6 +11,9 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
+// # TODO
+// [ ] Support the extended format
+
 #pragma once
 
 #include <fstream>
@@ -37,7 +40,7 @@ DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
 {
     auto n = 40;
 
-    ZeeInfoLog << "Loading matrix from file: " << file << Logger::end();
+    ZeeLogInfo << "Loading matrix from file: " << file << endLog;
 
     std::ifstream fs(file);
 
@@ -50,7 +53,7 @@ DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
     header_stream >> s >> t;
 
     if (s != "%%MatrixMarket" || t != "matrix") {
-        ZeeErrorLog << "Not a valid MM file: " << file << Logger::end();
+        ZeeLogError << "Not a valid MM file: " << file << endLog;
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 
@@ -64,7 +67,7 @@ DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
                 s == "complex" ||
                 s == "Hermitian" ||
                 s == "integer") {
-            ZeeErrorLog << "Unsupported keyword encountered: " << s << Logger::end();
+            ZeeLogError << "Unsupported keyword encountered: " << s << Logger::end();
             return DSparseMatrix<TVal, TIdx>(1, 1);
         }
 
@@ -97,11 +100,11 @@ DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
 
     std::stringstream line_stream(line);
 
-    // not a comment, if we have yet read N, M, L 
+    // not a comment, if we have yet read N, M, L
     line_stream >> M >> N;
     if (line_stream.eof()) {
         // error dense matrix
-        ZeeErrorLog << "Dense matrix format not supported" << Logger::end();
+        ZeeLogError << "Dense matrix format not supported" << Logger::end();
         return DSparseMatrix<TVal, TIdx>(1, 1);
     }
 

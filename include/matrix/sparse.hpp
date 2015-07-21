@@ -47,7 +47,7 @@ class DSparseMatrixImage;
   * matrix. It is particularly useful in the representation of sparse matrices.
   */
 template <typename TVal, typename TIdx = uint32_t>
-class Triplet 
+class Triplet
 {
     public:
         Triplet(TIdx i, TIdx j, TVal value)
@@ -85,7 +85,7 @@ enum class Partitioning
     custom
 };
 
-/** The class DSparseMatrix is a distributed matrix type inspired by 
+/** The class DSparseMatrix is a distributed matrix type inspired by
   * Eigen's SparseMatrix. It is distributed over multiple processing units,
   */
 template <typename TVal, typename TIdx = uint32_t,
@@ -97,7 +97,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         using image_type = Image;
         using index_type = TIdx;
         using value_type = TVal;
-            
+
         /** Initialize an (empty) sparse (rows x cols) oatrix */
         DSparseMatrix(TIdx rows, TIdx cols) :
             DMatrixBase<TVal, TIdx>(rows, cols)
@@ -106,7 +106,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         /** Default deconstructor */
-        ~DSparseMatrix() = default;
+        ~DSparseMatrix() { }
 
         /** Move constructor */
         DSparseMatrix(DSparseMatrix&& o) = default;
@@ -139,12 +139,19 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         // this is kind of like a reduce in mapreduce, implementing this such that
         // we can get some sample code going
         // perhaps think about pregel-like approach as well
+        // An alternative function signature could be:
+        //   template<typename TReturn, typename TFunc>
+        //   std::vector<TReturn> compute(TFunc func) const
+        // which would construct a separate function for each lambda, but remove overhead
+        // of using std::function.
         template<typename TReturn>
         std::vector<TReturn> compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const
         {
             auto result = std::vector<TReturn>(this->_procs);
 
-            auto push_result = [func, result] (TIdx proc, const std::shared_ptr<image_type>& image) mutable {
+            // capture function and result by-reference
+            auto push_result = [&func, &result] (TIdx proc,
+                    const std::shared_ptr<image_type>& image) mutable {
                     result[proc] = func(image);
                 };
 
@@ -168,7 +175,6 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
          * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
          * and should be smaller than some predetermined value \f$\epsilon\f$.
          */
-        //FIXME single precision support?
         double loadImbalance()
         {
             double eps = 1.0;
@@ -193,30 +199,30 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         TIdx communicationVolume()
         {
             // here we assume that v_i is owned by a processor holding
-            // a_ik =/= 0 for some k, and u_j is owned by a processor 
+            // a_ik =/= 0 for some k, and u_j is owned by a processor
             // holding a_kj =/= 0 for some k.
             //
             // We then ask the images themselves how much communciation
             // is necessary for spmv communication.
             //
             // We preprocess a 'rows' and 'cols' vector in each image.
-            // e.g. for i in rows, send (1, i) to (i % p) proc. 
+            // e.g. for i in rows, send (1, i) to (i % p) proc.
             //
             // proc adds 1 to lambda_i for each O(n / p) i's it owns.
             //
             // In the end lambda's are distributed over procs, let them compute
             // partial sums and send it upwards.
-            
+
             atomic<TIdx> V { 0 };
 
             // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
             std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->_procs,
-                    std::vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1)); 
+                    std::vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1));
             std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->_procs,
-                    std::vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1)); 
+                    std::vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1));
 
             // FIXME: parallelize, using generalized compute
-            TIdx s = 0; 
+            TIdx s = 0;
             for (auto& pimg : _subs) {
                 for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
@@ -232,7 +238,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
 
             // now let each proc compute partial sum
-            
+
             // sum over lambdas
             // FIXME: parallelize, using generalized compute
             // FIXME: can also parallelize.. O(n) -> O(n / p)
@@ -342,7 +348,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         /** Obtain a list of images */
-        const std::vector<std::shared_ptr<Image>>& getImages() const 
+        const std::vector<std::shared_ptr<Image>>& getImages() const
         {
             return _subs;
         }
@@ -370,11 +376,11 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
             fout << "%%Extended-MatrixMarket distributed-matrix coordinate pattern general" << endl;
 
-            fout << "% Matrix sparsity:      " << 
+            fout << "% Matrix sparsity:      " <<
                 std::fixed << std::setprecision(4) <<
                 this->nonZeros() / static_cast<double>(this->size()) << endl;
 
-            fout << "% Load imbalance:       " << 
+            fout << "% Load imbalance:       " <<
                 std::fixed << std::setprecision(4) <<
                 this->loadImbalance() << endl;
 
@@ -393,7 +399,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 ++s;
             }
 
-            ZeeInfoLog << "Spy saved to file: " << filename << Logger::end();
+            ZeeLogInfo << "Spy saved to file: " << filename << Logger::end();
         }
 
     private:
@@ -467,7 +473,7 @@ class DSparseMatrixImage
         }
 
         /** @return The number of nonzeros in this image */
-        TIdx nonZeros() const 
+        TIdx nonZeros() const
         {
             return _storage->size();
         }

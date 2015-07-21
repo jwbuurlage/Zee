@@ -64,6 +64,16 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             }
         }
 
+        void coarsen(TMatrix& A)
+        {
+            ZeeLogWarning << "Multi-level coarsening not implemented yet." << endLog;
+            // coarsen graph A and store HG
+            //
+            // We need to recursively find columns that *match* and merge them
+            //
+            // is KL used for partitioning or for coarsening?
+        }
+
         vector<bool> randomColumnDistribution(TIdx cols)
         {
             // We uniformly distribute the pins over A and B
@@ -114,11 +124,13 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         // therefore we call the matrix M
         virtual TMatrix& partition(TMatrix& M) override
         {
-            ZeeInfoLog << "Partitioning using FM heuristic" << endLog;
+            ZeeLogInfo << "Partitioning using FM heuristic" << endLog;
+
+            ZeeLogVar(M.procs());
 
             // We check if everything has been initialized properly
             if (!initialized) {
-                ZeeErrorLog << "Trying to partition with uninitialized partitioner." << endLog;
+                ZeeLogError << "Trying to partition with uninitialized partitioner." << endLog;
                 return M;
             }
 
@@ -158,14 +170,14 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 // FIXME prefix
             }
 
-            // Store the distribution for each net 
+            // Store the distribution for each net
             // rowCountA[row] yields the #elements in A in row
             vector<TIdx> rowCountA = obtainRowCountA(columnInA);
 
             // `max_size` is the maximum degree of a column
             // This is equal to the maximum size of a colNet
             auto max_size = std::accumulate(colNets.begin(),
-                    colNets.end(), (TIdx)0, 
+                    colNets.end(), (TIdx)0,
                     [] (TIdx rhs, const vector<TIdx>& elem) {
                         return (rhs > elem.size()) ? rhs : elem.size();
                     });
@@ -194,7 +206,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 buckets[vertexGains[j] + max_size].push_back(j);
                 listElements[j] = --buckets[vertexGains[j] + max_size].end();
             }
-            
+
             // Store the pins that become 'dirty' after a flip
             set<std::pair<TIdx, TIdx>> verticesToUpdate;
 
@@ -237,7 +249,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 verticesToUpdate.clear();
 
                 if (baseCell == -1) {
-                    ZeeErrorLog << "No viable base cell found." << endLog;
+                    ZeeLogError << "No viable base cell found." << endLog;
                     break;
                 }
 
@@ -248,7 +260,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 }
 
                 // If rowCountA changes 'type', then we need to update pins
-                // The types are:   
+                // The types are:
                 // (1) 'almost' A or B (1 or size - 1)
                 // (2) 'completely' A or B (0 or size)
                 // (3) mixed
@@ -303,17 +315,6 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                     // remove and reinsert
                     auto originalBucket = pPinGain.second + max_size;
                     auto newBucket = vertexGains[pPinGain.first] + max_size;
-                    if (newBucket < 0 || newBucket > 2 * max_size) {
-                        ZeeErrorLog << "Invalid bucket" << endLog;
-                        ZeeInfoLog << "(pin, gain) = " << pPinGain.first << ", " << pPinGain.second << endLog;
-                        for (auto& row : colNets[pPinGain.first]) {
-                            for (auto& col : rowNets[row]) {
-                                ZeeInfoLog << "(" << col << "," << columnInA[col] << ")" << endLog;
-                            }
-                            ZeeInfoLog << "----" << endLog;
-                        }
-                        exit(-1);
-                    }
                     buckets[originalBucket].erase(listElements[pPinGain.first]);
                     buckets[newBucket].push_back(pPinGain.first);
                     listElements[pPinGain.first] = --buckets[newBucket].end();
@@ -330,7 +331,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             vector<unique_ptr<TImage>> new_images;
             for (TIdx i = 0; i < p; ++i)
                 new_images.push_back(std::make_unique<TImage>());
-            
+
             for (auto& pimg : M.getImages()) {
                 for (auto& triplet : *pimg) {
                     new_images[(TIdx)(bestSplit[triplet.col()])]->pushTriplet(triplet);
@@ -339,25 +340,15 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             M.resetImages(new_images);
 
-            ZeeInfoLog << "FM partitioned into sizes: " << counts[0] << " " << counts[1] << endLog;
+            ZeeLogInfo << "FM partitioned into sizes: " << counts[0] << " " << counts[1] << endLog;
 
             return M;
-        }
-
-        void coarsen(TMatrix& A)
-        {
-            ZeeWarningLog << "Multi-level coarsening not implemented yet." << endLog;
-            // coarsen graph A and store HG
-            //
-            // We need to recursively find columns that *match* and merge them
-            //
-            // is KL used for partitioning or for coarsening?
         }
 
     private:
         bool initialized = false;
 
         // The nets corresponding to the hypergraph model(s)
-        vector<vector<TIdx>> rowNets;
         vector<vector<TIdx>> colNets;
+        vector<vector<TIdx>> rowNets;
 };

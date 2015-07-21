@@ -15,17 +15,24 @@ This file has been adapted from the Arya game engine.
 
 #pragma once
 
+// FIXME can make this more general by using e.g.:
+// #define LOGNAMESPACE Zee
+// can then reuse this for other projects
+
 #include <sstream>
 #include <iostream>
 #include <string>
 
 #include "color_output.hpp"
 
-#define ZeeInfoLog (Zee::Logger() << Zee::LogType::info)
-#define ZeeWarningLog (Zee::Logger() << Zee::LogType::warning)
-#define ZeeErrorLog (Zee::Logger() << Zee::LogType::error)
+#define ZeeLogDebug (Zee::Logger() << Zee::LogType::debug)
+#define ZeeLogError (Zee::Logger() << Zee::LogType::error)
+#define ZeeLogInfo (Zee::Logger() << Zee::LogType::info)
+#define ZeeLogWarning (Zee::Logger() << Zee::LogType::warning)
 
 #define endLog Zee::Logger::end()
+
+#define ZeeLogVar(VAR) (Zee::Logger() << Zee::LogType::debug << #VAR " = " << VAR << endLog)
 
 namespace Zee {
 
@@ -36,7 +43,8 @@ using std::endl;
 enum LogType {
     info,
     warning,
-    error
+    error,
+    debug
 };
 
 class Logger {
@@ -55,26 +63,42 @@ class Logger {
             return *this;
         }
 
+        template <typename S>
+        Logger& operator <<(std::vector<S> rhs) {
+            auto sep = "";
+            ss << "[";
+            for (S value : rhs) {
+                ss << sep << value;
+                sep = ", ";
+            }
+            ss << "]";
+            return *this;
+        }
+
         void operator <<(end) {
             // output ss
             switch (_t) {
                 case LogType::info:
-                    cout << colorOutput(Color::yellow) << "INFO: ";
+                    cout << Zee::colors::start["cyan"] << "INFO: ";
                     break;
 
                 case LogType::warning:
-                    cout << colorOutput(Color::blue) << "WARNING: ";
+                    cout << Zee::colors::start["blue"] << "WARNING: ";
                     break;
 
                 case LogType::error:
-                    cout << colorOutput(Color::red) << "ERROR: ";
+                    cout << Zee::colors::start["red"] << "ERROR: ";
+                    break;
+
+                case LogType::debug:
+                    cout << Zee::colors::start["darkgray"] << "DEBUG: ";
                     break;
 
                 default:
                     break;
             }
 
-            cout << colorOutput(Color::clear);
+            cout << Zee::colors::end;
             cout << ss.str() << endl;
         }
 
