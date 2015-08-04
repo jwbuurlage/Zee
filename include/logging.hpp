@@ -66,12 +66,12 @@ class Logger {
         template <typename S>
         Logger& operator <<(std::vector<S> rhs) {
             auto sep = "";
-            ss << "[";
+            *this << "[";
             for (S value : rhs) {
-                ss << sep << value;
+                *this << sep << value;
                 sep = ", ";
             }
-            ss << "]";
+            *this << "]";
             return *this;
         }
 

@@ -32,6 +32,7 @@ int main()
 
     ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
     while (!mgPartitioner.locallyOptimal()) {
+        ZeeLogVar(A.communicationVolume());
         mgPartitioner.refine(A);
     }
 
