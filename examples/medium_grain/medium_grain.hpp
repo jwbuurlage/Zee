@@ -12,6 +12,8 @@
 #include <zee.hpp>
 using Zee::atomic_wrapper;
 
+#include "../kernighanlin/kernighan_lin.hpp"
+
 #include <random>
 
 #include <vector>
@@ -51,10 +53,12 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
         TMatrix constructBimatrix(TMatrix& A)
         {
+            // FIXME ??
             return TMatrix();
         }
 
         /** Split matrix A into A_r + A_c using score function */
+        // maybe also construct B here
         void split(TMatrix& A)
         {
             // here we explicitely create a partitioning of A into
@@ -67,9 +71,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             auto n = A.cols();
             auto p = A.procs();
 
-            _bit_in_row = make_unique<vector<vector<atomic_wrapper<bool>>>>(p);
+            _bitInRow = make_unique<vector<vector<atomic_wrapper<bool>>>>(p);
             for (TIdx s = 0; s < p; ++s)
-                (*_bit_in_row)[s].resize((*A.getImages()[s]).nonZeros());
+                (*_bitInRow)[s].resize((*A.getImages()[s]).nonZeros());
 
             // we need to count the number of elements in each row
             // and column, use compute
@@ -113,11 +117,13 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                     auto s_c_j = col_count[j % p][j / p]._a.load();
 
                     // this is the score function
-                    (*_bit_in_row)[s][cur++]._a = (s_r_i < s_c_j);
+                    (*_bitInRow)[s][cur++]._a = (s_r_i < s_c_j);
                 }
 
                 ++s;
             }
+
+            // next we create B
         }
 
         /** For MG the initial partition relies on decomposition into A^c + A^r
@@ -156,7 +162,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             for (auto& pimg : images) {
                 TIdx cur = 0;
                 for (auto t : *pimg) {
-                    if ((*_bit_in_row)[s][cur++]._a)
+                    if ((*_bitInRow)[s][cur++]._a)
                         new_images[0]->pushTriplet(
                                 Zee::Triplet<TVal, TIdx>(
                                     t.col(), A.cols() + t.row(), t.value()));
@@ -220,7 +226,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 TIdx cur = 0;
                 for (auto triplet : *pimg) {
                     auto target_proc = 0;
-                    if ((*_bit_in_row)[s][cur++]._a) {
+                    if ((*_bitInRow)[s][cur++]._a) {
                         auto p_col = triplet.row() + A.cols();
                         target_proc =
                             proc_for_col[p_col % p][p_col / p];
@@ -301,6 +307,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 coefficients.push_back(TTriplet((TIdx)i, (TIdx)i, (TVal)1));
             }
 
+            // We want B to be bipartitioned. FIXME Support for lambda distribution.
             B.setDistributionScheme(Zee::Partitioning::cyclic, 1);
             B.setFromTriplets(coefficients.begin(), coefficients.end());
             B.spy("BTest");
@@ -324,7 +331,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         }
 
     private:
-        unique_ptr<vector<vector<atomic_wrapper<bool>>>> _bit_in_row;
+        TMatrix& _B;
+
+        unique_ptr<vector<vector<atomic_wrapper<bool>>>> _bitInRow;
         bool initialized = false;
         bool _locallyOptimal = false;
         bool _rowOptimal = false;
