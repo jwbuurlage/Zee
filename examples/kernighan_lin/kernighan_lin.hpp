@@ -326,4 +326,4 @@ class KernighanLin
         vector<list<TIdx>> _buckets;
         vector<TIdx> _vertexGains;
         vector<typename std::list<TIdx>::iterator> _listElements;
-};
+}
