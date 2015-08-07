@@ -12,7 +12,7 @@
 #include <zee.hpp>
 using Zee::atomic_wrapper;
 
-#include "../kernighanlin/kernighan_lin.hpp"
+#include "../kernighan_lin/kernighan_lin.hpp"
 
 #include <random>
 
@@ -25,8 +25,6 @@ using std::make_unique;
 
 #include <atomic>
 using std::atomic;
-
-#include "../multi_level/multi_level.hpp"
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MGPartitioner : Zee::IterativePartitioner<TMatrix>
@@ -49,12 +47,6 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
         bool locallyOptimal() const {
             return _locallyOptimal;
-        }
-
-        TMatrix constructBimatrix(TMatrix& A)
-        {
-            // FIXME ??
-            return TMatrix();
         }
 
         /** Split matrix A into A_r + A_c using score function */
@@ -122,28 +114,14 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
                 ++s;
             }
-
-            // next we create B
         }
 
-        /** For MG the initial partition relies on decomposition into A^c + A^r
-          * using information about the distribution of A */
-        TMatrix& partition(TMatrix& A) override
+        void constructExtendedMatrix(TMatrix& A, TMatrix& B)
         {
-            // FIXME: many of these operations can be done in place
+            // we bipartition
+            auto p = 2;
 
-            if (initialized) {
-                ZeeLogWarning << "Already applied an initial partitioning"
-                    " instead refining the partitioning on A" << endLog;
-                this->refine(A);
-                return A;
-            }
-
-            this->initialize(A);
-
-            auto p = this->_procs;
-
-            // PHASE 1: explicitely construct matrix B
+            // ## Explicitely construct matrix B
             // we allow this to be distributed for generalizing to parallel
             // for now just put A^c and A^r on differnt procs (and diagonal
             // elements)
@@ -186,61 +164,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 }
             }
 
-            auto B = TMatrix(2 * A.rows(), 2 * A.cols());
-
             B.resetImages(new_images);
-
-            // PHASE 2: call column partitioner
-            // (we now partition B)
-            //
-            // do we multilevel here?
-            // first just do cyclic
-            //
-            MultiLevelOneD<decltype(B)> mlPart{};
-            mlPart.initialize(B);
-            mlPart.partition(B);
-
-            // convert back partitioning to A
-            // note that each image in B has a map proc -> col(s)
-            // (distributed by proc) we want to construct from this a
-            // (distributed) map col -> proc of size O(2n / p) per proc
-            // lets just do this explicitely here
-            vector<vector<int>> proc_for_col(p,
-                    vector<int>(B.rows() / p + 1, -1));
-            s = 0;
-            for (auto& sub_matrix : B.getImages()) {
-                for (auto& col_with_count : sub_matrix->getColSet()) {
-                    auto col = col_with_count.first;
-                    proc_for_col[col % p][col / p] = s;
-                }
-                ++s;
-            }
-
-            vector<unique_ptr<TImage>> a_new_images;
-            for (TIdx i = 0; i < p; ++i)
-                a_new_images.push_back(std::make_unique<TImage>());
-
-            // now we modify A
-            s = 0;
-            for (auto& pimg : images) {
-                TIdx cur = 0;
-                for (auto triplet : *pimg) {
-                    auto target_proc = 0;
-                    if ((*_bitInRow)[s][cur++]._a) {
-                        auto p_col = triplet.row() + A.cols();
-                        target_proc =
-                            proc_for_col[p_col % p][p_col / p];
-                    } else {
-                        target_proc =
-                            proc_for_col[triplet.col() % p][triplet.col() / p];
-                    }
-                    a_new_images[target_proc]->pushTriplet(triplet);
-                }
-            }
-
-            A.resetImages(a_new_images);
-
-            return A;
         }
 
         inline TIdx bRow(bool tripletInAr,
@@ -265,6 +189,86 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 return col;
         }
 
+        /** The partitioning of the extended matrix B is used to repartition
+         *  the matrix A */
+        void inducePartitioning(TMatrix& A, TMatrix& B)
+        {
+            // we bipartition
+            auto p = 2;
+
+            vector<vector<int>> procForCol(p,
+                    vector<int>(B.rows() / p + 1, -1));
+            TIdx s = 0;
+            for (auto& subMatrix : B.getImages()) {
+                for (auto& pColCount : subMatrix->getColSet()) {
+                    auto col = pColCount.first;
+                    procForCol[col % p][col / p] = s;
+                }
+                ++s;
+            }
+
+            vector<unique_ptr<TImage>> aNewImages;
+            for (TIdx i = 0; i < p; ++i)
+                aNewImages.push_back(std::make_unique<TImage>());
+
+            auto& images = A.getMutableImages();
+            // now we modify A
+            s = 0;
+            for (auto& pimg : images) {
+                TIdx cur = 0;
+                for (auto triplet : *pimg) {
+                    auto targetProc = 0;
+                    if ((*_bitInRow)[s][cur++]._a) {
+                        auto colProc = triplet.row() + A.cols();
+                        targetProc =
+                            procForCol[colProc % p][colProc / p];
+                    } else {
+                        targetProc =
+                            procForCol[triplet.col() % p][triplet.col() / p];
+                    }
+                    aNewImages[targetProc]->pushTriplet(triplet);
+                }
+            }
+
+            A.resetImages(aNewImages);
+        }
+
+        /** For MG the initial partition relies on decomposition into A^c + A^r
+         * using information about the distribution of A */
+        TMatrix& partition(TMatrix& A) override
+        {
+            // FIXME: many of these operations can be done in place
+
+            if (initialized) {
+                ZeeLogWarning << "Already applied an initial partitioning"
+                    " instead refining the partitioning on A" << endLog;
+                this->refine(A);
+                return A;
+            }
+
+            // PHASE 1: split A in two, and construct extended matrix B
+            this->initialize(A);
+
+            auto B = TMatrix(2 * A.rows(), 2 * A.cols());
+            constructExtendedMatrix(A, B);
+
+            // PHASE 2: call column partitioner
+            // (we now partition B)
+            // here we use Kernighan-Lin
+            KernighanLin<decltype(B)> kerLin(B);
+            kerLin.run();
+
+            // PHASE 3: convert back partitioning to A
+            // note that each image in B has a map proc -> col(s)
+            // (distributed by proc) we want to construct from this a
+            // (distributed) map col -> proc of size O(2n / p) per proc
+            // lets just do this explicitely here
+            inducePartitioning(A, B);
+
+            return A;
+        }
+
+
         /** IR the (bi-)partitioning on A */
         TMatrix& refine(TMatrix& A) override
         {
@@ -288,7 +292,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             std::vector<TTriplet> coefficients;
             coefficients.reserve((int)(A.nonZeros() + A.rows() + A.cols()));
 
-            // We construct the matrix B according to the partitioning of A
+            // PHASE 1: We construct the matrix B according to the partitioning of A
             for (auto& t : *aImages[0]) {
                 coefficients.push_back(TTriplet(
                             bRow(_phaseRow, t.row(), t.col(), A),
@@ -307,13 +311,20 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 coefficients.push_back(TTriplet((TIdx)i, (TIdx)i, (TVal)1));
             }
 
-            // We want B to be bipartitioned. FIXME Support for lambda distribution.
+            // We want B to be bipartitioned.
+            // FIXME Support for lambda distribution.
             B.setDistributionScheme(Zee::Partitioning::cyclic, 1);
             B.setFromTriplets(coefficients.begin(), coefficients.end());
             B.spy("BTest");
 
-            // apply KL
-            // retrieve partitioning for A
+            // PHASE 2: Apply KL
+            // FIXME: naming is off here, why B member? only used in initialize
+            // FIXME: want to keep B inbetween runs, since it does things
+            KernighanLin<decltype(B)> kerLin(B);
+            kerLin.run();
+
+            // PHASE 3: retrieve partitioning for A
+            inducePartitioning(A, B);
 
             if (A.communicationVolume() == priorVolume) {
                 if (!_phaseRow && _rowOptimal) {
@@ -331,8 +342,6 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         }
 
     private:
-        TMatrix& _B;
-
         unique_ptr<vector<vector<atomic_wrapper<bool>>>> _bitInRow;
         bool initialized = false;
         bool _locallyOptimal = false;

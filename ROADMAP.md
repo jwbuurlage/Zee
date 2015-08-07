@@ -39,7 +39,7 @@ REFINEMENT:
 [ ] Formalize worker threads through some common provider interface.
 [ ] Formalize (parallel) operation generalization. How to specify for different
 (parallel) providers
-    
+
 # SpMV
 [ ] Add multiple parallelization providers and SpMD implementations, make sure
 it works on general systems (not only multi-core systems, or via pthreads)
@@ -53,6 +53,7 @@ requirements and low computational complexity, also ability to cache?
 = operation on a distributed type. (expression templates).  Requires careful
 design.
 [ ] Write virtual container with iterators for triplets generation
+[ ] Underscores are ugly..
 
 # (Test) Matrices & Testing / Benchmarking
 [!] Unit testing, custom solution w/ Python

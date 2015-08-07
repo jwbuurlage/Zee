@@ -105,6 +105,9 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             _partitioning = Partitioning::cyclic;
         }
 
+        DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0)
+        { }
+
         /** Default deconstructor */
         ~DSparseMatrix() { }
 

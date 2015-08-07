@@ -3,10 +3,6 @@
 #include "medium_grain/medium_grain.hpp"
 
 #include <string>
-#include <cstdint>
-#include <iostream>
-using std::cout;
-using std::endl;
 
 using namespace Zee;
 
@@ -36,7 +32,7 @@ int main()
         communicationVolumes.push_back(A.communicationVolume());
         A.spy(matrix + "_initial_mg_refine");
     }
-    ZeeLogVar(A.communicationVolumes());
+    ZeeLogVar(communicationVolumes);
 
     // the final matrix
     A.spy(matrix + "_initial_mg_final");
