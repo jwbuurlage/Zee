@@ -2,8 +2,8 @@
 
 # spy reads a descriptive .emtx file and plots this using matplotlib
 #
-# I think it would be cool if we would use full spectrum of colors, and sample uniformly
-# using the tree:
+# I think it would be cool if we would use full spectrum of colors, and sample
+# uniformly using the tree:
 #       1/2
 #      /   \
 #     1/4   3/4
@@ -15,13 +15,13 @@
 #
 # |------------------------------------------------|
 #      4    2    5       1    6       3      7
-# 
+#
 # etc.
 
 import argparse
 
 import matplotlib
-matplotlib.use('GTK3Cairo')   # generate postscript output by default
+matplotlib.use('GTK3Cairo')
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -37,14 +37,18 @@ parser = argparse.ArgumentParser(description=
     "This script reads one or multiple .emtx file(s), and outputs"
     " a spy plot to screen or as a .pdf file")
 
-parser.add_argument('spy_file', type=str, help=
-    "The .spy file to use as input")
-
-parser.add_argument('--show', action='store_true',
-        help="show output on screen instead of to file")
+parser.add_argument('--save', action='store_true',
+        help="save to file, dont show on screen")
 
 parser.add_argument('--filetype', type=str, default='pdf',
-        help="(also) show output on screen")
+        help="filetype used for saving images")
+
+parser.add_argument('--directory', type=str, default='',
+        help="the directory in which the matrices are stored. Including"
+        " the trailing /")
+
+parser.add_argument('matrix_files', type=str, nargs='+',
+        help="The .emtx file(s) to use as input")
 
 args = parser.parse_args()
 
@@ -63,32 +67,35 @@ def color_of_proc(proc):
 for i in range(0, 100):
     color_of_proc(i)
 
-with open(args.spy_file, 'r') as fin:
-    line = fin.readline()
-    while (len(line) == 0 or line[0] == '%'):
+for f in args.matrix_files:
+    matrix_file = args.directory + f
+    print("INFO: Opening:", matrix_file);
+    with open(matrix_file, 'r') as fin:
         line = fin.readline()
-    title = line
+        while (len(line) == 0 or line[0] == '%'):
+            line = fin.readline()
+        title = line
 
-    m, n, nz, p = map(int, fin.readline().split(' '))
+        m, n, nz, p = map(int, fin.readline().split(' '))
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, aspect='equal')
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, aspect='equal')
 
-    # force integer labels
-    ax.get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
-    ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+        # force integer labels
+        ax.get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+        ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
 
-    # set the appropriate limits
-    plt.xlim([0, n])
-    plt.ylim([m, 0])
+        # set the appropriate limits
+        plt.xlim([0, n])
+        plt.ylim([m, 0])
 
-    for _ in range(0, nz):
-        i, j, p = map(int, fin.readline().split(' '))
-        ax.add_patch(patches.Rectangle((j + marker_offset,
-            i + marker_offset),
-            marker_size, marker_size, color=color_of_proc(p)))
+        for _ in range(0, nz):
+            i, j, p = map(int, fin.readline().split(' '))
+            ax.add_patch(patches.Rectangle((j + marker_offset,
+                i + marker_offset),
+                marker_size, marker_size, color=color_of_proc(p)))
 
-    if args.show:
-        plt.show()
-    else:
-        plt.savefig(args.spy_file[:-4] + args.filetype)
+        if args.save:
+            plt.savefig(args.spy_file[:-4] + args.filetype)
+        else:
+            plt.show()
