@@ -23,6 +23,8 @@ This file has been adapted from the Arya game engine.
 #include <iostream>
 #include <string>
 
+#include "matrix/sparse.hpp"
+
 #include "color_output.hpp"
 
 #define ZeeLogDebug (Zee::Logger() << Zee::LogType::debug)
@@ -58,13 +60,22 @@ class Logger {
         }
 
         template <typename T>
-        Logger& operator <<(T rhs) {
+        Logger& operator <<(const T& rhs) {
             ss << rhs;
             return *this;
         }
 
+        Logger& operator <<(const bool& rhs)
+        {
+            if (rhs)
+                ss << "true";
+            else
+                ss << "false";
+            return *this;
+        }
+
         template <typename S>
-        Logger& operator <<(std::vector<S> rhs) {
+        Logger& operator <<(const std::vector<S>& rhs) {
             auto sep = "";
             *this << "[";
             for (S value : rhs) {
@@ -72,6 +83,18 @@ class Logger {
                 sep = ", ";
             }
             *this << "]";
+            return *this;
+        }
+
+        template <typename TVal, typename TIdx>
+        Logger& operator <<(const Triplet<TVal, TIdx>& rhs) {
+            ss << "{ " << rhs.row() << ",\t" << rhs.col() << " }";
+            return *this;
+        }
+
+        template <typename S, typename T>
+        Logger& operator <<(std::pair<S, T> rhs) {
+            ss << "[ " << rhs.first << ",\t" << rhs.second << " ]";
             return *this;
         }
 
