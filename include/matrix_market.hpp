@@ -131,11 +131,19 @@ DSparseMatrix<TVal, TIdx> fromMatrixMarket(std::string file, TIdx procs)
 
     if (info & MMInfo::symmetric) {
         for (auto& trip : coefficients) {
+            // we do not want to duplicate the diagonal
+            if (trip.col() == trip.row())
+                continue;
+
             coefficients.push_back(Triplet<TVal, TIdx>(
                 trip.col(), trip.row(), trip.value()));
         }
     } else if (info & MMInfo::skew_symmetric) {
         for (auto& trip : coefficients) {
+            // we do not want to duplicate the diagonal
+            if (trip.col() == trip.row())
+                continue;
+
             coefficients.push_back(Triplet<TVal, TIdx>(
                 trip.col(), trip.row(), -trip.value()));
         }
