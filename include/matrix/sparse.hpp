@@ -114,12 +114,25 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         /** Move constructor */
         DSparseMatrix(DSparseMatrix&& o) = default;
 
+        bool isInitialized() const {
+            return _initialized;
+        }
+
         /** Sets the distribution scheme for this matrix */
         void setDistributionScheme(Partitioning partitioning,
                 TIdx procs)
         {
             _partitioning = partitioning;
             this->_procs = procs;
+        }
+
+        /** Sets the distribution scheme for this matrix. The function should be of the form
+          * \f[ f: Z_m \times Z_n \to Z_p \f]
+          * where m is the number of columns, n is the number of rows, and p is the number
+          * of processors of this matrix */
+        void setDistributionFunction(std::function<TIdx(TIdx, TIdx)> distributionLambda)
+        {
+            _distributionLambda = distributionLambda;
         }
 
         /** Multiply a sparse matrix with a dense vector */
@@ -158,7 +171,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     result[proc] = func(image);
                 };
 
-            std::vector<std::thread> threads(this->_procs);
+            std::vector<std::thread> threads(this->_subs.size());
 
             TIdx p = 0;
             for (const auto& image : _subs) {
@@ -278,6 +291,15 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
             _nz = 0;
 
+            if (_partitioning == Partitioning::custom) {
+                if (!_distributionLambda) {
+                    ZeeLogError << "Trying to apply a custom partitioning, but"
+                        " no distribution function was set. The matrix remains"
+                        " uninitialized." << endLog;
+                    return;
+                }
+            }
+
             for (TIdx i = 0; i < this->procs(); ++i)
                 _subs.push_back(std::make_shared<Image>());
 
@@ -286,6 +308,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             std::mt19937 mt(rd());
             std::uniform_int_distribution<TIdx> randproc(0, this->procs() - 1);
 
+            // FIXME change order of switch and for
             for (TInputIterator it = begin; it != end; it++)
             {
                 TIdx target_proc = 0;
@@ -303,6 +326,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                     target_proc = randproc(mt);
                     break;
 
+                case Partitioning::custom:
+                    target_proc = _distributionLambda((*it).row(), (*it).col());
+                    break;
+
                 default:
                     // Fall back to 1D cyclic
                     target_proc = (*it).row() % this->procs();
@@ -312,6 +339,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 _subs[target_proc]->pushTriplet(*it);
                 _nz++;
             }
+
+            _initialized = true;
         }
 
         void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
@@ -328,6 +357,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             for (auto& pimg : _subs) {
                 _nz += pimg->nonZeros();
             }
+
+            _initialized = true;
         }
 
         /** Obtain the number of nonzeros in a column */
@@ -409,6 +440,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         TIdx _nz;
         Partitioning _partitioning;
         std::vector<std::shared_ptr<Image>> _subs;
+        std::function<TIdx(TIdx, TIdx)> _distributionLambda;
+        bool _initialized = false;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -449,7 +482,10 @@ class DSparseMatrixImage
         }
 
         void pushTriplet(Triplet<TVal, TIdx> t) {
-            assert(_storage);
+            if (!_storage) {
+                ZeeLogError << "Can not push triplet without storage." << endLog;
+                return;
+            }
             _rowset.raise(t.row());
             _colset.raise(t.col());
             _storage->pushTriplet(t);
