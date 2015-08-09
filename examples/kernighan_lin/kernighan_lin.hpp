@@ -225,14 +225,18 @@ class KernighanLin
             // Store the pins that become 'dirty' after a flip
             set<std::pair<TIdx, TIdx>> verticesToUpdate;
 
+            auto& colNets = _H.colNets();
+            auto& rowNets = _H.rowNets();
+
             // Choose the base cell (e.g. tail of highest non-trivial list)
             for (auto iter = 0; iter < _H.colNets().size(); ++iter) {
                 TIdx baseCell = -1;
+
                 // FIXME can we do this in constant time? the loop is possibly
                 // unnecessary.. maybe linked list as well
                 for (TIdx bucket = _buckets.size() - 1; bucket >= 0; --bucket) {
                     for (auto cell : _buckets[bucket]) {
-                        if (_counts[_columnInA[cell] ? 1 : 0] >= _allowedSize)
+                        if (_counts[_columnInA[cell] ? 1 : 0] + 1 > _allowedSize)
                             continue;
                         baseCell = cell;
                         netGain += bucket - _maxSize;
@@ -253,12 +257,6 @@ class KernighanLin
                     break;
                 }
 
-                for (auto row : _H.colNets()[baseCell]) {
-                    for (auto pin : _H.rowNets()[row]) {
-                        verticesToUpdate.insert(std::make_pair(pin, _vertexGains[pin]));
-                    }
-                }
-
                 // If rowCountA changes 'type', then we need to update pins
                 // The types are:
                 // (1) 'almost' A or B (1 or size - 1)
@@ -268,32 +266,18 @@ class KernighanLin
                 // but if we got to (1) we *might* have gotten from (2)
                 //
                 // first we nullify the effects of the effected nets (if necessary)
-                for (auto row : _H.colNets()[baseCell]) {
-                    for (auto pin : _H.rowNets()[row]) {
+                for (auto row : colNets[baseCell]) {
+                    for (auto pin : rowNets[row]) {
                         _vertexGains[pin] -= gainForPinInRow(_columnInA[pin],
                                 _rowCountA[row],
                                 _H.rowNets()[row].size());
                     }
 
+                    // FIXME: do we require this?
+                    //  if (_H.rowNets()[row].size() == 1)
+                    //      continue;
+
                     _rowCountA[row] += _columnInA[baseCell] ? -1 : 1;
-
-                    if (_H.rowNets()[row].size() == 1)
-                        continue;
-
-                    //// FIXME can probably be made more efficient, similar to nullifying step
-                    //// case (1)
-                    //if ((columnInA[baseCell] && rowCountA[row] == 1)
-                    //        || (!columnInA[baseCell] && rowCountA[row] == rowNets[row].size() - 1)) {
-                    //    // from positive gain to neutral gain
-                    //    vertexGains[baseCell] -= 1;
-                    //}
-                    //// case (2)
-                    //else if (rowCountA[row] == rowNets[row].size() || rowCountA[row] == 0) {
-                    //    // from negative gain, to neutral gain
-                    //    for (auto pin : rowNets[row]) {
-                    //        vertexGains[pin] += 1;
-                    //    }
-                    //}
                 }
 
                 // We flip the base cell
@@ -308,6 +292,12 @@ class KernighanLin
                         _vertexGains[pin] += gainForPinInRow(_columnInA[pin],
                                 _rowCountA[row],
                                 _H.rowNets()[row].size());
+                    }
+                }
+
+                for (auto row : _H.colNets()[baseCell]) {
+                    for (auto pin : _H.rowNets()[row]) {
+                        verticesToUpdate.insert(std::make_pair(pin, _vertexGains[pin]));
                     }
                 }
 
@@ -339,8 +329,6 @@ class KernighanLin
             }
 
             _A.resetImages(newImages);
-
-            ZeeLogInfo << "FM partitioned into sizes: " << _counts[0] << " " << _counts[1] << endLog;
         };
 
     private:

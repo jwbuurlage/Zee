@@ -2,11 +2,16 @@
  * a row partitioning. The identity blocks are implied, and used for computing
  * communication volume.
  *
+ * There are four relevant matrices involved:
+ *
  * A = A_r + A_c
- * B = [ I & A_c^T \\ A_r & I ]
+ *
+ * B = [ I   | A_r^T ]
+ *     [-------------]
+ *     [ A_c | I     ]
  *
  * We call B the "extended matrix".
- * This partitioner is a stateful iterative partitioner.
+ * This partitioner is a 'stateful iterative partitioner'.
  */
 
 #include <zee.hpp>
@@ -33,6 +38,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         using TIdx = typename TMatrix::index_type;
         using TVal = typename TMatrix::value_type;
         using TImage = typename TMatrix::image_type;
+        using TTriplet = Zee::Triplet<TVal, TIdx>;
 
         MGPartitioner() {
             this->_procs = 2;
@@ -42,7 +48,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         virtual void initialize(TMatrix& A) override
         {
             this->split(A);
-            initialized = true;
+            _initialized = true;
         }
 
         bool locallyOptimal() const {
@@ -63,9 +69,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             auto n = A.cols();
             auto p = A.procs();
 
-            _bitInRow = make_unique<vector<vector<atomic_wrapper<bool>>>>(p);
-            for (TIdx s = 0; s < p; ++s)
-                (*_bitInRow)[s].resize((*A.getImages()[s]).nonZeros());
+            _tripletInRow.resize(A.nonZeros());
 
             // we need to count the number of elements in each row
             // and column, use compute
@@ -95,12 +99,11 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
             // we now have distributed row/col counts.
             // time to split into bits
-            s = 0;
+            TIdx cur = 0;
             for (auto& pimg : A.getImages()) {
                 // for every nonzero in the image, we need to check if its
                 // row count or col count is higher, and assign
                 // the proper bool to the bitset
-                TIdx cur = 0;
                 for (auto& t : *pimg) {
                     auto i = t.row();
                     auto j = t.col();
@@ -109,7 +112,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                     auto s_c_j = col_count[j % p][j / p]._a.load();
 
                     // this is the score function
-                    (*_bitInRow)[s][cur++]._a = (s_r_i < s_c_j);
+                    _tripletInRow[cur++] = (s_r_i < s_c_j);
                 }
 
                 ++s;
@@ -118,9 +121,6 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
         void constructExtendedMatrix(TMatrix& A, TMatrix& B)
         {
-            // we bipartition
-            auto p = 2;
-
             // ## Explicitely construct matrix B
             // we allow this to be distributed for generalizing to parallel
             // for now just put A^c and A^r on differnt procs (and diagonal
@@ -130,41 +130,36 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // - less flexibility (can easily switch (1D) partitioners for B
             //   if we explicitely construct it)
             // - cluttered code here
-            vector<unique_ptr<TImage>> new_images;
-            for (TIdx i = 0; i < p; ++i)
-                new_images.push_back(std::make_unique<TImage>());
+            std::vector<TTriplet> coefficients;
 
             auto& images = A.getMutableImages();
 
-            TIdx s = 0;
+            std::set<TIdx> rowset;
+            std::set<TIdx> colset;
+
+            TIdx cur = 0;
             for (auto& pimg : images) {
-                TIdx cur = 0;
                 for (auto t : *pimg) {
-                    if ((*_bitInRow)[s][cur++]._a)
-                        new_images[0]->pushTriplet(
-                                Zee::Triplet<TVal, TIdx>(
-                                    t.col(), A.cols() + t.row(), t.value()));
-                    else
-                        new_images[1]->pushTriplet(
-                                Zee::Triplet<TVal, TIdx>(
-                                    A.rows() + t.row(), t.col(), t.value()));
+                    bool tripletInAr = _tripletInRow[cur++];
+                    auto bTriplet = TTriplet(
+                                bRow(tripletInAr, t.row(), t.col(), A),
+                                bCol(tripletInAr, t.row(), t.col(), A),
+                                t.value());
+                    rowset.insert(bTriplet.row());
+                    colset.insert(bTriplet.col());
+                    coefficients.push_back(bTriplet);
                 }
-                ++s;
             }
 
             for (TIdx i = 0; i < A.rows() + A.cols(); ++i) {
-                if (i < A.cols()) {
-                    new_images[0]->pushTriplet(
-                            Zee::Triplet<TVal, TIdx>(
-                                i, i, (TVal)1));
-                } else {
-                    new_images[1]->pushTriplet(
-                            Zee::Triplet<TVal, TIdx>(
+                if (colset.find(i) != colset.end() &&
+                        rowset.find(i) != rowset.end()) {
+                    coefficients.push_back(TTriplet(
                                 i, i, (TVal)1));
                 }
             }
 
-            B.resetImages(new_images);
+            B.setFromTriplets(coefficients.begin(), coefficients.end());
         }
 
         inline TIdx bRow(bool tripletInAr,
@@ -212,13 +207,12 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 aNewImages.push_back(std::make_unique<TImage>());
 
             auto& images = A.getMutableImages();
+            TIdx cur = 0;
             // now we modify A
-            s = 0;
             for (auto& pimg : images) {
-                TIdx cur = 0;
                 for (auto triplet : *pimg) {
                     auto targetProc = 0;
-                    if ((*_bitInRow)[s][cur++]._a) {
+                    if (_tripletInRow[cur++]) {
                         auto colProc = triplet.row() + A.cols();
                         targetProc =
                             procForCol[colProc % p][colProc / p];
@@ -239,10 +233,15 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         {
             // FIXME: many of these operations can be done in place
 
-            if (initialized) {
+            if (_initialized) {
                 ZeeLogWarning << "Already applied an initial partitioning"
                     " instead refining the partitioning on A" << endLog;
                 this->refine(A);
+                return A;
+            }
+
+            if (!A.isInitialized()) {
+                ZeeLogError << "MG: Trying to partition uninitialized matrix." << endLog;
                 return A;
             }
 
@@ -251,6 +250,8 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
             auto B = TMatrix(2 * A.rows(), 2 * A.cols());
             constructExtendedMatrix(A, B);
+
+            B.spy("initial_B");
 
             // PHASE 2: call column partitioner
             // (we now partition B)
@@ -272,13 +273,16 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         /** IR the (bi-)partitioning on A */
         TMatrix& refine(TMatrix& A) override
         {
-            using TTriplet = Zee::Triplet<TVal, TIdx>;
-
             // We only support IR on bi-partitionings
             if (A.procs() != 2) {
                 ZeeLogError << "For now MG-IR only supports bipartitionings, "
                     "the matrix A has a " << A.procs() << "-way partitioning"
                     << endLog;
+                return A;
+            }
+
+            if (!A.isInitialized()) {
+                ZeeLogError << "MG: Trying to refine uninitialized matrix." << endLog;
                 return A;
             }
 
@@ -292,49 +296,84 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             std::vector<TTriplet> coefficients;
             coefficients.reserve((int)(A.nonZeros() + A.rows() + A.cols()));
 
+            std::set<TIdx> rowset;
+            std::set<TIdx> colset;
+
+            std::fill(_tripletInRow.begin(), _tripletInRow.end(), false);
+
             // PHASE 1: We construct the matrix B according to the partitioning of A
+            TIdx cur = 0;
             for (auto& t : *aImages[0]) {
-                coefficients.push_back(TTriplet(
+                auto bTriplet = TTriplet(
                             bRow(_phaseRow, t.row(), t.col(), A),
                             bCol(_phaseRow, t.row(), t.col(), A),
-                            t.value()));
+                            t.value());
+                if (_phaseRow) {
+                    _tripletInRow[cur] = true;
+                }
+                rowset.insert(bTriplet.row());
+                colset.insert(bTriplet.col());
+                coefficients.push_back(bTriplet);
+                cur++;
             }
 
             for (auto& t : *aImages[1]) {
-                coefficients.push_back(TTriplet(
+                auto bTriplet = TTriplet(
                             bRow(!_phaseRow, t.row(), t.col(), A),
                             bCol(!_phaseRow, t.row(), t.col(), A),
-                            t.value()));
+                            t.value());
+                rowset.insert(bTriplet.row());
+                colset.insert(bTriplet.col());
+                if (!_phaseRow) {
+                    _tripletInRow[cur] = true;
+                }
+                coefficients.push_back(bTriplet);
+                cur++;
             }
 
             for (TIdx i = 0; i < A.cols() + A.rows(); ++i) {
-                coefficients.push_back(TTriplet((TIdx)i, (TIdx)i, (TVal)1));
+                if (colset.find(i) != colset.end() &&
+                        rowset.find(i) != rowset.end()) {
+                    coefficients.push_back(TTriplet(i, i, (TVal)1));
+                }
             }
 
             // We want B to be bipartitioned.
-            // FIXME Support for lambda distribution.
-            B.setDistributionScheme(Zee::Partitioning::cyclic, 1);
+            B.setDistributionScheme(Zee::Partitioning::custom, 2);
+            B.setDistributionFunction([&A] (TIdx row, TIdx col) {
+                        if (col < A.rows()) {
+                            return 0;
+                        }
+                        return 1;
+                    });
             B.setFromTriplets(coefficients.begin(), coefficients.end());
-            B.spy("BTest");
 
-            // PHASE 2: Apply KL
-            // FIXME: naming is off here, why B member? only used in initialize
-            // FIXME: want to keep B inbetween runs, since it does things
-            KernighanLin<decltype(B)> kerLin(B);
-            kerLin.run();
+            if (B.isInitialized()) {
+                // PHASE 2: Apply KL
+                // FIXME: naming is off here, why B member? only used in initialize
+                // FIXME: want to keep B inbetween runs, since it does things?
+                KernighanLin<decltype(B)> kerLin(B);
+                kerLin.run();
 
-            // PHASE 3: retrieve partitioning for A
-            inducePartitioning(A, B);
+                // PHASE 3: retrieve partitioning for A
+                inducePartitioning(A, B);
+            }
+            else {
+                ZeeLogError << "Could not construct the extended matrix B."
+                    << endLog;
+            }
 
             if (A.communicationVolume() == priorVolume) {
                 if (!_phaseRow && _rowOptimal) {
                     _locallyOptimal = true;
-                } else {
-                    if (_phaseRow)
-                        _rowOptimal = true;
-                    else
-                        _rowOptimal = false;
-                    _phaseRow = !_phaseRow;
+                } else if (_phaseRow) {
+                    _rowOptimal = true;
+                }
+                _phaseRow = !_phaseRow;
+            }
+            else {
+                if (!_phaseRow) {
+                    _rowOptimal = false;
                 }
             }
 
@@ -342,8 +381,8 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         }
 
     private:
-        unique_ptr<vector<vector<atomic_wrapper<bool>>>> _bitInRow;
-        bool initialized = false;
+        vector<bool> _tripletInRow;
+        bool _initialized = false;
         bool _locallyOptimal = false;
         bool _rowOptimal = false;
         bool _phaseRow = true;
