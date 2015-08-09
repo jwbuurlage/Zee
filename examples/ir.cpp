@@ -8,14 +8,14 @@ using namespace Zee;
 
 int main()
 {
-    std::string matrix = "karate";
+    std::string matrix = "steam3";
 
     ZeeLogInfo << "-- Starting IR example" << endLog;
 
     // Initialize the centralized base matrix from file
     DSparseMatrix<double, int> baseMatrix =
         fromMatrixMarket<double, int>("data/matrices/" + matrix  + ".mtx", 1);
-    baseMatrix.spy("karate");
+    baseMatrix.spy(matrix);
     auto& A = baseMatrix;
 
     vector<int> communicationVolumes;
@@ -27,15 +27,18 @@ int main()
     A.spy(matrix + "_initial_mg");
 
     communicationVolumes.push_back(A.communicationVolume());
-    while (!mgPartitioner.locallyOptimal()) {
+    auto iter = 0;
+    auto iters = 1000;
+    while (!mgPartitioner.locallyOptimal() && iter < iters) {
         mgPartitioner.refine(A);
         communicationVolumes.push_back(A.communicationVolume());
-        A.spy(matrix + "_initial_mg_refine");
+        A.spy(matrix + "_mg_refine");
+        ++iter;
     }
     ZeeLogVar(communicationVolumes);
 
     // the final matrix
-    A.spy(matrix + "_initial_mg_final");
+    A.spy(matrix + "_mg_final");
 
     return 0;
 }
