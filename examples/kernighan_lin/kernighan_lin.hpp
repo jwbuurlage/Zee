@@ -21,8 +21,8 @@ class Hypergraph
 
         void initialize(const TMatrix& A)
         {
-            _rowNets.resize(A.rows());
-            _colNets.resize(A.cols());
+            _rowNets.resize(A.getRows());
+            _colNets.resize(A.getCols());
             for (auto& imgPtr : A.getImages()) {
                 for (auto& triplet : *imgPtr) {
                     _rowNets[triplet.row()].push_back(triplet.col());
@@ -56,8 +56,8 @@ class KernighanLin
         {
             // if bipartitioned we take this partitioning
             // as initial for hypergraph
-            if (_A.procs() == 2) {
-                _columnInA.resize(_A.cols());
+            if (_A.getProcs() == 2) {
+                _columnInA.resize(_A.getCols());
                 std::fill(_columnInA.begin(), _columnInA.end(), false);
 
                 // columnInA from A
@@ -70,7 +70,7 @@ class KernighanLin
                 }
             } else {
                 // otherwise we randomize a partitioning
-                _columnInA = randomColumnDistribution(_A.cols());
+                _columnInA = randomColumnDistribution(_A.getCols());
             }
 
             _H.initialize(_A);
@@ -84,8 +84,8 @@ class KernighanLin
             _allowedSize = (TIdx)(0.5 * _A.nonZeros() * (1 + _epsilon));
 
             // Weights are number of elements in each column of the matrix
-            _columnWeights.resize(_A.cols());
-            for (TIdx j = 0; j < _A.cols(); ++j) {
+            _columnWeights.resize(_A.getCols());
+            for (TIdx j = 0; j < _A.getCols(); ++j) {
                 _columnWeights[j] = _A.getColumnWeight(j);
             }
 
@@ -94,7 +94,7 @@ class KernighanLin
             _counts[0] = 0;
             _counts[1] = 0;
 
-            for (TIdx j = 0; j < _A.cols(); ++j) {
+            for (TIdx j = 0; j < _A.getCols(); ++j) {
                 if (_columnInA[j]) {
                     _counts[0] += _columnWeights[j];
                 } else {
@@ -127,14 +127,14 @@ class KernighanLin
                 _buckets.push_back(list<TIdx>());
             }
 
-            _vertexGains.resize(_A.cols());
+            _vertexGains.resize(_A.getCols());
             std::fill(_vertexGains.begin(), _vertexGains.end(), 0);
 
             // Next we loop over all vertices, obtaining vertex gain
             // if it is the *only* element of {A, B} in a net, a gain of 1
             // if the net is and stays mixed then a gain of 0
             // if the net is pure then flipping it is a gain of -1
-            for (TIdx row = 0; row < _A.rows(); ++row) {
+            for (TIdx row = 0; row < _A.getRows(); ++row) {
                 for (const auto& pin : rowNets[row]) {
                     _vertexGains[pin] += gainForPinInRow(_columnInA[pin],
                             _rowCountA[row],
@@ -145,8 +145,8 @@ class KernighanLin
             // We initialize the buckets, and store the list elements for each
             // column in M
             _listElements.clear();
-            _listElements.resize(_A.cols());
-            for (TIdx j = 0; j < _A.cols(); ++j) {
+            _listElements.resize(_A.getCols());
+            for (TIdx j = 0; j < _A.getCols(); ++j) {
                 _buckets[_vertexGains[j] + _maxSize].push_back(j);
                 _listElements[j] = --_buckets[_vertexGains[j] + _maxSize].end();
             }

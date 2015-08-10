@@ -17,9 +17,6 @@ License, or (at your option) any later version.
 #include <thread>
 #include <iostream>
 
-#include "matrix/sparse.hpp"
-#include "matrix/dense.hpp"
-
 namespace Zee {
 
 namespace operation

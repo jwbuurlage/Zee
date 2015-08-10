@@ -26,10 +26,9 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include <unpain_cpp.hpp>
+#include <unpain_base.hpp>
 
 #include "base.hpp"
-#include "dense.hpp"
 #include "storage.hpp"
 #include "../matrix_market.hpp"
 #include "../common.hpp"
@@ -41,6 +40,9 @@ namespace Zee {
 // Fwd declaring partitioner
 template <class TMatrix>
 class Partitioner;
+
+template <typename TVal, typename TIdx>
+class DVector;
 
 template <typename TVal, typename TIdx = uint32_t,
          class CStorage = StorageTriplets<TVal, TIdx>>
@@ -91,7 +93,7 @@ enum class Partitioning
 /** The class DSparseMatrix is a distributed matrix type inspired by
   * Eigen's SparseMatrix. It is distributed over multiple processing units,
   */
-template <typename TVal, typename TIdx = uint32_t,
+template <typename TVal = double, typename TIdx = uint32_t,
          class Image = DSparseMatrixImage<TVal, TIdx,
             StorageTriplets<TVal, TIdx>>>
 class DSparseMatrix : public DMatrixBase<TVal, TIdx>
@@ -102,15 +104,15 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         using value_type = TVal;
 
         /** Initialize from .emtx format */
-        DSparseMatrix(std::string file) :
-            DMatrixBase<TVal, TIdx>(0, 0)
+        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, std::string file) :
+            DMatrixBase<TVal, TIdx>(center, 0, 0)
         {
             loadMatrixMarket(file);
         }
 
         /** Initialize an (empty) sparse (rows x cols) oatrix */
-        DSparseMatrix(TIdx rows, TIdx cols) :
-            DMatrixBase<TVal, TIdx>(rows, cols)
+        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx rows, TIdx cols) :
+            DMatrixBase<TVal, TIdx>(center, rows, cols)
         {
             _partitioning = Partitioning::cyclic;
         }
@@ -133,7 +135,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 TIdx procs)
         {
             _partitioning = partitioning;
-            this->_procs = procs;
+            this->procs_ = procs;
         }
 
         /** Sets the distribution scheme for this matrix. The function should be of the form
@@ -173,7 +175,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         template<typename TReturn>
         std::vector<TReturn> compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const
         {
-            auto result = std::vector<TReturn>(this->_procs);
+            auto result = std::vector<TReturn>(this->getProcs());
 
             // capture function and result by-reference
             auto push_result = [&func, &result] (TIdx proc,
@@ -206,7 +208,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             double eps = 1.0;
             for (auto& pimg : _subs)
             {
-                double eps_i = ((double)this->_procs * pimg->nonZeros())
+                double eps_i = ((double)this->getProcs() * pimg->nonZeros())
                     / this->nonZeros();
                 if (eps_i > eps) {
                     eps = eps_i;
@@ -242,22 +244,22 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             atomic<TIdx> V { 0 };
 
             // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
-            std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->_procs,
-                    std::vector<atomic_wrapper<TIdx>>(this->_rows / this->_procs + 1));
-            std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->_procs,
-                    std::vector<atomic_wrapper<TIdx>>(this->_cols / this->_procs + 1));
+            std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->getProcs(),
+                    std::vector<atomic_wrapper<TIdx>>(this->getRows() / this->getProcs() + 1));
+            std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->getProcs(),
+                    std::vector<atomic_wrapper<TIdx>>(this->getCols() / this->getProcs() + 1));
 
             // FIXME: parallelize, using generalized compute
             TIdx s = 0;
             for (auto& pimg : _subs) {
                 for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
-                    lambda[i % this->_procs][i / this->_procs]._a += 1;
+                    lambda[i % this->getProcs()][i / this->getProcs()]._a += 1;
                 }
 
                 for (auto key_count : pimg->getColSet()) {
                     auto j = key_count.first;
-                    mu[j % this->_procs][j / this->_procs]._a += 1;
+                    mu[j % this->getProcs()][j / this->getProcs()]._a += 1;
                 }
 
                 ++s;
@@ -269,8 +271,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // FIXME: parallelize, using generalized compute
             // FIXME: can also parallelize.. O(n) -> O(n / p)
             // with extra superstep
-            std::vector<int> lambda_s(this->_procs, 0);
-            for (TIdx proc = 0; proc < this->_procs; ++proc) {
+            std::vector<int> lambda_s(this->getProcs(), 0);
+            for (TIdx proc = 0; proc < this->getProcs(); ++proc) {
                 TIdx V_s = 0;
 
                 for (int i = 0; i < lambda[proc].size(); ++i) {
@@ -310,13 +312,13 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 }
             }
 
-            for (TIdx i = 0; i < this->procs(); ++i)
+            for (TIdx i = 0; i < this->getProcs(); ++i)
                 _subs.push_back(std::make_shared<Image>());
 
             // FIXME: only if partitioning is random
             std::random_device rd;
             std::mt19937 mt(rd());
-            std::uniform_int_distribution<TIdx> randproc(0, this->procs() - 1);
+            std::uniform_int_distribution<TIdx> randproc(0, this->getProcs() - 1);
 
             // FIXME change order of switch and for
             for (TInputIterator it = begin; it != end; it++)
@@ -325,11 +327,11 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 switch (_partitioning)
                 {
                 case Partitioning::cyclic:
-                    target_proc = (*it).row() % this->procs();
+                    target_proc = (*it).row() % this->getProcs();
                     break;
 
                 case Partitioning::block:
-                    target_proc = (this->procs() * (*it).row()) / this->rows();
+                    target_proc = (this->getProcs() * (*it).row()) / this->getRows();
                     break;
 
                 case Partitioning::random:
@@ -342,7 +344,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
                 default:
                     // Fall back to 1D cyclic
-                    target_proc = (*it).row() % this->procs();
+                    target_proc = (*it).row() % this->getProcs();
                     break;
                 }
 
@@ -356,8 +358,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
         {
             // update the number of processors
-            this->_procs = new_images.size();
-            _subs.resize(this->_procs);
+            this->procs_ = new_images.size();
+            _subs.resize(this->getProcs());
 
             for(TIdx i = 0; i < new_images.size(); ++i)
                 _subs[i].reset(new_images[i].release());
@@ -432,8 +434,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 this->communicationVolume() << endl;
             fout << title << endl;
 
-            fout << this->rows() << " " << this->cols() << " " << this->nonZeros() <<
-                " " << this->procs() << endl;
+            fout << this->getRows() << " " << this->getCols() << " " << this->nonZeros() <<
+                " " << this->getProcs() << endl;
 
             TIdx s = 0;
             for (auto& image : _subs) {
@@ -558,8 +560,8 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 }
             }
 
-            this->_cols = N;
-            this->_rows = M;
+            this->cols_ = N;
+            this->rows_ = M;
 
             setDistributionScheme(Partitioning::cyclic, 1);
             setFromTriplets(coefficients.begin(), coefficients.end());

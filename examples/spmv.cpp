@@ -1,30 +1,27 @@
-#include <zee.hpp>
+#include <string>
 
-#include <cstdint>
-#include <iostream>
+#include <unpain_cpp.hpp>
+#include <zee.hpp>
 
 using namespace Zee;
 
 int main()
 {
-    // 1. Initialize a random n*m sparse matrix with set fillin
-    uint32_t n = 30;
-    uint32_t m = 30;
-    uint32_t p = 4;
-    double fill_in = 0.4;
+    auto center = std::make_shared<Unpain::Center<int>>(2);
+    std::string matrix = "steam3";
 
-    auto I = eye(n, p);
-    DSparseMatrix<double> A = rand(n, m, p, fill_in);
- 
-    I.spy();
+    ZeeLogInfo << "-- Starting SpMV example" << endLog;
+
+    auto A = DSparseMatrix<double, int>(center, "data/matrices/" + matrix + ".mtx");
     A.spy();
 
-    // for now vectors are not distributed
-    DVector<double> v = rand(n);
-    DVector<double> u = zeros(n);
+    auto v = DVector<double, int>{center, A.getCols(), 1.0};
 
-    // 4. Multiply A with some dense vector and store the result
-    spmv_cpp<double, uint32_t>(A, v, u);
+    auto u = DVector<double, int>{center, A.getRows()};
+
+    u = A * v;
+
+    ZeeLogVar(u[3]);
 
     return 0;
 }

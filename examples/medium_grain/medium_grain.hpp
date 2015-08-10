@@ -65,9 +65,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // We initialize a bitset for the nonzeros of A, and
             // let 0 be Ar and 1 be into Ac
 
-            auto m = A.rows();
-            auto n = A.cols();
-            auto p = A.procs();
+            auto m = A.getRows();
+            auto n = A.getCols();
+            auto p = A.getProcs();
 
             _tripletInRow.resize(A.nonZeros());
 
@@ -151,7 +151,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 }
             }
 
-            for (TIdx i = 0; i < A.rows() + A.cols(); ++i) {
+            for (TIdx i = 0; i < A.getRows() + A.getCols(); ++i) {
                 if (colset.find(i) != colset.end() &&
                         rowset.find(i) != rowset.end()) {
                     coefficients.push_back(TTriplet(
@@ -170,7 +170,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             if (tripletInAr)
                 return col;
             else
-                return A.rows() + row;
+                return A.getRows() + row;
         }
 
         inline TIdx bCol(bool tripletInAr,
@@ -179,7 +179,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 const TMatrix& A) const
         {
             if (tripletInAr)
-                return A.cols() + row;
+                return A.getCols() + row;
             else
                 return col;
         }
@@ -192,7 +192,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             auto p = 2;
 
             vector<vector<int>> procForCol(p,
-                    vector<int>(B.rows() / p + 1, -1));
+                    vector<int>(B.getRows() / p + 1, -1));
             TIdx s = 0;
             for (auto& subMatrix : B.getImages()) {
                 for (auto& pColCount : subMatrix->getColSet()) {
@@ -213,7 +213,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 for (auto triplet : *pimg) {
                     auto targetProc = 0;
                     if (_tripletInRow[cur++]) {
-                        auto colProc = triplet.row() + A.cols();
+                        auto colProc = triplet.row() + A.getCols();
                         targetProc =
                             procForCol[colProc % p][colProc / p];
                     } else {
@@ -248,7 +248,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // PHASE 1: split A in two, and construct extended matrix B
             this->initialize(A);
 
-            auto B = TMatrix(2 * A.rows(), 2 * A.cols());
+            auto B = TMatrix(A.getCenter(), 2 * A.getRows(), 2 * A.getCols());
             constructExtendedMatrix(A, B);
 
             B.spy("initial_B");
@@ -274,9 +274,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         TMatrix& refine(TMatrix& A) override
         {
             // We only support IR on bi-partitionings
-            if (A.procs() != 2) {
+            if (A.getProcs() != 2) {
                 ZeeLogError << "For now MG-IR only supports bipartitionings, "
-                    "the matrix A has a " << A.procs() << "-way partitioning"
+                    "the matrix A has a " << A.getProcs() << "-way partitioning"
                     << endLog;
                 return A;
             }
@@ -291,10 +291,10 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             auto priorVolume = A.communicationVolume();
             auto& aImages = A.getImages();
 
-            auto B = TMatrix(2 * A.rows(), 2 * A.cols());
+            auto B = TMatrix(A.getCenter(), 2 * A.getRows(), 2 * A.getCols());
 
             std::vector<TTriplet> coefficients;
-            coefficients.reserve((int)(A.nonZeros() + A.rows() + A.cols()));
+            coefficients.reserve((int)(A.nonZeros() + A.getRows() + A.getCols()));
 
             std::set<TIdx> rowset;
             std::set<TIdx> colset;
@@ -331,7 +331,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 cur++;
             }
 
-            for (TIdx i = 0; i < A.cols() + A.rows(); ++i) {
+            for (TIdx i = 0; i < A.getCols() + A.getRows(); ++i) {
                 if (colset.find(i) != colset.end() &&
                         rowset.find(i) != rowset.end()) {
                     coefficients.push_back(TTriplet(i, i, (TVal)1));
@@ -341,7 +341,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // We want B to be bipartitioned.
             B.setDistributionScheme(Zee::Partitioning::custom, 2);
             B.setDistributionFunction([&A] (TIdx row, TIdx col) {
-                        if (col < A.rows()) {
+                        if (col < A.getRows()) {
                             return 0;
                         }
                         return 1;

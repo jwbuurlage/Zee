@@ -15,49 +15,63 @@ License, or (at your option) any later version.
 
 #include <cstdint>
 
+#include <memory>
+
+#include <unpain_base.hpp>
+
 namespace Zee {
 
 /** Base class for matrices */
 template <typename TVal, typename TIdx = int32_t>
 class DMatrixBase {
     public:
-        DMatrixBase(TIdx rows, TIdx cols)
-        {
-            _rows = rows;
-            _cols = cols;
-            _procs = 1;
-        }
+        DMatrixBase(std::shared_ptr<UnpainBase::Center<TIdx>> center,
+                TIdx rows, TIdx cols)
+            : center_(center),
+              cols_(cols),
+              rows_(rows),
+              procs_((TIdx)1)
+        { }
 
         virtual ~DMatrixBase() = default;
 
         /** @return the total number of (possible) entries of the matrix  */
-        inline TIdx size() const
+        TIdx size() const
         {
-            return _rows * _cols;
+            return rows_ * cols_;
         }
 
         /** @return the number of rows of the matrix */
-        inline TIdx rows() const
+        TIdx getRows() const
         {
-            return _rows;
+            return rows_;
         }
 
         /** @return the number of columns of the matrix */
-        inline TIdx cols() const
+        TIdx getCols() const
         {
-            return _cols;
+            return cols_;
         }
 
         /** @return the number of columns of the matrix */
-        inline TIdx procs() const
+        TIdx getProcs() const
         {
-            return _procs;
+            return procs_;
         }
+
+        /** @return the unpain center */
+        std::shared_ptr<UnpainBase::Center<TIdx>> getCenter() const
+        {
+            return center_;
+        };
 
     protected:
-        TIdx _procs = 0;
-        TIdx _rows = 0;
-        TIdx _cols = 0;
+        std::shared_ptr<UnpainBase::Center<TIdx>> center_;
+
+        TIdx cols_ = 0;
+        TIdx rows_ = 0;
+
+        TIdx procs_ = 0;
 };
 
 } // namespace Zee
