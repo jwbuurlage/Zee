@@ -19,52 +19,38 @@ License, or (at your option) any later version.
 
 #include "matrix/sparse.hpp"
 #include "matrix/dense.hpp"
-#include "parallel.hpp"
 
 namespace Zee {
 
-using std::vector;
-using std::thread;
-using std::cerr;
-using std::endl;
-
-template <typename TVal, typename TIdx, typename TImage>
-void spmv_image_cpp(const TImage& image,
-        const DVector<TVal>& v,
-        DVector<TVal>& u)
+namespace operation
 {
-    for (const auto& triplet : image)
-        u[triplet.row()] += triplet.value() * v[triplet.col()];
-}
-
-template <typename TVal, typename TIdx, class Matrix>
-void spmv_cpp(const Matrix& A,
-        const DVector<TVal>& v,
-        DVector<TVal>& u)
-{
-    vector<thread> threads;
-    vector<DVector<TVal>> uis;
-    for (TIdx p = 0; p < A.procs(); p++)
-        uis.push_back(zeros(A.rows()));
-
-    // start a thread with image multiplication
-    TIdx proc = 0;
-    for (auto& image : A.getImages())
+    enum type
     {
-        threads.push_back(
-                thread(spmv_image_cpp<TVal, TIdx, typename Matrix::image_type>,
-                    std::ref(*image),
-                    std::ref(v),
-                    std::ref(uis[proc++])));
-    }
+        product,
+        sum
+    };
+} // namespace operation
 
-    for(auto& t : threads)
-        t.join();
+template <operation::type opType, typename LHS, typename RHS>
+class BinaryOperation
+{
+    public:
+        BinaryOperation(const LHS& lhs, const RHS& rhs)
+            : lhs_(lhs), rhs_(rhs)
+        {
+        }
 
-    // add results (O(np), will optimize when distributing vectors)
-    for (TIdx p = 0; p < A.procs(); p++)
-        for (TIdx j = 0; j < A.rows(); ++j)
-            u[j] += uis[p][j];
-}
+        const LHS& getLHS() const {
+            return lhs_;
+        }
 
-}
+        const RHS& getRHS() const {
+            return rhs_;
+        }
+
+    private:
+        const LHS& lhs_;
+        const RHS& rhs_;
+};
+
+} // namespace Zee

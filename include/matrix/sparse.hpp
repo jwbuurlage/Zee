@@ -26,12 +26,15 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include "matrix/base.hpp"
-#include "matrix/dense.hpp"
-#include "matrix/storage.hpp"
-#include "color_output.hpp"
-#include "logging.hpp"
-#include "common.hpp"
+#include <unpain_cpp.hpp>
+
+#include "base.hpp"
+#include "dense.hpp"
+#include "storage.hpp"
+#include "../matrix_market.hpp"
+#include "../common.hpp"
+#include "../logging.hpp"
+#include "../operations.hpp"
 
 namespace Zee {
 
@@ -98,6 +101,13 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         using index_type = TIdx;
         using value_type = TVal;
 
+        /** Initialize from .emtx format */
+        DSparseMatrix(std::string file) :
+            DMatrixBase<TVal, TIdx>(0, 0)
+        {
+            loadMatrixMarket(file);
+        }
+
         /** Initialize an (empty) sparse (rows x cols) oatrix */
         DSparseMatrix(TIdx rows, TIdx cols) :
             DMatrixBase<TVal, TIdx>(rows, cols)
@@ -136,14 +146,14 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         /** Multiply a sparse matrix with a dense vector */
-        DVector<TVal, TIdx> operator*(const DVector<TVal, TIdx>& v) const
+        BinaryOperation<operation::type::product,
+            DSparseMatrix<TVal, TIdx>,
+            DVector<TVal, TIdx>>
+            operator*(const DVector<TVal, TIdx>& rhs) const
         {
-            DVector<TVal, TIdx> u(this->rows());
-            // how is u distributed, depends on left hand side.. very weird
-            // construction, but interesting. Should return expression template
-            // here
-            // distributed shit
-            return u;
+            return BinaryOperation<operation::type::product,
+                   DSparseMatrix<TVal, TIdx>,
+                   DVector<TVal, TIdx>>(*this, rhs);
         }
 
         /** @return the number of non-zero entries in the matrix */
@@ -437,6 +447,124 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
     private:
+        /** Load matrix from .mtx format */
+        void loadMatrixMarket(std::string file)
+        {
+            ZeeLogInfo << "Loading matrix from file: " << file << endLog;
+
+            std::ifstream fs(file);
+
+            std::string header;
+            std::getline(fs, header);
+            std::stringstream header_stream(header);
+
+            // first check if file is a legitimate MatrixMarket file
+            std::string s, t;
+            header_stream >> s >> t;
+
+            if (s != "%%MatrixMarket" || t != "matrix") {
+                ZeeLogError << "Not a valid MM file: " << file << endLog;
+                return;
+            }
+
+            // now follow a sequence of keywords
+            int info = 0;
+            while (!header_stream.eof()) {
+                std::string keyword;
+                header_stream >> keyword;
+
+                if (s == "array" ||
+                        s == "complex" ||
+                        s == "Hermitian" ||
+                        s == "integer") {
+                    ZeeLogError << "Unsupported keyword encountered: " << s << Logger::end();
+                    return;
+                }
+
+                if (keyword == "coordinate") {
+                    info |= matrix_market::info::coordinate;
+                } else if (keyword == "real") {
+                    info |= matrix_market::info::real;
+                } else if (keyword == "pattern") {
+                    info |= matrix_market::info::pattern;
+                } else if (keyword == "general") {
+                    info |= matrix_market::info::general;
+                } else if (keyword == "symmetric") {
+                    info |= matrix_market::info::symmetric;
+                } else if (keyword == "skew_symmetric") {
+                    info |= matrix_market::info::skew_symmetric;
+                }
+            }
+
+            std::string line;
+            while (!fs.eof()) {
+                std::getline(fs, line);
+                if (line[0] != '%')
+                    break;
+            }
+
+            TIdx M = 0;
+            TIdx N = 0;
+            TIdx L = 0;
+
+            std::stringstream line_stream(line);
+
+            // not a comment, if we have yet read N, M, L
+            line_stream >> M >> N;
+            if (line_stream.eof()) {
+                // error dense matrix
+                ZeeLogError << "Dense matrix format not supported" << Logger::end();
+                return;
+            }
+
+            line_stream >> L;
+
+            vector<Triplet<TVal, TIdx>> coefficients;
+            coefficients.reserve(L);
+
+            // read matrix coordinates
+            for (TIdx i = 0; i < L; ++i) {
+                TIdx row, col;
+                TVal value = (TVal)1;
+
+                std::getline(fs, line);
+                std::stringstream line_stream(line);
+                line_stream >> row >> col;
+
+                if (!(info & matrix_market::info::pattern)) {
+                    line_stream >> value;
+                }
+
+                coefficients.push_back(Triplet<TVal, TIdx>(row - 1, col - 1, value));
+            }
+
+            if (info & matrix_market::info::symmetric) {
+                for (auto& trip : coefficients) {
+                    // we do not want to duplicate the diagonal
+                    if (trip.col() == trip.row())
+                        continue;
+
+                    coefficients.push_back(Triplet<TVal, TIdx>(
+                        trip.col(), trip.row(), trip.value()));
+                }
+            } else if (info & matrix_market::info::skew_symmetric) {
+                for (auto& trip : coefficients) {
+                    // we do not want to duplicate the diagonal
+                    if (trip.col() == trip.row())
+                        continue;
+
+                    coefficients.push_back(Triplet<TVal, TIdx>(
+                        trip.col(), trip.row(), -trip.value()));
+                }
+            }
+
+            this->_cols = N;
+            this->_rows = M;
+
+            setDistributionScheme(Partitioning::cyclic, 1);
+            setFromTriplets(coefficients.begin(), coefficients.end());
+        }
+
         TIdx _nz;
         Partitioning _partitioning;
         std::vector<std::shared_ptr<Image>> _subs;

@@ -13,8 +13,7 @@ int main()
     ZeeLogInfo << "-- Starting IR example" << endLog;
 
     // Initialize the centralized base matrix from file
-    DSparseMatrix<double, int> baseMatrix =
-        fromMatrixMarket<double, int>("data/matrices/" + matrix  + ".mtx", 1);
+    auto baseMatrix = DSparseMatrix<double, int>("data/matrices/" + matrix  + ".mtx");
     baseMatrix.spy(matrix);
     auto& A = baseMatrix;
 

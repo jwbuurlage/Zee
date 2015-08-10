@@ -2,7 +2,7 @@ CCPP = clang++
 CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall -g
 
 OUTPUT_DIR = bin
-INCLUDE_DIRS = -Iinclude
+INCLUDE_DIRS = -Iinclude -Iunpain/include
 
 LIB_DEPS = -lpthread
 
@@ -13,7 +13,7 @@ all: dirs spmv cycpart part
 dirs:
 	mkdir -p ${OUTPUT_DIR}
 
-spmv: examples/spmv.cpp 
+spmv: examples/spmv.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 cycpart: examples/cyclic_partitioner.cpp
