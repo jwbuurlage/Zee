@@ -25,6 +25,9 @@ part: examples/partitioner.cpp
 ir: examples/ir.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
+gmres: examples/gmres.cpp
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
 mm: examples/matrix_market.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
