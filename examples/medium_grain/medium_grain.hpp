@@ -85,13 +85,13 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                 for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
                     auto num_r_i = key_count.second;
-                    row_count[i % p][i / p]._a += num_r_i;
+                    row_count[i % p][i / p].a += num_r_i;
                 }
 
                 for (auto key_count : pimg->getColSet()) {
                     auto j = key_count.first;
                     auto num_c_j = key_count.second;
-                    col_count[j % p][j / p]._a += num_c_j;
+                    col_count[j % p][j / p].a += num_c_j;
                 }
 
                 ++s;
@@ -108,8 +108,8 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                     auto i = t.row();
                     auto j = t.col();
 
-                    auto s_r_i = row_count[i % p][i / p]._a.load();
-                    auto s_c_j = col_count[j % p][j / p]._a.load();
+                    auto s_r_i = row_count[i % p][i / p].a.load();
+                    auto s_c_j = col_count[j % p][j / p].a.load();
 
                     // this is the score function
                     _tripletInRow[cur++] = (s_r_i < s_c_j);
@@ -250,8 +250,6 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
             auto B = TMatrix(A.getCenter(), 2 * A.getRows(), 2 * A.getCols());
             constructExtendedMatrix(A, B);
-
-            B.spy("initial_B");
 
             // PHASE 2: call column partitioner
             // (we now partition B)

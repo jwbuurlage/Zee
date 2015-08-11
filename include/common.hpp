@@ -22,7 +22,6 @@ License, or (at your option) any later version.
 namespace Zee {
 
 using std::make_pair;
-using std::atomic;
 using std::unique_ptr;
 
 template <typename T>
@@ -49,7 +48,7 @@ class counted_set :
         }
 };
 
-// When atomic is used in a nested vector, it is constructed in 2 phases if 
+// When atomic is used in a nested vector, it is constructed in 2 phases if
 // I understand correctly. Since atomic integrals have their move/copy ctors
 // deleted, this does not compile. This wrapper simply adds copy/move ctors, but
 // these are *not* atomic, and thus not thread-safe. Use with caution.
@@ -57,21 +56,26 @@ template <typename T>
 class atomic_wrapper
 {
     public:
-        atomic<T> _a;
 
-        atomic_wrapper() : _a(0) { }
+        atomic_wrapper() : a(0) { }
 
+        atomic_wrapper(const std::atomic<T>& a)
+            : a(a.load()) {}
 
-        atomic_wrapper(const std::atomic<T> &a)
-            : _a(a.load()) {}
+        atomic_wrapper(const atomic_wrapper& other)
+            : a(other.a.load()) {}
 
-        atomic_wrapper(const atomic_wrapper &other)
-            : _a(other._a.load()) {}
-
-        atomic_wrapper &operator=(const atomic_wrapper &other)
+        void operator=(const atomic_wrapper& other)
         {
-            _a.store(other._a.load());
+            a.store(other.a.load());
         }
+
+        void operator=(const T& other)
+        {
+            a = other;
+        }
+
+        std::atomic<T> a;
 };
 
 //* General factory class */
@@ -87,8 +91,6 @@ class Factory
             return unique_ptr<TPart>(new TPart());
         }
 };
-
-
 
 bool fileExists(std::string path)
 {
