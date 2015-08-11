@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# spy reads a descriptive .emtx file and plots this using matplotlib
+# spy reads a descriptive .mtx file and plots this using matplotlib
 #
 # I think it would be cool if we would use full spectrum of colors, and sample
 # uniformly using the tree:
@@ -34,7 +34,7 @@ marker_size = 0.8
 marker_offset = 0.5 * (1 - marker_size)
 
 parser = argparse.ArgumentParser(description=
-    "This script reads one or multiple .emtx file(s), and outputs"
+    "This script reads one or multiple .mtx file(s), and outputs"
     " a spy plot to screen or as a .pdf file")
 
 parser.add_argument('--save', action='store_true',
@@ -48,7 +48,7 @@ parser.add_argument('--directory', type=str, default='',
         " the trailing /")
 
 parser.add_argument('matrix_files', type=str, nargs='+',
-        help="The .emtx file(s) to use as input")
+        help="The .mtx file(s) to use as input")
 
 args = parser.parse_args()
 
@@ -76,7 +76,7 @@ for f in args.matrix_files:
             line = fin.readline()
         title = line
 
-        m, n, nz, p = map(int, fin.readline().split(' '))
+        m, n, nz = map(int, fin.readline().split(' '))
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, aspect='equal')

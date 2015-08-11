@@ -1,14 +1,14 @@
 TODAY:
 ------
 
-[!] Benchmarking `<chrono>` 
 [!] Output performance graphs
     - need to define filetypes for output data (see e.g. spy)
     o spy-ish distribution visualization
     o plots for communication volume
 [!] Think of data output, write python scripts for plotting
-[ ] Implement Multi-Level KL with row-net.
-
+[ ] Generalize spy for large matrices
+[ ] Write iterative solver
+[ ] Generalize to Epiphany
 
 HIGH PRIORITY:
 --------------
@@ -48,10 +48,6 @@ In particular implement for BSP.
 requirements and low computational complexity, also ability to cache?
 
 # General improvements
-[ ] Generalize spy for large matrices
-[ ] Make operations encapsulated in objects, and only perform them at an
-= operation on a distributed type. (expression templates).  Requires careful
-design.
 [ ] Write virtual container with iterators for triplets generation
 [ ] Underscores are ugly..
 
@@ -79,3 +75,7 @@ Need to devise an interface that makes partitioning as general as possible.
     - Possible to cache and (incrementally) update?
 [x] Consider Iterative Refinement (IR) methods and how to implement them.
 [x] Implement MG
+[x] Benchmarking `<chrono>` 
+[x] Make operations encapsulated in objects, and only perform them at an
+= operation on a distributed type. (expression templates).  Requires careful
+design.

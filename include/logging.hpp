@@ -27,6 +27,7 @@ This file has been adapted from the Arya game engine.
 
 #include "color_output.hpp"
 
+#define ZeeLogBenchmark (Zee::Logger() << Zee::LogType::benchmark)
 #define ZeeLogDebug (Zee::Logger() << Zee::LogType::debug)
 #define ZeeLogError (Zee::Logger() << Zee::LogType::error)
 #define ZeeLogInfo (Zee::Logger() << Zee::LogType::info)
@@ -46,7 +47,8 @@ enum LogType {
     info,
     warning,
     error,
-    debug
+    debug,
+    benchmark
 };
 
 class Logger {
@@ -115,6 +117,10 @@ class Logger {
 
                 case LogType::debug:
                     cout << Zee::colors::start["darkgray"] << "DEBUG: ";
+                    break;
+
+                case LogType::benchmark:
+                    cout << Zee::colors::start["purple"] << "BENCHMARK: ";
                     break;
 
                 default:

@@ -14,6 +14,7 @@ License, or (at your option) any later version.
 #include "matrix/base.hpp"
 #include "matrix/sparse.hpp"
 #include "matrix/dense.hpp"
+#include "benchmarking.hpp"
 #include "operations.hpp"
 #include "partitioner.hpp"
 #include "matrix_market.hpp"

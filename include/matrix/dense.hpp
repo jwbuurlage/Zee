@@ -18,16 +18,18 @@ License, or (at your option) any later version.
 #include <vector>
 #include <random>
 #include <memory>
+#include <atomic>
+#include <mutex>
+#include <map>
 
 #include <unpain_base.hpp>
 
 #include "base.hpp"
+#include "common.hpp"
 #include "sparse.hpp"
 #include "../operations.hpp"
 
 namespace Zee {
-
-using std::vector;
 
 // FIXME: should be a specialization of a general dense matrix
 // FIXME: saved as pairs? or just owners distributed cyclically
@@ -38,38 +40,72 @@ class DVector : public DMatrixBase<TVal, TIdx>
         explicit DVector(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx n, TVal defaultValue = (TVal)0)
             : DMatrixBase<TVal, TIdx>(center, n, 1)
         {
-            _elements.resize(n);
-            std::fill(_elements.begin(), _elements.end(), defaultValue);
+            elements_.resize(n);
+            std::fill(elements_.begin(), elements_.end(), defaultValue);
         }
 
-        TVal& operator[] (int i)
+        /** Return the size of the matrix (i.e. the number of rows) */
+        TIdx size() const {
+            return this->rows_;
+        }
+
+        TVal& operator[] (TIdx i)
         {
-            return _elements[i];
+            return elements_[i];
         }
 
-        const TVal& operator[] (int i) const
+        const TVal& operator[] (TIdx i) const
         {
-            return _elements[i];
+            return elements_[i];
         }
 
+        // FIXME we can use #include to split this class over multiple files
+        // which would make more sense
         void operator= (BinaryOperation<operation::type::product,
             DSparseMatrix<TVal, TIdx>,
             DVector<TVal, TIdx>> op)
         {
-            auto& A = op.getLHS();
-            auto& v = op.getRHS();
+            using TImage = typename DSparseMatrix<TVal, TIdx>::image_type;
+
+            const auto& A = op.getLHS();
+            const auto& v = op.getRHS();
             auto& u = *this;
 
-            // FIXME: parallelize
-            for (auto& submatrixPtr : A.getImages()) {
-                for (auto& triplet : *submatrixPtr) {
-                    u[triplet.row()] = triplet.value() * v[triplet.col()];
+            std::mutex writeMutex;
+
+            // FIXME: parallelize using unpain
+            A.compute([&v, &u, &writeMutex] (std::shared_ptr<TImage> submatrixPtr) {
+                std::map<TIdx, TVal> u_s;
+                for (const auto& triplet : *submatrixPtr) {
+                    u_s[triplet.row()] = u_s[triplet.row()] + triplet.value() * v[triplet.col()];
                 }
+
+                for (const auto& pKeyValue : u_s) {
+                    std::lock_guard<std::mutex> lock(writeMutex);
+                    u[pKeyValue.first] += pKeyValue.second;
+                }
+            });
+        }
+
+        /** The dot product */
+        // FIXME parallellize
+        TVal dot(const DVector<TVal, TIdx>& rhs) const {
+            if (rhs.size() != size()) {
+                ZeeLogError << "Can not compute dotproduct between vectors of"
+                    "different sizes" << endLog;
+                return (TVal)0;
             }
+
+            TVal result = (TVal)0;
+        }
+
+        /** The (Euclidian) vector norm */
+        TVal norm() const {
+            return (TVal)0;
         }
 
     private:
-        vector<TVal> _elements;
+        std::vector<TVal> elements_;
 };
 
 //-----------------------------------------------------------------------------

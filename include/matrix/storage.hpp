@@ -223,7 +223,7 @@ class StorageTriplets :
         virtual TIdx size() const override {
             return _triplets.size();
         }
-        
+
         // FIXME: move to getter?! although iterators truly are 'friends'
         friend iterator;
         friend const_iterator;

@@ -103,7 +103,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         using index_type = TIdx;
         using value_type = TVal;
 
-        /** Initialize from .emtx format */
+        /** Initialize from .mtx format */
         DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, std::string file) :
             DMatrixBase<TVal, TIdx>(center, 0, 0)
         {
@@ -198,6 +198,21 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return result;
         }
 
+        // template specialization for void which does not return anything
+        void compute(std::function<void(std::shared_ptr<image_type>)> func) const
+        {
+            // capture function and result by-reference
+            std::vector<std::thread> threads;
+
+            for (auto& image : _subs) {
+                threads.push_back(std::thread(func, image));
+            }
+
+            for (auto& t : threads) {
+                t.join();
+            }
+        }
+
         /** Returns the load imbalance of the current partitioning.
          * Load imbalance is defined as:
          * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
@@ -241,7 +256,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             // In the end lambda's are distributed over procs, let them compute
             // partial sums and send it upwards.
 
-            atomic<TIdx> V { 0 };
+            std::atomic<TIdx> V { 0 };
 
             // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
             std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->getProcs(),
@@ -254,12 +269,12 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             for (auto& pimg : _subs) {
                 for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
-                    lambda[i % this->getProcs()][i / this->getProcs()]._a += 1;
+                    lambda[i % this->getProcs()][i / this->getProcs()].a += 1;
                 }
 
                 for (auto key_count : pimg->getColSet()) {
                     auto j = key_count.first;
-                    mu[j % this->getProcs()][j / this->getProcs()]._a += 1;
+                    mu[j % this->getProcs()][j / this->getProcs()].a += 1;
                 }
 
                 ++s;
@@ -276,14 +291,14 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 TIdx V_s = 0;
 
                 for (int i = 0; i < lambda[proc].size(); ++i) {
-                    if (lambda[proc][i]._a > 1) {
-                        V_s += lambda[proc][i]._a - 1;
+                    if (lambda[proc][i].a > 1) {
+                        V_s += lambda[proc][i].a - 1;
                     }
                 }
 
                 for (int i = 0; i < mu[proc].size(); ++i) {
-                    if (mu[proc][i]._a > 1) {
-                        V_s += mu[proc][i]._a - 1;
+                    if (mu[proc][i].a > 1) {
+                        V_s += mu[proc][i].a - 1;
                     }
                 }
 
@@ -409,18 +424,18 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             using std::endl;
 
             std::stringstream ss;
-            ss << "data/spies/" << title << ".emtx";
+            ss << "data/spies/" << title << ".mtx";
             auto filename = ss.str();
             int i = 1;
             while(fileExists(filename)) {
                 ss.str("");
                 ss.clear();
-                ss << "data/spies/" << title << "_" << i++ << ".emtx";
+                ss << "data/spies/" << title << "_" << i++ << ".mtx";
                 filename = ss.str();
             }
             std::ofstream fout(filename);
 
-            fout << "%%Extended-MatrixMarket distributed-matrix coordinate pattern general" << endl;
+            fout << "%%MatrixMarket matrix coordinate integer general" << endl;
 
             fout << "% Matrix sparsity:      " <<
                 std::fixed << std::setprecision(4) <<
@@ -434,8 +449,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 this->communicationVolume() << endl;
             fout << title << endl;
 
-            fout << this->getRows() << " " << this->getCols() << " " << this->nonZeros() <<
-                " " << this->getProcs() << endl;
+            fout << this->getRows() << " " << this->getCols() << " " << this->nonZeros() << endl;
 
             TIdx s = 0;
             for (auto& image : _subs) {
