@@ -24,7 +24,10 @@ namespace operation
     enum type
     {
         product,
-        sum
+        add,
+        subtract,
+        scalar_product,
+        scalar_division
     };
 } // namespace operation
 

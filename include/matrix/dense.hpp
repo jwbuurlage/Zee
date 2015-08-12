@@ -59,50 +59,36 @@ class DVector : public DMatrixBase<TVal, TIdx>
             return elements_[i];
         }
 
-        // FIXME we can use #include to split this class over multiple files
-        // which would make more sense
-        void operator= (BinaryOperation<operation::type::product,
-            DSparseMatrix<TVal, TIdx>,
-            DVector<TVal, TIdx>> op)
-        {
-            using TImage = typename DSparseMatrix<TVal, TIdx>::image_type;
-
-            const auto& A = op.getLHS();
-            const auto& v = op.getRHS();
-            auto& u = *this;
-
-            std::mutex writeMutex;
-
-            // FIXME: parallelize using unpain
-            A.compute([&v, &u, &writeMutex] (std::shared_ptr<TImage> submatrixPtr) {
-                std::map<TIdx, TVal> u_s;
-                for (const auto& triplet : *submatrixPtr) {
-                    u_s[triplet.row()] = u_s[triplet.row()] + triplet.value() * v[triplet.col()];
-                }
-
-                for (const auto& pKeyValue : u_s) {
-                    std::lock_guard<std::mutex> lock(writeMutex);
-                    u[pKeyValue.first] += pKeyValue.second;
-                }
-            });
-        }
-
         /** The dot product */
         // FIXME parallellize
         TVal dot(const DVector<TVal, TIdx>& rhs) const {
             if (rhs.size() != size()) {
                 ZeeLogError << "Can not compute dotproduct between vectors of"
                     "different sizes" << endLog;
-                return (TVal)0;
+                return 0;
             }
 
-            TVal result = (TVal)0;
+            const auto& lhs = *this;
+
+            TVal sum = 0;
+            for (TIdx i = 0; i < this->size(); ++i) {
+                sum += lhs[i] * rhs[i];
+            }
+
+            return sum;
         }
 
         /** The (Euclidian) vector norm */
         TVal norm() const {
-            return (TVal)0;
+            TVal sum = 0;
+            for (auto& element : elements_) {
+                sum += element * element;
+            }
+            return sqrt(sum);
         }
+
+        // Operator overloads and algorithm implementations
+        #include "dense_operations.hpp"
 
     private:
         std::vector<TVal> elements_;
