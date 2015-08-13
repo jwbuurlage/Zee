@@ -117,6 +117,15 @@ Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
     return lhs;
 }
 
+// Allow expression of type lambda * V by forwarding to V * lambda
+template <typename TVal, typename TIdx>
+BinaryOperation<operation::type::scalar_product,
+    DVector<TVal, TIdx>, TVal>
+    operator*(const TVal& lhs, const DVector<TVal, TIdx>& rhs)
+{
+    return BinaryOperation<operation::type::scalar_product,
+           DVector<TVal, TIdx>, TVal>(rhs, lhs);
+}
 
 // FIXME: these should be constructors
 //DVector<double> zeros(int32_t n)

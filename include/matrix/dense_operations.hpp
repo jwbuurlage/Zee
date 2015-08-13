@@ -33,18 +33,40 @@ BinaryOperation<operation::type::scalar_division,
 
 BinaryOperation<operation::type::subtract,
     DVector<TVal, TIdx>, DVector<TVal, TIdx>>
-    operator- (const DVector<TVal, TIdx>& rhs)
+    operator- (const DVector<TVal, TIdx>& rhs) const
 {
     return BinaryOperation<operation::type::subtract,
            DVector<TVal, TIdx>, DVector<TVal, TIdx>>(*this, rhs);
 }
 
+template <operation::type TOp, typename TLHS, typename TRHS>
+BinaryOperation<operation::type::subtract,
+    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
+ operator- (const BinaryOperation<TOp, TLHS, TRHS>& op) const
+{
+    DVector<TVal, TIdx> v(this->getCenter(), this->size());
+    v = op;
+    auto subOp = *this - v;
+    return subOp;
+}
+
 BinaryOperation<operation::type::add,
     DVector<TVal, TIdx>, DVector<TVal, TIdx>>
-    operator+ (const DVector<TVal, TIdx>& rhs)
+    operator+ (const DVector<TVal, TIdx>& rhs) const
 {
     return BinaryOperation<operation::type::add,
            DVector<TVal, TIdx>, DVector<TVal, TIdx>>(*this, rhs);
+}
+
+template <operation::type TOp, typename TLHS, typename TRHS>
+BinaryOperation<operation::type::add,
+    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
+ operator+ (const BinaryOperation<TOp, TLHS, TRHS>& op) const
+{
+    DVector<TVal, TIdx> v(this->getCenter(), this->size());
+    v = op;
+    auto addOp = *this + v;
+    return addOp;
 }
 
 template <operation::type TOp, typename TLHS, typename TRHS>
@@ -141,5 +163,19 @@ void operator= (BinaryOperation<operation::type::subtract,
 
     for (TIdx i = 0; i < this->size(); ++i) {
         elements_[i] = lhs[i] - rhs[i];
+    }
+}
+
+void operator= (BinaryOperation<operation::type::add,
+    DVector<TVal, TIdx>, DVector<TVal, TIdx>> op)
+{
+    const auto& lhs = op.getLHS();
+    const auto& rhs = op.getRHS();
+
+    ZeeAssert(rhs.size() == lhs.size());
+    ZeeAssert(lhs.size() == size());
+
+    for (TIdx i = 0; i < this->size(); ++i) {
+        elements_[i] = lhs[i] + rhs[i];
     }
 }
