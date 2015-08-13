@@ -75,15 +75,28 @@ void operator= (BinaryOperation<operation::type::product,
     const auto& A = op.getLHS();
     const auto& v = op.getRHS();
     auto& u = *this;
+    const auto p = A.getProcs();
 
     std::mutex writeMutex;
+    Barrier<TIdx> barrier(p);
 
     // FIXME: parallelize using unpain
-    A.compute([&v, &u, &writeMutex] (std::shared_ptr<TImage> submatrixPtr) {
+    A.compute([&] (std::shared_ptr<TImage> submatrixPtr,
+                TIdx s) {
         std::map<TIdx, TVal> u_s;
         for (const auto& triplet : *submatrixPtr) {
-            u_s[triplet.row()] = u_s[triplet.row()] + triplet.value() * v[triplet.col()];
+             u_s[triplet.row()] += triplet.value() * v[triplet.col()];
         }
+
+        // if RHS = this then we can only reset here,
+        // so we use a barrier sync
+        barrier.sync();
+
+        for (TIdx i = s; i < this->size(); i += p) {
+            u[i] = 0;
+        }
+
+        barrier.sync();
 
         for (const auto& pKeyValue : u_s) {
             std::lock_guard<std::mutex> lock(writeMutex);

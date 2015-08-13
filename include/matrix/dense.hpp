@@ -87,6 +87,12 @@ class DVector : public DMatrixBase<TVal, TIdx>
             return sqrt(sum);
         }
 
+        void reset() {
+            for (auto& elem : elements_) {
+                elem = 0;
+            }
+        }
+
         // Operator overloads and algorithm implementations
         #include "dense_operations.hpp"
 
@@ -95,6 +101,22 @@ class DVector : public DMatrixBase<TVal, TIdx>
 };
 
 //-----------------------------------------------------------------------------
+// LOGGING
+//     Vector2D Vector2D::operator+(const Vector2D& right)const {...}
+
+template <typename TVal, typename TIdx>
+Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
+    auto sep = "";
+    lhs << "[";
+    for (TIdx i = 0; i < rhs.size(); ++i) {
+        lhs << std::fixed << std::setprecision(2) << sep << rhs[i];
+        sep = ", ";
+    }
+    lhs << "]";
+
+    return lhs;
+}
+
 
 // FIXME: these should be constructors
 //DVector<double> zeros(int32_t n)

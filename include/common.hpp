@@ -16,6 +16,8 @@ License, or (at your option) any later version.
 #include <map>
 #include <atomic>
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 
 #include <sys/stat.h>
 
@@ -25,8 +27,8 @@ using std::make_pair;
 using std::unique_ptr;
 
 template <typename T>
-class counted_set :
-    public std::map<T, T>
+    class counted_set :
+        public std::map<T, T>
 {
     public:
         counted_set() : std::map<T, T>() { }
@@ -97,5 +99,31 @@ bool fileExists(std::string path)
     struct stat fileInfo;
     return stat(path.c_str(), &fileInfo) == 0;
 }
+
+// FIXME move to center
+template <typename TIdx>
+class Barrier {
+    public:
+        Barrier (TIdx procs = 0)
+            : procs_(procs) {}
+
+        inline void sync()
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            count_++;
+            if (count_ == procs_) {
+                cv.notify_all();
+                count_ = 0;
+            } else {
+                cv.wait(lock);
+            }
+        }
+
+    private:
+        std::mutex mtx;
+        std::condition_variable cv;
+        TIdx procs_ = 0;
+        TIdx count_ = 0;
+};
 
 } // namespace Zee

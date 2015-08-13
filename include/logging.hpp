@@ -23,8 +23,6 @@ This file has been adapted from the Arya game engine.
 #include <iostream>
 #include <string>
 
-#include "matrix/sparse.hpp"
-
 #include "color_output.hpp"
 
 #define ZeeLogBenchmark (Zee::Logger() << Zee::LogType::benchmark)
@@ -36,6 +34,11 @@ This file has been adapted from the Arya game engine.
 #define endLog Zee::Logger::end()
 
 #define ZeeLogVar(VAR) (Zee::Logger() << Zee::LogType::debug << #VAR " = " << VAR << endLog)
+
+#define ZeeAssert(ASSERT) if (!(ASSERT)) {\
+    ZeeLogInfo << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << endLog;\
+    exit(-1);\
+}
 
 namespace Zee {
 
@@ -85,12 +88,6 @@ class Logger {
                 sep = ", ";
             }
             *this << "]";
-            return *this;
-        }
-
-        template <typename TVal, typename TIdx>
-        Logger& operator <<(const Triplet<TVal, TIdx>& rhs) {
-            ss << "{ " << rhs.row() << ",\t" << rhs.col() << " }";
             return *this;
         }
 

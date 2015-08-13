@@ -1,9 +1,12 @@
 #pragma once
 
+#include "logging.hpp"
+
 #include <chrono>
 #include <vector>
 #include <utility>
 #include <sstream>
+#include <iomanip>
 
 namespace Zee
 {
@@ -20,25 +23,28 @@ class Benchmark
         }
 
         ~Benchmark() {
-            auto end = std::chrono::high_resolution_clock::now();
+            if (!silent_) {
+                auto end = std::chrono::high_resolution_clock::now();
+                auto total_ms = std::chrono::duration<double, std::milli>(end - start_).count();
 
-            std::stringstream splitOutput;
-            if (!splits_.empty()) {
-                splits_.push_back(make_pair("", end));
-                auto hline = "--------------------------------------------------";
-                splitOutput << "\n" << hline << '\n';
-                for (unsigned int i = 0; i < splits_.size() - 1; ++i) {
-                    auto splitTime = splits_[i + 1].second - splits_[i].second;
-                    auto ms = std::chrono::duration<double, std::milli>(splitTime).count();
-                    splitOutput << splits_[i].first << "\t" << ms << " ms" << endl;
+                std::stringstream splitOutput;
+                if (!splits_.empty()) {
+                    splits_.push_back(make_pair("", end));
+                    auto hline = "----------------------------------------------------------";
+                    splitOutput << "\n" << hline << '\n';
+                    for (unsigned int i = 0; i < splits_.size() - 1; ++i) {
+                        auto splitTime = splits_[i + 1].second - splits_[i].second;
+                        auto ms = std::chrono::duration<double, std::milli>(splitTime).count();
+                        splitOutput << std::fixed << std::setprecision(2) << splits_[i].first << " \t" << ms << " ms" << " \t" <<
+                             (ms / total_ms) * 100 << "%" << endl;
+                    }
+                    splitOutput << hline;
                 }
-                splitOutput << hline;
-            }
 
-            ZeeLogBenchmark << title_ << " total runtime: " <<
-                std::chrono::duration<double, std::milli>(end - start_).count() <<
-                " ms" <<
-                splitOutput.str() << endLog;
+                ZeeLogBenchmark << title_ << " total runtime: " <<
+                    total_ms << " ms" <<
+                    splitOutput.str() << endLog;
+            }
         }
 
         void phase(std::string splitTitle)
@@ -48,9 +54,14 @@ class Benchmark
             splits_.push_back(make_pair(splitTitle, now));
         }
 
+        void silence() {
+            silent_ = true;
+        }
+
     private:
         std::vector<std::pair<std::string, TTimePoint>> splits_;
         std::string title_;
+        bool silent_ = false;
         TTimePoint start_;
 };
 

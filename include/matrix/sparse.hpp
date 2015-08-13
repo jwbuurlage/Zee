@@ -57,26 +57,26 @@ class Triplet
     public:
         Triplet(TIdx i, TIdx j, TVal value)
         {
-            _i = i;
-            _j = j;
-            _value = value;
+            i_ = i;
+            j_ = j;
+            value_ = value;
         };
 
         ~Triplet() { }
 
         /** @return the value for this triplet */
-        inline TVal value() const { return _value; }
+        TVal value() const { return value_; }
 
         /** @return the row position inside the matrix */
-        inline TIdx row() const { return _i; }
+        TIdx row() const { return i_; }
 
         /** @return the column position inside the matrix */
-        inline TIdx col() const { return _j; }
+        TIdx col() const { return j_; }
 
     private:
-        TIdx _i;
-        TIdx _j;
-        TVal _value;
+        TIdx i_;
+        TIdx j_;
+        TVal value_;
 };
 
 //-----------------------------------------------------------------------------
@@ -199,13 +199,14 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         // template specialization for void which does not return anything
-        void compute(std::function<void(std::shared_ptr<image_type>)> func) const
+        void compute(std::function<void(std::shared_ptr<image_type>, TIdx s)> func) const
         {
             // capture function and result by-reference
             std::vector<std::thread> threads;
 
+            TIdx s = 0;
             for (auto& image : _subs) {
-                threads.push_back(std::thread(func, image));
+                threads.push_back(std::thread(func, image, s++));
             }
 
             for (auto& t : threads) {
@@ -535,8 +536,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
             line_stream >> L;
 
-            vector<Triplet<TVal, TIdx>> coefficients;
-            coefficients.reserve(L);
+            std::vector<Triplet<TVal, TIdx>> coefficients;
+
+            // FIXME: why does this corrupt data
+            //coefficients.reserve(L);
 
             // read matrix coordinates
             for (TIdx i = 0; i < L; ++i) {
@@ -557,8 +560,10 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             if (info & matrix_market::info::symmetric) {
                 for (auto& trip : coefficients) {
                     // we do not want to duplicate the diagonal
-                    if (trip.col() == trip.row())
+                    if (trip.col() == trip.row()) {
+                        ZeeAssert(0);
                         continue;
+                    }
 
                     coefficients.push_back(Triplet<TVal, TIdx>(
                         trip.col(), trip.row(), trip.value()));
@@ -573,6 +578,9 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                         trip.col(), trip.row(), -trip.value()));
                 }
             }
+
+
+            ZeeLogVar(coefficients.size());
 
             this->cols_ = N;
             this->rows_ = M;
@@ -749,5 +757,12 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
 }
 
 //-----------------------------------------------------------------------------
+// LOGGING
+
+template <typename TVal, typename TIdx>
+Logger& operator <<(Logger& lhs, const Triplet<TVal, TIdx>& rhs) {
+    lhs << "{" << rhs.row() << ", " << rhs.col() << ", " << rhs.value() << "}";
+    return lhs;
+}
 
 } // namespace Zee
