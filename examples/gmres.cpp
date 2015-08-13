@@ -152,7 +152,8 @@ void solve(const DSparseMatrix<TVal, TIdx>& A,
         }
     }
 
-    ZeeLogVar(rhos);
+    auto p = Plotter();
+    p.plot(rhos);
 }
 
 } // namespace GMRES
@@ -167,8 +168,9 @@ int main()
     auto center = std::make_shared<Unpain::Center<int>>(4);
 
     // We initialize the matrix with cyclic distribution
-    std::string matrix = "fpga_dcop_05";
+    std::string matrix = "steam3";
     auto A = DSparseMatrix<double, int>(center, "data/matrices/" + matrix + ".mtx", 4);
+
     auto b = DVector<double, int>{center, A.getRows(), 1.0};
     b = A * b;
 
@@ -180,15 +182,15 @@ int main()
     GMRES::solve<double, int>(A, // Matrix
             b,                   // RHS vector
             x,                   // resulting guess for x
-            10,                  // outer iterations
-            10,                  // inner iterations
+            100,                  // outer iterations
+            100,                  // inner iterations
             1e-6);               // tolerance level
 
     DVector<double, int> c{center, A.getRows()};
     DVector<double, int> r{center, A.getRows()};
     c = A * x;
     r = b - c;
-    ZeeLogVar(r.norm());
+    ZeeLogVar(r.norm() / b.norm());
 
     return 0;
 }

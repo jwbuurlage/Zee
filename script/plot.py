@@ -1,5 +1,10 @@
 #!/usr/bin/python3
-
+#
+# -------------------------------
+# FILE:    spy.py
+# AUTHOR:  Jan-Willem Buurlage
+# -------------------------------
+#
 # spy reads a descriptive .mtx file and plots this using matplotlib
 #
 # I think it would be cool if we would use full spectrum of colors, and sample
@@ -17,8 +22,12 @@
 #      4    2    5       1    6       3      7
 #
 # etc.
+#
+# TODO: zplot support
 
 import argparse
+import os
+import yaml
 
 import matplotlib
 matplotlib.use('GTK3Cairo')
@@ -29,16 +38,15 @@ import matplotlib.ticker as ticker
 
 from math import log, ceil
 
-
-marker_size = 0.8
-marker_offset = 0.5 * (1 - marker_size)
-
 parser = argparse.ArgumentParser(description=
     "This script reads one or multiple .mtx file(s), and outputs"
     " a spy plot to screen or as a .pdf file")
 
 parser.add_argument('--save', action='store_true',
         help="save to file, dont show on screen")
+
+parser.add_argument('--showfile', action='store_true',
+        help="save to file, show file on screen")
 
 parser.add_argument('--filetype', type=str, default='pdf',
         help="filetype used for saving images")
@@ -47,12 +55,12 @@ parser.add_argument('--directory', type=str, default='',
         help="the directory in which the matrices are stored. Including"
         " the trailing /")
 
-parser.add_argument('matrix_files', type=str, nargs='+',
-        help="The .mtx file(s) to use as input")
+parser.add_argument('files', type=str, nargs='+',
+        help="The file(s) to use as input")
 
 args = parser.parse_args()
 
-def color_of_proc(proc):
+def get_color(proc):
     # ith element of has denumerator of 2^ceil(2log(p) + 1)
     #                    numerator is n - whats above, 1 + that
     level = ceil(log(proc + 1, 2))
@@ -64,11 +72,13 @@ def color_of_proc(proc):
         color += 1.0;
     return matplotlib.colors.hsv_to_rgb([color, 1, 1])
 
-for i in range(0, 100):
-    color_of_proc(i)
+###################################################
+# SPY MTX
 
-for f in args.matrix_files:
-    matrix_file = args.directory + f
+def spy(matrix_file):
+    marker_size = 0.8
+    marker_offset = 0.5 * (1 - marker_size)
+
     print("INFO: Opening:", matrix_file);
     with open(matrix_file, 'r') as fin:
         line = fin.readline()
@@ -93,9 +103,44 @@ for f in args.matrix_files:
             i, j, p = map(int, fin.readline().split(' '))
             ax.add_patch(patches.Rectangle((j + marker_offset,
                 i + marker_offset),
-                marker_size, marker_size, color=color_of_proc(p)))
+                marker_size, marker_size, color=get_color(p)))
 
         if args.save:
-            plt.savefig(args.spy_file[:-4] + args.filetype)
+            plt.savefig(matrix_file[:-3] + args.filetype)
+        elif args.showfile:
+            outfilename = matrix_file[:-3] + args.filetype
+            plt.savefig(outfilename)
+            os.system("xdg-open " + outfilename)
         else:
             plt.show()
+
+###################################################
+# PLOT YAML
+
+def plot(plot_file):
+    f = open(plot_file, 'r')
+
+    # FIXME: check if zee plot file or error
+    # print(f.getline())
+    # contents = f.read();
+    # print(contents)
+
+    plot_data = yaml.load(contents)
+
+    print(plot_data)
+
+    for line in plot_data["lines"]:
+        line_data = plot_data["lines"][line]["data"]
+        plt.plot(line_data)
+
+    plt.show()
+
+for f in args.files:
+    f = args.directory + f
+    extension = f.split('.')[-1]
+    if extension == "mtx":
+        spy(f);
+    elif extension == "yaml":
+        plot(f)
+    else:
+        print("can not plot file with extension " + extension)

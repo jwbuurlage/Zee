@@ -1,13 +1,19 @@
 TODAY:
 ------
 
+[!] Unit testing, custom solution w/ Python
+    - Unit tests using `script/test.py [category]`
+    - Actual tests in  `test/category.c`
+    - See unit tests in `munificent/wren`
+    - OR use something like Catch, gtest, etc.
 [!] Output performance graphs
     - need to define filetypes for output data (see e.g. spy)
     o spy-ish distribution visualization
     o plots for communication volume
 [!] Think of data output, write python scripts for plotting
-[ ] Generalize spy for large matrices
-[ ] Write iterative solver
+[!] Generalize spy for large matrices
+[ ] Split into more files
+[ ] Add dense matrix
 [ ] Generalize to Epiphany
 
 HIGH PRIORITY:
@@ -35,28 +41,14 @@ a portable way.
 REFINEMENT:
 -----------
 
-# Parallelilization
-[ ] Formalize worker threads through some common provider interface.
-[ ] Formalize (parallel) operation generalization. How to specify for different
-(parallel) providers
-
 # SpMV
-[ ] Add multiple parallelization providers and SpMD implementations, make sure
-it works on general systems (not only multi-core systems, or via pthreads)
-In particular implement for BSP.
 [!] Completely parallel version of SPMD, without O(n) storage
 requirements and low computational complexity, also ability to cache?
+Implement this using streaming on parallella
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
 [ ] Underscores are ugly..
-
-# (Test) Matrices & Testing / Benchmarking
-[!] Unit testing, custom solution w/ Python
-    - Unit tests using `script/test.py [category]`
-    - Actual tests in  `test/category.c`
-    - See unit tests in `munificent/wren`
-    - OR use something like Catch, gtest, etc.
 
 # Done
 [x] move `using` aliases to Zee namespace
@@ -79,3 +71,7 @@ Need to devise an interface that makes partitioning as general as possible.
 [x] Make operations encapsulated in objects, and only perform them at an
 = operation on a distributed type. (expression templates).  Requires careful
 design.
+[x] Write iterative solver
+[x] Add multiple parallelization providers and SpMD implementations, make sure
+it works on general systems (not only multi-core systems, or via pthreads)
+In particular implement for BSP.

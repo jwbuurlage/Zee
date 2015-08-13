@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/matrix/dense.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -30,6 +30,9 @@ License, or (at your option) any later version.
 #include "../operations.hpp"
 
 namespace Zee {
+
+//-----------------------------------------------------------------------------
+// VECTOR
 
 // FIXME: should be a specialization of a general dense matrix
 // FIXME: saved as pairs? or just owners distributed cyclically
@@ -100,9 +103,7 @@ class DVector : public DMatrixBase<TVal, TIdx>
         std::vector<TVal> elements_;
 };
 
-//-----------------------------------------------------------------------------
-// LOGGING
-//     Vector2D Vector2D::operator+(const Vector2D& right)const {...}
+// VECTOR LOGGING
 
 template <typename TVal, typename TIdx>
 Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
@@ -127,29 +128,18 @@ BinaryOperation<operation::type::scalar_product,
            DVector<TVal, TIdx>, TVal>(rhs, lhs);
 }
 
-// FIXME: these should be constructors
-//DVector<double> zeros(int32_t n)
-//{
-//    DVector<double> v(n);
-//
-//    for (int32_t i = 0; i < n; ++i)
-//        v[i] = 0;
-//
-//    return v;
-//}
-//
-//DVector<double> rand(int32_t n)
-//{
-//    DVector<double> v(n);
-//
-//    std::random_device rd;
-//    std::mt19937 mt(rd());
-//    std::uniform_real_distribution<double> dist(1.0, 10.0);
-//
-//    for (int32_t i = 0; i < n; ++i)
-//        v[i] = dist(mt);
-//
-//    return v;
-//}
+//-----------------------------------------------------------------------------
+// MATRIX
+
+template <typename TVal, typename TIdx = int32_t>
+class DMatrix : public DMatrixBase<TVal, TIdx>
+{
+    public:
+       // Operator overloads and algorithm implementations
+        //#include "dense_matrix_operations.hpp"
+
+    private:
+        std::vector<std::vector<TVal>> elements_;
+};
 
 } // namespace Zee

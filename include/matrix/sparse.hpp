@@ -15,6 +15,7 @@ License, or (at your option) any later version.
 
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 
 #include <iostream>
 #include <fstream>
@@ -421,7 +422,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             return _subs;
         }
 
-        void spy(std::string title = "anonymous")
+        void spy(std::string title = "anonymous", bool show = false)
         {
             using std::endl;
 
@@ -462,6 +463,11 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
             }
 
             ZeeLogInfo << "Spy saved to file: " << filename << Logger::end();
+
+            if (show) {
+                auto command = "./script/plot.py --showfile " + filename;
+                std::system(command.c_str());
+            }
         }
 
     private:
@@ -562,7 +568,6 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 for (auto& trip : coefficients) {
                     // we do not want to duplicate the diagonal
                     if (trip.col() == trip.row()) {
-                        ZeeAssert(0);
                         continue;
                     }
 
