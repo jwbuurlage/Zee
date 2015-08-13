@@ -82,7 +82,7 @@ class Triplet
 //-----------------------------------------------------------------------------
 
 /** Different partitioning schemes */
-enum class Partitioning
+enum class partitioning_scheme
 {
     cyclic,
     block,
@@ -104,17 +104,18 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         using value_type = TVal;
 
         /** Initialize from .mtx format */
-        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, std::string file) :
+        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, std::string file, TIdx procs = 0) :
             DMatrixBase<TVal, TIdx>(center, 0, 0)
         {
+            setDistributionScheme(partitioning_scheme::cyclic, procs);
             loadMatrixMarket(file);
         }
 
         /** Initialize an (empty) sparse (rows x cols) oatrix */
-        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx rows, TIdx cols) :
+        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx rows, TIdx cols, TIdx procs = 0) :
             DMatrixBase<TVal, TIdx>(center, rows, cols)
         {
-            _partitioning = Partitioning::cyclic;
+            setDistributionScheme(partitioning_scheme::cyclic, procs);
         }
 
         DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0)
@@ -131,7 +132,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
         }
 
         /** Sets the distribution scheme for this matrix */
-        void setDistributionScheme(Partitioning partitioning,
+        void setDistributionScheme(partitioning_scheme partitioning,
                 TIdx procs)
         {
             _partitioning = partitioning;
@@ -319,7 +320,7 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
 
             _nz = 0;
 
-            if (_partitioning == Partitioning::custom) {
+            if (_partitioning == partitioning_scheme::custom) {
                 if (!_distributionLambda) {
                     ZeeLogError << "Trying to apply a custom partitioning, but"
                         " no distribution function was set. The matrix remains"
@@ -342,19 +343,19 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 TIdx target_proc = 0;
                 switch (_partitioning)
                 {
-                case Partitioning::cyclic:
+                case partitioning_scheme::cyclic:
                     target_proc = (*it).row() % this->getProcs();
                     break;
 
-                case Partitioning::block:
+                case partitioning_scheme::block:
                     target_proc = (this->getProcs() * (*it).row()) / this->getRows();
                     break;
 
-                case Partitioning::random:
+                case partitioning_scheme::random:
                     target_proc = randproc(mt);
                     break;
 
-                case Partitioning::custom:
+                case partitioning_scheme::custom:
                     target_proc = _distributionLambda((*it).row(), (*it).col());
                     break;
 
@@ -579,18 +580,14 @@ class DSparseMatrix : public DMatrixBase<TVal, TIdx>
                 }
             }
 
-
-            ZeeLogVar(coefficients.size());
-
             this->cols_ = N;
             this->rows_ = M;
 
-            setDistributionScheme(Partitioning::cyclic, 1);
             setFromTriplets(coefficients.begin(), coefficients.end());
         }
 
         TIdx _nz;
-        Partitioning _partitioning;
+        partitioning_scheme _partitioning;
         std::vector<std::shared_ptr<Image>> _subs;
         std::function<TIdx(TIdx, TIdx)> _distributionLambda;
         bool _initialized = false;
@@ -704,7 +701,7 @@ DSparseMatrix<double> eye(TIdx n, TIdx procs)
         coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
 
     DSparseMatrix<double, TIdx> A(n, n);
-    A.setDistributionScheme(Partitioning::cyclic, procs);
+    A.setDistributionScheme(partitioning_scheme::cyclic, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 
@@ -749,7 +746,7 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density)
     }
 
     DSparseMatrix<double, TIdx> A(m, n);
-    A.setDistributionScheme(Partitioning::random, procs);
+    A.setDistributionScheme(partitioning_scheme::random, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());
 

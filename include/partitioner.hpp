@@ -113,7 +113,7 @@ class CyclicPartitioner : public Partitioner<TMatrix>
             using TImage = typename TMatrix::image_type;
 
             // repartition A
-            A.setDistributionScheme(Partitioning::custom, this->_procs);
+            A.setDistributionScheme(partitioning_scheme::custom, this->_procs);
 
             vector<unique_ptr<TImage>> new_images;
             for (TIdx i = 0; i < this->_procs; ++i)

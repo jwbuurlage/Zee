@@ -36,7 +36,7 @@ This file has been adapted from the Arya game engine.
 #define ZeeLogVar(VAR) (Zee::Logger() << Zee::LogType::debug << #VAR " = " << VAR << endLog)
 
 #define ZeeAssert(ASSERT) if (!(ASSERT)) {\
-    ZeeLogInfo << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << endLog;\
+    ZeeLogError << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << endLog;\
     exit(-1);\
 }
 

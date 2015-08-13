@@ -123,11 +123,7 @@ void operator= (BinaryOperation<operation::type::scalar_product,
     const auto& v = op.getLHS();
     const auto& lambda = op.getRHS();
 
-    if (v.size() != size()) {
-        ZeeLogError << "Can not assign DVector to expression of type"
-            " (alpha * DVector) with a different dimension." << endLog;
-        return;
-    }
+    ZeeAssert(v.size() == size());
 
     for (TIdx i = 0; i < this->size(); ++i) {
         elements_[i] = lambda * v[i];
@@ -137,18 +133,11 @@ void operator= (BinaryOperation<operation::type::scalar_product,
 void operator= (BinaryOperation<operation::type::subtract,
     DVector<TVal, TIdx>, DVector<TVal, TIdx>> op)
 {
-
     const auto& lhs = op.getLHS();
     const auto& rhs = op.getRHS();
 
-    if (rhs.size() != lhs.size()) {
-        ZeeLogError << "Can subtract vectors of different sizes" << endLog;
-        return;
-    } else if (lhs.size() != size()) {
-        ZeeLogError << "Cannot assign DVector to expression of type"
-            " (v - w) with a different dimension." << endLog;
-        return;
-    }
+    ZeeAssert(rhs.size() == lhs.size());
+    ZeeAssert(lhs.size() == size());
 
     for (TIdx i = 0; i < this->size(); ++i) {
         elements_[i] = lhs[i] - rhs[i];

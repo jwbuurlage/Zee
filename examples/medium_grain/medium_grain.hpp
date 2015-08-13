@@ -337,7 +337,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             }
 
             // We want B to be bipartitioned.
-            B.setDistributionScheme(Zee::Partitioning::custom, 2);
+            B.setDistributionScheme(Zee::partitioning_scheme::custom, 2);
             B.setDistributionFunction([&A] (TIdx row, TIdx col) {
                         if (col < A.getRows()) {
                             return 0;
