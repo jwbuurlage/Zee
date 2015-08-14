@@ -9,30 +9,33 @@ using namespace Zee;
 
 int main()
 {
+    using TVal = double;
+    using TIdx = int;
+
     ZeeLogInfo << "-- Starting GMRES example" << endLog;
 
-    auto center = std::make_shared<Unpain::Center<int>>(4);
+    auto center = std::make_shared<Unpain::Center<TIdx>>(4);
 
     // We initialize the matrix with cyclic distribution
     std::string matrix = "karate";
-    auto A = DSparseMatrix<double, int>(center, "data/matrices/" + matrix + ".mtx", 4);
+    auto A = DSparseMatrix<TVal, TIdx>(center, "data/matrices/" + matrix + ".mtx", 4);
 
-    auto b = DVector<double, int>{center, A.getRows(), 1.0};
+    auto b = DVector<TVal, TIdx>{center, A.getRows(), 1.0};
     b = A * b;
 
     // initial x is the zero vector
-    auto x = DVector<double, int>{center, A.getCols()};
+    auto x = DVector<TVal, TIdx>{center, A.getCols()};
 
     // Start GMRES
-    GMRES::solve<double, int>(A, // Matrix
-            b,                   // RHS vector
-            x,                   // resulting guess for x
-            100,                  // outer iterations
-            100,                  // inner iterations
-            1e-6);               // tolerance level
+    GMRES::solve<TVal, TIdx>(A, // Matrix
+            b,                  // RHS vector
+            x,                  // resulting guess for x
+            100,                // outer iterations
+            100,                // inner iterations
+            1e-6);              // tolerance level
 
-    DVector<double, int> c{center, A.getRows()};
-    DVector<double, int> r{center, A.getRows()};
+    DVector<TVal, TIdx> c{center, A.getRows()};
+    DVector<TVal, TIdx> r{center, A.getRows()};
     c = A * x;
     r = b - c;
     ZeeLogVar(r.norm() / b.norm());
