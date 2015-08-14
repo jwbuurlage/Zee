@@ -152,8 +152,14 @@ void solve(const DSparseMatrix<TVal, TIdx>& A,
         }
     }
 
-    auto p = Plotter();
-    p.plot(rhos);
+    // We plot the residuals
+    auto p = Plotter<>();
+    p["xlabel"] = "iterations";
+    p["ylabel"] = "$\\rho$";
+    p["yscale"] = "log";
+    p["title"] = "GMRES: residual norm";
+    p.addLine(rhos, "rhos");
+    p.plot("residual_test", true);
 }
 
 } // namespace GMRES

@@ -7,10 +7,7 @@ TODAY:
     - See unit tests in `munificent/wren`
     - OR use something like Catch, gtest, etc.
 [!] Output performance graphs
-    - need to define filetypes for output data (see e.g. spy)
-    o spy-ish distribution visualization
-    o plots for communication volume
-[!] Think of data output, write python scripts for plotting
+    [ ] plots for communication volume
 [!] Generalize spy for large matrices
 [ ] Split into more files
 [ ] Add dense matrix
@@ -75,3 +72,6 @@ design.
 [x] Add multiple parallelization providers and SpMD implementations, make sure
 it works on general systems (not only multi-core systems, or via pthreads)
 In particular implement for BSP.
+[x] Think of data output, write python scripts for plotting
+[x] spy-ish distribution visualization
+[x] need to define filetypes for output data (see e.g. spy)

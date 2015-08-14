@@ -60,6 +60,7 @@ parser.add_argument('files', type=str, nargs='+',
 
 args = parser.parse_args()
 
+
 def get_color(proc):
     # ith element of has denumerator of 2^ceil(2log(p) + 1)
     #                    numerator is n - whats above, 1 + that
@@ -71,6 +72,17 @@ def get_color(proc):
     if (color < 0.0):
         color += 1.0;
     return matplotlib.colors.hsv_to_rgb([color, 1, 1])
+
+def finalize_plt(filename):
+    extension_length = len(filename.split('.')[-1])
+    if args.save:
+        plt.savefig(filename[:-extension_length] + args.filetype)
+    elif args.showfile:
+        outfilename = filename[:-extension_length] + args.filetype
+        plt.savefig(outfilename)
+        os.system("xdg-open " + outfilename)
+    else:
+        plt.show()
 
 ###################################################
 # SPY MTX
@@ -105,14 +117,8 @@ def spy(matrix_file):
                 i + marker_offset),
                 marker_size, marker_size, color=get_color(p)))
 
-        if args.save:
-            plt.savefig(matrix_file[:-3] + args.filetype)
-        elif args.showfile:
-            outfilename = matrix_file[:-3] + args.filetype
-            plt.savefig(outfilename)
-            os.system("xdg-open " + outfilename)
-        else:
-            plt.show()
+        finalize_plt(matrix_file)
+
 
 ###################################################
 # PLOT YAML
@@ -121,19 +127,21 @@ def plot(plot_file):
     f = open(plot_file, 'r')
 
     # FIXME: check if zee plot file or error
-    # print(f.getline())
-    # contents = f.read();
-    # print(contents)
+    contents = f.read();
+    contents = contents.replace("\\", "\\\\")
 
     plot_data = yaml.load(contents)
 
-    print(plot_data)
+    plt.title(plot_data["title"])
+    plt.xlabel(plot_data["xlabel"])
+    plt.ylabel(plot_data["ylabel"])
+    plt.yscale(plot_data["yscale"])
 
     for line in plot_data["lines"]:
         line_data = plot_data["lines"][line]["data"]
         plt.plot(line_data)
 
-    plt.show()
+    finalize_plt(plot_file)
 
 for f in args.files:
     f = args.directory + f

@@ -1,9 +1,10 @@
-# filetype: zee plot
-axis_title_x: "iterations"
-axis_title_y: "rho"
+# file description: zee plot
+title: "$test$"
+xlabel: "iterations"
+ylabel: "$\\rho$"
 lines:
     one:
-        title: "something"
+        title: "line_one"
         data:
             - 1.0
             - 2.0
@@ -15,7 +16,7 @@ lines:
             - 4.0
             - 4.0
     two:
-        title: "something"
+        title: "line_two"
         data:
             - 0.0
             - 1.0
