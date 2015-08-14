@@ -1,17 +1,16 @@
 TODAY:
 ------
-
-[!] Unit testing, custom solution w/ Python
+[!] Add dense matrix
+[!] Generalize to Epiphany
+[ ] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
     - Actual tests in  `test/category.c`
     - See unit tests in `munificent/wren`
     - OR use something like Catch, gtest, etc.
-[!] Output performance graphs
+[ ] Output performance graphs
     [ ] plots for communication volume
-[!] Generalize spy for large matrices
 [ ] Split into more files
-[ ] Add dense matrix
-[ ] Generalize to Epiphany
+[ ] Generalize spy for large matrices
 
 HIGH PRIORITY:
 --------------
