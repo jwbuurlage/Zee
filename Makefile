@@ -1,8 +1,8 @@
-CCPP = clang++
+CCPP = g++
 CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall -g
 
 OUTPUT_DIR = bin
-INCLUDE_DIRS = -Iinclude -Iunpain/include
+INCLUDE_DIRS = -Iinclude
 
 LIB_DEPS = -lpthread
 

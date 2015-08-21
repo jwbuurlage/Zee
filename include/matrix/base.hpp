@@ -14,21 +14,18 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
-
 #include <memory>
 
-#include <unpain_base.hpp>
+#include "../operations.hpp"
 
 namespace Zee {
 
 /** Base class for matrices */
-template <typename TVal, typename TIdx = int32_t>
+template <typename Derived, typename TVal, typename TIdx = int32_t>
 class DMatrixBase {
     public:
-        DMatrixBase(std::shared_ptr<UnpainBase::Center<TIdx>> center,
-                TIdx rows, TIdx cols)
-            : center_(center),
-              cols_(cols),
+        DMatrixBase(TIdx rows, TIdx cols)
+            : cols_(cols),
               rows_(rows),
               procs_((TIdx)1)
         { }
@@ -59,15 +56,14 @@ class DMatrixBase {
             return procs_;
         }
 
-        /** @return the unpain center */
-        std::shared_ptr<UnpainBase::Center<TIdx>> getCenter() const
+        const Derived& derived() const
         {
-            return center_;
+            return *this;
         };
 
-    protected:
-        std::shared_ptr<UnpainBase::Center<TIdx>> center_;
+        #include "base_operations.hpp"
 
+    protected:
         TIdx cols_ = 0;
         TIdx rows_ = 0;
 

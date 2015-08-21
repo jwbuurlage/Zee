@@ -11,6 +11,7 @@ TODAY:
     [ ] plots for communication volume
 [ ] Split into more files
 [ ] Generalize spy for large matrices
+[ ] Fix binary operation nesting and resulting type
 
 HIGH PRIORITY:
 --------------

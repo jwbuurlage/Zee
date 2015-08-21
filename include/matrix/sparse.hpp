@@ -27,8 +27,6 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include <unpain_base.hpp>
-
 #include "base.hpp"
 #include "storage.hpp"
 #include "../matrix_market.hpp"
@@ -97,24 +95,26 @@ enum class partitioning_scheme
 template <typename TVal = double, typename TIdx = uint32_t,
          class Image = DSparseMatrixImage<TVal, TIdx,
             StorageTriplets<TVal, TIdx>>>
-class DSparseMatrix : public DMatrixBase<TVal, TIdx>
+class DSparseMatrix : public DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>
 {
+    using Base = DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>;
+
     public:
         using image_type = Image;
         using index_type = TIdx;
         using value_type = TVal;
 
         /** Initialize from .mtx format */
-        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, std::string file, TIdx procs = 0) :
-            DMatrixBase<TVal, TIdx>(center, 0, 0)
+        DSparseMatrix(std::string file, TIdx procs = 0) :
+            Base(0, 0)
         {
             setDistributionScheme(partitioning_scheme::cyclic, procs);
             loadMatrixMarket(file);
         }
 
         /** Initialize an (empty) sparse (rows x cols) oatrix */
-        DSparseMatrix(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx rows, TIdx cols, TIdx procs = 0) :
-            DMatrixBase<TVal, TIdx>(center, rows, cols)
+        DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) :
+            Base(rows, cols)
         {
             setDistributionScheme(partitioning_scheme::cyclic, procs);
         }

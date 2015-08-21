@@ -11,79 +11,6 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-// OPERATORS //////////////////////////////////////////////////////////////////
-
-/** Scalar multiplication */
-BinaryOperation<operation::type::scalar_product,
-    DVector<TVal, TIdx>, TVal>
-    operator*(const TVal& rhs) const
-{
-    return BinaryOperation<operation::type::scalar_product,
-           DVector<TVal, TIdx>, TVal>(*this, rhs);
-}
-
-/** Scalar multiplication */
-BinaryOperation<operation::type::scalar_division,
-    DVector<TVal, TIdx>, TVal>
-    operator/(const TVal& rhs) const
-{
-    return BinaryOperation<operation::type::scalar_division,
-           DVector<TVal, TIdx>, TVal>(*this, rhs);
-}
-
-BinaryOperation<operation::type::subtract,
-    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
-    operator- (const DVector<TVal, TIdx>& rhs) const
-{
-    return BinaryOperation<operation::type::subtract,
-           DVector<TVal, TIdx>, DVector<TVal, TIdx>>(*this, rhs);
-}
-
-template <operation::type TOp, typename TLHS, typename TRHS>
-BinaryOperation<operation::type::subtract,
-    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
- operator- (const BinaryOperation<TOp, TLHS, TRHS>& op) const
-{
-    DVector<TVal, TIdx> v(this->getCenter(), this->size());
-    v = op;
-    auto subOp = *this - v;
-    return subOp;
-}
-
-BinaryOperation<operation::type::add,
-    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
-    operator+ (const DVector<TVal, TIdx>& rhs) const
-{
-    return BinaryOperation<operation::type::add,
-           DVector<TVal, TIdx>, DVector<TVal, TIdx>>(*this, rhs);
-}
-
-template <operation::type TOp, typename TLHS, typename TRHS>
-BinaryOperation<operation::type::add,
-    DVector<TVal, TIdx>, DVector<TVal, TIdx>>
- operator+ (const BinaryOperation<TOp, TLHS, TRHS>& op) const
-{
-    DVector<TVal, TIdx> v(this->getCenter(), this->size());
-    v = op;
-    auto addOp = *this + v;
-    return addOp;
-}
-
-template <operation::type TOp, typename TLHS, typename TRHS>
-void operator-= (const BinaryOperation<TOp, TLHS, TRHS>& op)
-{
-    DVector<TVal, TIdx> v(this->getCenter(), this->size());
-    v = op;
-    auto subOp = *this - v;
-    *this = subOp;
-}
-
-void operator-= (const DVector<TVal, TIdx>& rhs)
-{
-    auto op = *this - rhs;
-    *this = op;
-}
-
 // IMPLEMENTATIONS ////////////////////////////////////////////////////////////
 
 // FIXME we can use #include to split this class over multiple files
@@ -158,6 +85,8 @@ void operator= (BinaryOperation<operation::type::subtract,
     const auto& lhs = op.getLHS();
     const auto& rhs = op.getRHS();
 
+    ZeeLogVar(rhs.size());
+    ZeeLogVar(lhs.size());
     ZeeAssert(rhs.size() == lhs.size());
     ZeeAssert(lhs.size() == size());
 
@@ -172,6 +101,8 @@ void operator= (BinaryOperation<operation::type::add,
     const auto& lhs = op.getLHS();
     const auto& rhs = op.getRHS();
 
+    ZeeLogVar(rhs.size());
+    ZeeLogVar(lhs.size());
     ZeeAssert(rhs.size() == lhs.size());
     ZeeAssert(lhs.size() == size());
 

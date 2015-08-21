@@ -22,8 +22,6 @@ License, or (at your option) any later version.
 #include <mutex>
 #include <map>
 
-#include <unpain_base.hpp>
-
 #include "base.hpp"
 #include "common.hpp"
 #include "sparse.hpp"
@@ -37,11 +35,13 @@ namespace Zee {
 // FIXME: should be a specialization of a general dense matrix
 // FIXME: saved as pairs? or just owners distributed cyclically
 template <typename TVal, typename TIdx = int32_t>
-class DVector : public DMatrixBase<TVal, TIdx>
+class DVector : public DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>
 {
+    using Base = DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>;
+
     public:
-        explicit DVector(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx n, TVal defaultValue = (TVal)0)
-            : DMatrixBase<TVal, TIdx>(center, n, 1)
+        explicit DVector(TIdx n, TVal defaultValue = (TVal)0)
+            : Base(n, 1)
         {
             elements_.resize(n);
             std::fill(elements_.begin(), elements_.end(), defaultValue);
@@ -65,11 +65,7 @@ class DVector : public DMatrixBase<TVal, TIdx>
         /** The dot product */
         // FIXME parallellize
         TVal dot(const DVector<TVal, TIdx>& rhs) const {
-            if (rhs.size() != size()) {
-                ZeeLogError << "Can not compute dotproduct between vectors of"
-                    "different sizes" << endLog;
-                return 0;
-            }
+            ZeeAssert(rhs.size() == size());
 
             const auto& lhs = *this;
 
@@ -132,7 +128,7 @@ BinaryOperation<operation::type::scalar_product,
 // MATRIX
 
 template <typename TVal, typename TIdx = int32_t>
-class DMatrix : public DMatrixBase<TVal, TIdx>
+class DMatrix : public DMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>
 {
     public:
        // Operator overloads and algorithm implementations
