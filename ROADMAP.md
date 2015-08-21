@@ -12,6 +12,7 @@ TODAY:
 [ ] Split into more files
 [ ] Generalize spy for large matrices
 [ ] Fix binary operation nesting and resulting type
+    - Need to use base with CRT, and specialize in Derived where implementation is needed
 
 HIGH PRIORITY:
 --------------
