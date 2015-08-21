@@ -9,10 +9,7 @@ TODAY:
     - OR use something like Catch, gtest, etc.
 [ ] Output performance graphs
     [ ] plots for communication volume
-[ ] Split into more files
 [ ] Generalize spy for large matrices
-[ ] Fix binary operation nesting and resulting type
-    - Need to use base with CRT, and specialize in Derived where implementation is needed
 
 HIGH PRIORITY:
 --------------
@@ -76,3 +73,7 @@ In particular implement for BSP.
 [x] Think of data output, write python scripts for plotting
 [x] spy-ish distribution visualization
 [x] need to define filetypes for output data (see e.g. spy)
+[x] Split into more files
+[x] Fix binary operation nesting and resulting type
+    - Need to use base with CRT, and specialize in Derived where implementation is needed
+

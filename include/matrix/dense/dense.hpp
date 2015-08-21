@@ -22,10 +22,11 @@ License, or (at your option) any later version.
 #include <mutex>
 #include <map>
 
-#include "base.hpp"
-#include "common.hpp"
-#include "sparse.hpp"
-#include "../operations.hpp"
+#include "../base/base.hpp"
+#include "../sparse/sparse.hpp"
+#include "../../common.hpp"
+#include "../../operations/operations.hpp"
+#include "../../default_types.hpp"
 
 namespace Zee {
 
@@ -34,17 +35,37 @@ namespace Zee {
 
 // FIXME: should be a specialization of a general dense matrix
 // FIXME: saved as pairs? or just owners distributed cyclically
-template <typename TVal, typename TIdx = int32_t>
-class DVector : public DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>
+template <typename TVal = default_scalar_type,
+         typename TIdx = default_index_type>
+class DVector :
+    public DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>
 {
     using Base = DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>;
 
     public:
-        explicit DVector(TIdx n, TVal defaultValue = (TVal)0)
+        DVector(TIdx n, TVal defaultValue = 0)
             : Base(n, 1)
         {
             elements_.resize(n);
             std::fill(elements_.begin(), elements_.end(), defaultValue);
+        }
+
+        DVector(const DVector& other) :
+            Base(other.size(), 1)
+        {
+            elements_ = other.elements_;
+        }
+
+        DVector(DVector&& other) :
+            Base(other.size(), 1)
+        {
+            elements_ = std::move(other.elements_);
+        }
+
+        using Base::operator=;
+
+        void operator= (DVector&& other) {
+            elements_ = std::move(other.elements_);
         }
 
         /** Return the size of the matrix (i.e. the number of rows) */
@@ -93,7 +114,6 @@ class DVector : public DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>
         }
 
         // Operator overloads and algorithm implementations
-        #include "dense_operations.hpp"
 
     private:
         std::vector<TVal> elements_;
@@ -114,15 +134,10 @@ Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
     return lhs;
 }
 
-// Allow expression of type lambda * V by forwarding to V * lambda
-template <typename TVal, typename TIdx>
-BinaryOperation<operation::type::scalar_product,
-    DVector<TVal, TIdx>, TVal>
-    operator*(const TVal& lhs, const DVector<TVal, TIdx>& rhs)
-{
-    return BinaryOperation<operation::type::scalar_product,
-           DVector<TVal, TIdx>, TVal>(rhs, lhs);
-}
+
+#include "dense_operations.hpp"
+
+#include "dense_matrix_operations.hpp"
 
 //-----------------------------------------------------------------------------
 // MATRIX
@@ -131,7 +146,6 @@ template <typename TVal, typename TIdx = int32_t>
 class DMatrix : public DMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>
 {
     public:
-       // Operator overloads and algorithm implementations
         //#include "dense_matrix_operations.hpp"
 
     private:

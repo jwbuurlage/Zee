@@ -11,11 +11,10 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base.hpp"
-#include "matrix/sparse.hpp"
-#include "matrix/dense.hpp"
+#include "matrix/base/base.hpp"
+#include "matrix/sparse/sparse.hpp"
+#include "matrix/dense/dense.hpp"
 #include "benchmarking.hpp"
-#include "operations.hpp"
 #include "partitioner.hpp"
 #include "matrix_market.hpp"
 #include "logging.hpp"

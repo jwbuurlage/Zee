@@ -28,8 +28,14 @@ ir: examples/ir.cpp
 gmres: examples/gmres.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
+lial: examples/linear_algebra.cpp
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
 mm: examples/matrix_market.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+
+ops: minimal_ops.cpp
+	${CCPP} ${CCPP_FLAGS} -o $@ $<
 
 lint:
 	./script/cpplint.py --filter=-whitespace,-build/c++11 --extensions=hpp include/*.hpp include/*/*.hpp

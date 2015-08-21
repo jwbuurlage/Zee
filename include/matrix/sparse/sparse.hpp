@@ -27,12 +27,12 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include "base.hpp"
-#include "storage.hpp"
-#include "../matrix_market.hpp"
-#include "../common.hpp"
-#include "../logging.hpp"
-#include "../operations.hpp"
+#include "../base/base.hpp"
+#include "../storage.hpp"
+#include "../../matrix_market.hpp"
+#include "../../common.hpp"
+#include "../../logging.hpp"
+#include "../../operations/operations.hpp"
 
 namespace Zee {
 
@@ -95,7 +95,8 @@ enum class partitioning_scheme
 template <typename TVal = double, typename TIdx = uint32_t,
          class Image = DSparseMatrixImage<TVal, TIdx,
             StorageTriplets<TVal, TIdx>>>
-class DSparseMatrix : public DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>
+class DSparseMatrix :
+    public DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>
 {
     using Base = DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>;
 
@@ -147,17 +148,6 @@ class DSparseMatrix : public DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal,
         void setDistributionFunction(std::function<TIdx(TIdx, TIdx)> distributionLambda)
         {
             _distributionLambda = distributionLambda;
-        }
-
-        /** Multiply a sparse matrix with a dense vector */
-        BinaryOperation<operation::type::product,
-            DSparseMatrix<TVal, TIdx>,
-            DVector<TVal, TIdx>>
-            operator*(const DVector<TVal, TIdx>& rhs) const
-        {
-            return BinaryOperation<operation::type::product,
-                   DSparseMatrix<TVal, TIdx>,
-                   DVector<TVal, TIdx>>(*this, rhs);
         }
 
         /** @return the number of non-zero entries in the matrix */

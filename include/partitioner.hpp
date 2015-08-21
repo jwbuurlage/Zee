@@ -15,7 +15,7 @@ License, or (at your option) any later version.
 
 #include <memory>
 
-#include "matrix/sparse.hpp"
+#include "matrix/sparse/sparse.hpp"
 #include "common.hpp"
 
 namespace Zee {

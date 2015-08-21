@@ -11,7 +11,8 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
         Zee::DVector<TVal, TIdx>& x,
         TIdx maxIterations,
         TIdx m,
-        TVal tol)
+        TVal tol,
+        bool plotResiduals = false)
 {
     ZeeLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
         " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
@@ -130,9 +131,6 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
         }
 
         for (TIdx i = 0; i < nr; ++i) {
-            ZeeLogVar(i);
-            ZeeLogVar(y[i]);
-            ZeeLogVar(V[i].size());
             x = x + y[i] * V[i];
         }
 
@@ -146,14 +144,16 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     // we finalize the benchmark
     bench.finish();
 
-    // We plot the residuals
-    auto p = Zee::Plotter<>();
-    p["xlabel"] = "iterations";
-    p["ylabel"] = "$\\rho$";
-    p["yscale"] = "log";
-    p["title"] = "GMRES: residual norm";
-    p.addLine(rhos, "rhos");
-    p.plot("residual_test", true);
+    if (plotResiduals) {
+        // We plot the residuals
+        auto p = Zee::Plotter<>();
+        p["xlabel"] = "iterations";
+        p["ylabel"] = "$\\rho$";
+        p["yscale"] = "log";
+        p["title"] = "GMRES: residual norm";
+        p.addLine(rhos, "rhos");
+        p.plot("residual_test", true);
+    }
 }
 
 } // namespace GMRES

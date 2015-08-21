@@ -29,7 +29,8 @@ int main()
             x,                  // resulting guess for x
             100,                // outer iterations
             100,                // inner iterations
-            1e-6);              // tolerance level
+            1e-6,               // tolerance level
+            false);             // plot residuals
 
     DVector<TVal, TIdx> c{A.getRows()};
     DVector<TVal, TIdx> r{A.getRows()};
