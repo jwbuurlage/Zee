@@ -202,7 +202,7 @@ class KernighanLin
         {
             // We check if everything has been initialized properly
             // we bipartition
-            auto p = 2;
+            TIdx p = 2;
 
             // FIXME: We reset the partitioning
             // to the current bipartitioning of _A
@@ -229,8 +229,9 @@ class KernighanLin
             auto& rowNets = _H.rowNets();
 
             // Choose the base cell (e.g. tail of highest non-trivial list)
-            for (auto iter = 0; iter < _H.colNets().size(); ++iter) {
-                TIdx baseCell = -1;
+            for (TIdx iter = 0; iter < _H.colNets().size(); ++iter) {
+                // FIXME: we want to change this to support BigNums etc.
+                signed long baseCell = -1;
 
                 // FIXME can we do this in constant time? the loop is possibly
                 // unnecessary.. maybe linked list as well

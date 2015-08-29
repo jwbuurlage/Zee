@@ -54,8 +54,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             // The row nets and column nets are initialized
             // Can be used for coarsening as well as partitioning
-            rowNets.resize(M.rows());
-            colNets.resize(M.cols());
+            rowNets.resize(M.getRows());
+            colNets.resize(M.getCols());
             for (auto& pimg : M.getImages()) {
                 for (auto& triplet : *pimg) {
                     rowNets[triplet.row()].push_back(triplet.col());
@@ -126,7 +126,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         {
             ZeeLogInfo << "Partitioning using FM heuristic" << endLog;
 
-            ZeeLogVar(M.procs());
+            ZeeLogVar(M.getProcs());
 
             // We check if everything has been initialized properly
             if (!initialized) {
@@ -135,7 +135,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             }
 
             // We bipartition
-            auto p = 2;
+            TIdx p = 2;
 
             // The allowed load imbalance FIXME as param
             double epsilon = 0.03;
@@ -144,19 +144,19 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             // First start with a random distribution
             // This vector says for each column if it is in "A"
-            vector<bool> columnInA = randomColumnDistribution(M.cols());
+            vector<bool> columnInA = randomColumnDistribution(M.getCols());
 
             // Weights are number of elements in each column of the matrix
             // TODO: precompute this in matrix?
-            vector<TIdx> columnWeights(M.cols(), 0);
-            for (TIdx j = 0; j < M.cols(); ++j) {
+            vector<TIdx> columnWeights(M.getCols(), 0);
+            for (TIdx j = 0; j < M.getCols(); ++j) {
                 columnWeights[j] = M.getColumnWeight(j);
             }
 
             // We need to make sure the distribution satisfies the imbalance
             // otherwise we flip the first `x` until it does
             TIdx counts[2] = { 0, 0 };
-            for (TIdx j = 0; j < M.cols(); ++j) {
+            for (TIdx j = 0; j < M.getCols(); ++j) {
                 if (columnInA[j]) {
                     counts[0] += columnWeights[j];
                 } else {
@@ -185,13 +185,13 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
             // Next we make the bucketed lists.
             // We need a vector of size 2*m + 1 containing lists
             vector<list<TIdx>> buckets(2 * max_size + 1);
-            vector<TIdx> vertexGains(M.cols());
+            vector<TIdx> vertexGains(M.getCols());
 
             // Next we loop over all vertices, obtaining vertex gain
             // if it is the *only* element of {A, B} in a net, a gain of 1
             // if the net is and stays mixed then a gain of 0
             // if the net is pure then flipping it is a gain of -1
-            for (TIdx row = 0; row < M.rows(); ++row) {
+            for (TIdx row = 0; row < M.getRows(); ++row) {
                 for (auto& pin : rowNets[row]) {
                     vertexGains[pin] += gainForPinInRow(columnInA[pin],
                             rowCountA[row],
@@ -201,8 +201,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             // We initialize the buckets, and store the list elements for each
             // column in M
-            vector<typename std::list<TIdx>::iterator> listElements(M.cols());
-            for (TIdx j = 0; j < M.cols(); ++j) {
+            vector<typename std::list<TIdx>::iterator> listElements(M.getCols());
+            for (TIdx j = 0; j < M.getCols(); ++j) {
                 buckets[vertexGains[j] + max_size].push_back(j);
                 listElements[j] = --buckets[vertexGains[j] + max_size].end();
             }
@@ -227,7 +227,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             // Choose the base cell (e.g. tail of highest non-trivial list)
             for (auto iter = 0; iter < 10000; ++iter) {
-                TIdx baseCell = -1;
+                signed long long baseCell = -1;
                 // FIXME can we do this in constant time? the loop is possibly
                 // unnecessary.. maybe linked list as well
                 for (TIdx bucket = buckets.size() - 1; bucket >= 0; --bucket) {
