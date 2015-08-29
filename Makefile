@@ -8,16 +8,10 @@ LIB_DEPS = -lpthread
 
 .PHONY: lint test docs
 
-all: dirs spmv cycpart part
+all: dirs part ir gmres lial
 
 dirs:
 	mkdir -p ${OUTPUT_DIR}
-
-spmv: examples/spmv.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-cycpart: examples/cyclic_partitioner.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 part: examples/partitioner.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
@@ -30,12 +24,6 @@ gmres: examples/gmres.cpp
 
 lial: examples/linear_algebra.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-mm: examples/matrix_market.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-ops: minimal_ops.cpp
-	${CCPP} ${CCPP_FLAGS} -o $@ $<
 
 lint:
 	./script/cpplint.py --filter=-whitespace,-build/c++11 --extensions=hpp include/*.hpp include/*/*.hpp

@@ -1,8 +1,6 @@
-#include <unpain_cpp.hpp>
-
 #include <zee.hpp>
 
-#include "medium_grain/medium_grain.hpp"
+#include "partitioners/medium_grain.hpp"
 
 #include <string>
 
@@ -10,14 +8,12 @@ using namespace Zee;
 
 int main()
 {
-    auto center = std::make_shared<Unpain::Center<int>>(2);
-
     std::string matrix = "steam3";
 
     ZeeLogInfo << "-- Starting IR example" << endLog;
 
     // Initialize the centralized base matrix from file
-    auto baseMatrix = DSparseMatrix<double, int>(center, "data/matrices/" + matrix  + ".mtx");
+    auto baseMatrix = DSparseMatrix<double, size_t>("data/matrices/" + matrix  + ".mtx");
     baseMatrix.spy(matrix);
     auto& A = baseMatrix;
 

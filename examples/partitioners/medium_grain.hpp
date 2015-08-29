@@ -17,7 +17,7 @@
 #include <zee.hpp>
 using Zee::atomic_wrapper;
 
-#include "../kernighan_lin/kernighan_lin.hpp"
+#include "kernighan_lin.hpp"
 
 #include <random>
 
@@ -65,9 +65,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // We initialize a bitset for the nonzeros of A, and
             // let 0 be Ar and 1 be into Ac
 
-            auto m = A.getRows();
-            auto n = A.getCols();
-            auto p = A.getProcs();
+            TIdx m = A.getRows();
+            TIdx n = A.getCols();
+            TIdx p = A.getProcs();
 
             _tripletInRow.resize(A.nonZeros());
 
@@ -189,7 +189,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         void inducePartitioning(TMatrix& A, TMatrix& B)
         {
             // we bipartition
-            auto p = 2;
+            TIdx p = 2;
 
             vector<vector<int>> procForCol(p,
                     vector<int>(B.getRows() / p + 1, -1));
@@ -248,7 +248,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             // PHASE 1: split A in two, and construct extended matrix B
             this->initialize(A);
 
-            auto B = TMatrix(A.getCenter(), 2 * A.getRows(), 2 * A.getCols());
+            auto B = TMatrix(2 * A.getRows(), 2 * A.getCols());
             constructExtendedMatrix(A, B);
 
             // PHASE 2: call column partitioner
@@ -289,7 +289,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             auto priorVolume = A.communicationVolume();
             auto& aImages = A.getImages();
 
-            auto B = TMatrix(A.getCenter(), 2 * A.getRows(), 2 * A.getCols());
+            auto B = TMatrix(2 * A.getRows(), 2 * A.getCols());
 
             std::vector<TTriplet> coefficients;
             coefficients.reserve((int)(A.nonZeros() + A.getRows() + A.getCols()));

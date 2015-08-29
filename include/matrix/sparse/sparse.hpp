@@ -279,17 +279,17 @@ class DSparseMatrix :
             // FIXME: parallelize, using generalized compute
             // FIXME: can also parallelize.. O(n) -> O(n / p)
             // with extra superstep
-            std::vector<int> lambda_s(this->getProcs(), 0);
+            std::vector<TIdx> lambda_s(this->getProcs(), 0);
             for (TIdx proc = 0; proc < this->getProcs(); ++proc) {
                 TIdx V_s = 0;
 
-                for (int i = 0; i < lambda[proc].size(); ++i) {
+                for (TIdx i = 0; i < lambda[proc].size(); ++i) {
                     if (lambda[proc][i].a > 1) {
                         V_s += lambda[proc][i].a - 1;
                     }
                 }
 
-                for (int i = 0; i < mu[proc].size(); ++i) {
+                for (TIdx i = 0; i < mu[proc].size(); ++i) {
                     if (mu[proc][i].a > 1) {
                         V_s += mu[proc][i].a - 1;
                     }
@@ -382,7 +382,7 @@ class DSparseMatrix :
         }
 
         /** Obtain the number of nonzeros in a column */
-        int getColumnWeight(TIdx j) const
+        TIdx getColumnWeight(TIdx j) const
         {
             // TODO precompute
             // TODO optimize
