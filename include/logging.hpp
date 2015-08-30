@@ -29,10 +29,14 @@ License, or (at your option) any later version.
 
 #define ZeeLogVar(VAR) (Zee::Logger() << Zee::LogType::debug << #VAR " = " << VAR << endLog)
 
+#ifndef DEBUG
 #define ZeeAssert(ASSERT) if (!(ASSERT)) {\
     ZeeLogError << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << endLog;\
     exit(-1);\
 }
+#else
+#define ZeeAssert(ASSERT)
+#endif
 
 namespace Zee {
 
