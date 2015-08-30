@@ -36,6 +36,7 @@ requirements and low computational complexity, also ability to cache?
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
+[ ] Files should be relative to running binary, use common.hpp
 
 DONE:
 -----

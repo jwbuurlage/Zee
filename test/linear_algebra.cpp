@@ -5,8 +5,7 @@
 using TIdx = uint32_t;
 using TVal = float;
 
-TIdx size = 10;
-
+TIdx size = 4;
 
 Zee::DVector<TVal, TIdx> x{size, 1.0};
 Zee::DVector<TVal, TIdx> y{size, 1.0};
@@ -60,9 +59,43 @@ TEST_CASE("vector operations", "[linear algebra]") {
 
 Zee::DSparseMatrix<TVal, TIdx> A{"mtx/sparse_example.mtx", 1};
 Zee::DMatrix<TVal, TIdx> B{"mtx/dense_example.mtx"};
+Zee::DMatrix<TVal, TIdx> C = B;
+Zee::DMatrix<TVal, TIdx> D{4, 4};
 
-TEST_CASE("matrix market", "[linear algebra]") {
+TEST_CASE("matrix operations", "[linear algebra]") {
     SECTION("we can load matrix market format") {
-        // FIXME
+        REQUIRE(A.getRows() == 3);
+        REQUIRE(A.getCols() == 4);
+
+        REQUIRE(B.getRows() == 3);
+        REQUIRE(B.getCols() == 4);
+
+        REQUIRE(B.at(2, 3) == 12.0f);
+    }
+
+    SECTION("we can perform a spmv") {
+        z = A * x;
+        REQUIRE(z[1] == 2.0f);
+        REQUIRE(z.size() == 3);
+    }
+
+    SECTION("we can mix spmv and vectors") {
+        z = A * (x + x) * 2.0f;
+        REQUIRE(z[1] == 8.0f);
+        REQUIRE(z.size() == 3);
+    }
+
+    SECTION("dense operations") {
+        SECTION("we can transpose (dense) matrices") {
+            C.transpose();
+            REQUIRE(C.getRows() == B.getCols());
+            REQUIRE(C.getCols() == B.getRows());
+            REQUIRE(C.at(3, 2) == 12.0f);
+        }
+        
+        SECTION("we can multiply dense matrices") {
+            D = B * C;
+            REQUIRE(D.at(2, 2) == 270.0f);
+        }
     }
 }

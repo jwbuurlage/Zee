@@ -61,7 +61,7 @@ namespace matrix_market
 
         std::stringstream line_stream(line);
 
-        // not a comment, if we have yet read N, M, L
+        // not a comment, if we have yet read M, N, L
         line_stream >> M >> N >> L;
 
         std::vector<Triplet<TVal, TIdx>> coefficients;
@@ -106,7 +106,7 @@ namespace matrix_market
             }
         }
 
-        target.resize(N, M);
+        target.resize(M, N);
         target.setFromTriplets(coefficients.begin(), coefficients.end());
     }
 
@@ -149,7 +149,7 @@ namespace matrix_market
             values.push_back(value);
         }
 
-        target.resize(N, M);
+        target.resize(M, N);
         target.setFromValues(values.begin(), values.end());
     }
 
