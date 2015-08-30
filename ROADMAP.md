@@ -2,11 +2,7 @@ TODAY:
 ------
 
 [!] Generalize to Epiphany
-[ ] Unit testing, custom solution w/ Python
-    - Unit tests using `script/test.py [category]`
-    - Actual tests in  `test/category.c`
-    - See unit tests in `munificent/wren`
-    - OR use something like Catch, gtest, etc.
+[ ] Unit testing, using catch.hpp
 [ ] Output performance graphs
     [ ] plots for communication volume
 [ ] Generalize spy for large matrices
