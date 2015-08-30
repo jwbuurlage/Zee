@@ -29,7 +29,6 @@ License, or (at your option) any later version.
 
 #include "../base/base.hpp"
 #include "../storage.hpp"
-#include "../../matrix_market.hpp"
 #include "../../common.hpp"
 #include "../../logging.hpp"
 #include "../../operations/operations.hpp"
@@ -46,6 +45,12 @@ class DVector;
 template <typename TVal, typename TIdx = uint32_t,
          class CStorage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
+
+// Matrix Market
+namespace matrix_market {
+    template <typename Derived, typename TVal, typename TIdx>
+    void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target);
+}
 
 /** A (matrix) triplet is a tuplet \f$(i, j, a_{ij})\f$, representing an entry in a
   * matrix. It is particularly useful in the representation of sparse matrices.
@@ -110,7 +115,7 @@ class DSparseMatrix :
             Base(0, 0)
         {
             setDistributionScheme(partitioning_scheme::cyclic, procs);
-            loadMatrixMarket(file);
+            matrix_market::load(file, *this);
         }
 
         /** Initialize an (empty) sparse (rows x cols) oatrix */
@@ -461,125 +466,7 @@ class DSparseMatrix :
         }
 
     private:
-        /** Load matrix from .mtx format */
-        void loadMatrixMarket(std::string file)
-        {
-            ZeeLogInfo << "Loading matrix from file: " << file << endLog;
 
-            std::ifstream fs(file);
-
-            std::string header;
-            std::getline(fs, header);
-            std::stringstream header_stream(header);
-
-            // first check if file is a legitimate MatrixMarket file
-            std::string s, t;
-            header_stream >> s >> t;
-
-            if (s != "%%MatrixMarket" || t != "matrix") {
-                ZeeLogError << "Not a valid MM file: " << file << endLog;
-                return;
-            }
-
-            // now follow a sequence of keywords
-            int info = 0;
-            while (!header_stream.eof()) {
-                std::string keyword;
-                header_stream >> keyword;
-
-                if (s == "array" ||
-                        s == "complex" ||
-                        s == "Hermitian" ||
-                        s == "integer") {
-                    ZeeLogError << "Unsupported keyword encountered: " << s << Logger::end();
-                    return;
-                }
-
-                if (keyword == "coordinate") {
-                    info |= matrix_market::info::coordinate;
-                } else if (keyword == "real") {
-                    info |= matrix_market::info::real;
-                } else if (keyword == "pattern") {
-                    info |= matrix_market::info::pattern;
-                } else if (keyword == "general") {
-                    info |= matrix_market::info::general;
-                } else if (keyword == "symmetric") {
-                    info |= matrix_market::info::symmetric;
-                } else if (keyword == "skew_symmetric") {
-                    info |= matrix_market::info::skew_symmetric;
-                }
-            }
-
-            std::string line;
-            while (!fs.eof()) {
-                std::getline(fs, line);
-                if (line[0] != '%')
-                    break;
-            }
-
-            TIdx M = 0;
-            TIdx N = 0;
-            TIdx L = 0;
-
-            std::stringstream line_stream(line);
-
-            // not a comment, if we have yet read N, M, L
-            line_stream >> M >> N;
-            if (line_stream.eof()) {
-                // error dense matrix
-                ZeeLogError << "Dense matrix format not supported" << Logger::end();
-                return;
-            }
-
-            line_stream >> L;
-
-            std::vector<Triplet<TVal, TIdx>> coefficients;
-
-            // FIXME: why does this corrupt data
-            //coefficients.reserve(L);
-
-            // read matrix coordinates
-            for (TIdx i = 0; i < L; ++i) {
-                TIdx row, col;
-                TVal value = (TVal)1;
-
-                std::getline(fs, line);
-                std::stringstream line_stream(line);
-                line_stream >> row >> col;
-
-                if (!(info & matrix_market::info::pattern)) {
-                    line_stream >> value;
-                }
-
-                coefficients.push_back(Triplet<TVal, TIdx>(row - 1, col - 1, value));
-            }
-
-            if (info & matrix_market::info::symmetric) {
-                for (auto& trip : coefficients) {
-                    // we do not want to duplicate the diagonal
-                    if (trip.col() == trip.row()) {
-                        continue;
-                    }
-
-                    coefficients.push_back(Triplet<TVal, TIdx>(
-                        trip.col(), trip.row(), trip.value()));
-                }
-            } else if (info & matrix_market::info::skew_symmetric) {
-                for (auto& trip : coefficients) {
-                    // we do not want to duplicate the diagonal
-                    if (trip.col() == trip.row())
-                        continue;
-
-                    coefficients.push_back(Triplet<TVal, TIdx>(
-                        trip.col(), trip.row(), -trip.value()));
-                }
-            }
-
-            this->cols_ = N;
-            this->rows_ = M;
-
-            setFromTriplets(coefficients.begin(), coefficients.end());
-        }
 
         TIdx nz_;
         partitioning_scheme partitioning_;
