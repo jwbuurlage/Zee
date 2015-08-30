@@ -65,6 +65,7 @@ class DVector :
         using Base::operator=;
 
         void operator= (DVector&& other) {
+            this->rows_ = other.size();
             elements_ = std::move(other.elements_);
         }
 

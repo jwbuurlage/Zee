@@ -2,11 +2,7 @@ TODAY:
 ------
 
 [!] Generalize to Epiphany
-[ ] Unit testing, custom solution w/ Python
-    - Unit tests using `script/test.py [category]`
-    - Actual tests in  `test/category.c`
-    - See unit tests in `munificent/wren`
-    - OR use something like Catch, gtest, etc.
+[ ] Unit testing, using catch.hpp
 [ ] Output performance graphs
     [ ] plots for communication volume
 [ ] Generalize spy for large matrices
@@ -40,6 +36,7 @@ requirements and low computational complexity, also ability to cache?
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
+[ ] Files should be relative to running binary, use common.hpp
 
 DONE:
 -----
