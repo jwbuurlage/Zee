@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/matrix/storage.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -95,14 +95,14 @@ class StorageIteratorTriplets:
 
         /** Default constructor */
         StorageIteratorTriplets(StoragePointer storage, TIdx i) :
-            _storage(storage),
-            _i(i) { }
+            storage_(storage),
+            i_(i) { }
 
         /** Copy constructor (const <-> regular conversion) */
         StorageIteratorTriplets(
                 const StorageIteratorTriplets<TVal, TIdx, false>& other) :
-            _storage(other._storage),
-            _i(other._i)  { }
+            storage_(other.storage_),
+            i_(other.i_)  { }
 
         StorageIteratorTriplets& operator--(int)
         {
@@ -122,7 +122,7 @@ class StorageIteratorTriplets:
 
         bool operator== (const StorageIteratorTriplets& other) const
         {
-            return (_i == other._i);
+            return (i_ == other.i_);
         }
 
         /** Comparison operator for not equal
@@ -134,17 +134,17 @@ class StorageIteratorTriplets:
 
         TripletReference operator*()
         {
-            return _storage->_triplets[_i];
+            return storage_->triplets_[i_];
         }
 
         StorageIteratorTriplets& operator--() {
-            _i--;
+            i_--;
             return *this;
         }
 
         StorageIteratorTriplets& operator++()
         {
-            _i++;
+            i_++;
             return *this;
         }
 
@@ -153,8 +153,8 @@ class StorageIteratorTriplets:
        friend class StorageIteratorTriplets<TVal, TIdx, true>; 
 
     private:
-        StoragePointer _storage;
-        TIdx _i;
+        StoragePointer storage_;
+        TIdx i_;
 };
 
 
@@ -186,7 +186,7 @@ class StorageTriplets :
 
         iterator end() override
         {
-            return iterator(this, _triplets.size());
+            return iterator(this, triplets_.size());
         }
 
         const_iterator cbegin() const override
@@ -196,7 +196,7 @@ class StorageTriplets :
 
         const_iterator cend() const override
         {
-            return const_iterator(this, _triplets.size());
+            return const_iterator(this, triplets_.size());
         }
 
         StorageTriplets() = default;
@@ -205,23 +205,22 @@ class StorageTriplets :
         Triplet<TVal, TIdx> popElement(TIdx element) override
         {
             // FIXME: does this get copied? want by ref, move?
-            Triplet<TVal, TIdx> trip = _triplets[element];
-            _triplets.erase(_triplets.begin() + element);
+            Triplet<TVal, TIdx> trip = triplets_[element];
+            triplets_.erase(triplets_.begin() + element);
             return trip;
         }
 
         void pushTriplet(Triplet<TVal, TIdx> t) override
         {
-            // FIXME: does this get copied? want by ref, move?
-            _triplets.push_back(t);
+            triplets_.push_back(t);
         }
 
         virtual Triplet<TVal, TIdx> getElement(TIdx i) const override {
-            return _triplets[i];
+            return triplets_[i];
         }
 
         virtual TIdx size() const override {
-            return _triplets.size();
+            return triplets_.size();
         }
 
         // FIXME: move to getter?! although iterators truly are 'friends'
@@ -230,7 +229,7 @@ class StorageTriplets :
 
     private:
         // FIXME: proper wasy to store this (reference?)
-        vector<Triplet<TVal, TIdx>> _triplets;
+        vector<Triplet<TVal, TIdx>> triplets_;
 };
 
 //-----------------------------------------------------------------------------

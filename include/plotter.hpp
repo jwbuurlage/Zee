@@ -1,5 +1,5 @@
 /*
-File: include/logging.hpp
+File: include/plotter.hpp
 
 This file is part of the Zee partitioning framework
 

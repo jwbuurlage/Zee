@@ -9,15 +9,9 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License (LGPL)
 as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
-
-This file has been adapted from the Arya game engine.
 */
 
 #pragma once
-
-// FIXME can make this more general by using e.g.:
-// #define LOGNAMESPACE Zee
-// can then reuse this for other projects
 
 #include <sstream>
 #include <iostream>
@@ -60,7 +54,7 @@ class Logger {
         struct end { };
 
         Logger& operator <<(LogType t) {
-            _t = t;
+            t_ = t;
             return *this;
         }
 
@@ -99,7 +93,7 @@ class Logger {
 
         void operator <<(end) {
             // output ss
-            switch (_t) {
+            switch (t_) {
                 case LogType::info:
                     cout << Zee::colors::start["cyan"] << "INFO: ";
                     break;
@@ -130,7 +124,7 @@ class Logger {
 
     private:
         std::stringstream ss;
-        LogType _t = LogType::info;
+        LogType t_ = LogType::info;
 };
 
 

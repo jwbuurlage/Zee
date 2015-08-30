@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/matrix_market.hpp
 
 This file is part of the Zee partitioning framework
 
