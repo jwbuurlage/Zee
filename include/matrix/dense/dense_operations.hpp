@@ -1,5 +1,5 @@
 /*
-File: include/matrix/dense_operations.hpp
+File: include/matrix/dense/dense_operations.hpp
 
 This file is part of the Zee partitioning framework
 

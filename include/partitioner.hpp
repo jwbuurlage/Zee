@@ -1,5 +1,5 @@
 /*
-File: include/partitioner.h
+File: include/partitioner.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -46,16 +46,16 @@ class Partitioner
           * @param procs Number of processors _after_ partitioning.
           * */
         void setProcs(int procs) {
-            _procs = procs;
+            procs_ = procs;
         }
 
     protected:
         /* The number of processors _after_ partitioning */
-        int _procs = 0;
+        int procs_ = 0;
 
         /* The number of processors _before_ partitioning
          * The value 0 is used for an arbitrary number */
-        int _procs_in = 0;
+        int procs_in_ = 0;
 };
 
 
@@ -90,18 +90,18 @@ class CyclicPartitioner : public Partitioner<TMatrix>
 
         CyclicPartitioner()
         {
-            this->_procs = 1;
+            this->procs_ = 1;
         }
 
         CyclicPartitioner(int procs)
         {
-            this->_procs = procs;
+            this->procs_ = procs;
         }
 
         CyclicPartitioner(int procs, CyclicType type)
         {
-            this->_procs = procs;
-            this->_type = type;
+            this->procs_ = procs;
+            this->type_ = type;
         }
 
         virtual ~CyclicPartitioner() override = default;
@@ -113,10 +113,10 @@ class CyclicPartitioner : public Partitioner<TMatrix>
             using TImage = typename TMatrix::image_type;
 
             // repartition A
-            A.setDistributionScheme(partitioning_scheme::custom, this->_procs);
+            A.setDistributionScheme(partitioning_scheme::custom, this->procs_);
 
             vector<unique_ptr<TImage>> new_images;
-            for (TIdx i = 0; i < this->_procs; ++i)
+            for (TIdx i = 0; i < this->procs_; ++i)
                 new_images.push_back(std::make_unique<TImage>());
 
             // FIXME, make this inplace for the first proc
@@ -125,12 +125,12 @@ class CyclicPartitioner : public Partitioner<TMatrix>
             TIdx cur = 0;
             for (auto& image : images)
                 for(auto& trip : *image) {
-                    if (_type == CyclicType::row) {
-                        new_images[trip.row() % this->_procs]->pushTriplet(trip);
-                    } else  if (_type == CyclicType::column) {
-                        new_images[trip.col() % this->_procs]->pushTriplet(trip);
-                    } else  if (_type == CyclicType::element_wise) {
-                        new_images[cur++ % this->_procs]->pushTriplet(trip);
+                    if (type_ == CyclicType::row) {
+                        new_images[trip.row() % this->procs_]->pushTriplet(trip);
+                    } else  if (type_ == CyclicType::column) {
+                        new_images[trip.col() % this->procs_]->pushTriplet(trip);
+                    } else  if (type_ == CyclicType::element_wise) {
+                        new_images[cur++ % this->procs_]->pushTriplet(trip);
                     }
 
                 }
@@ -141,7 +141,7 @@ class CyclicPartitioner : public Partitioner<TMatrix>
         }
 
     private:
-        CyclicType _type = CyclicType::row;
+        CyclicType type_ = CyclicType::row;
 };
 
 }

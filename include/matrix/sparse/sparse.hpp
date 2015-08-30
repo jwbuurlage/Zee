@@ -130,14 +130,14 @@ class DSparseMatrix :
         DSparseMatrix(DSparseMatrix&& o) = default;
 
         bool isInitialized() const {
-            return _initialized;
+            return initialized_;
         }
 
         /** Sets the distribution scheme for this matrix */
         void setDistributionScheme(partitioning_scheme partitioning,
                 TIdx procs)
         {
-            _partitioning = partitioning;
+            partitioning_ = partitioning;
             this->procs_ = procs;
         }
 
@@ -147,13 +147,13 @@ class DSparseMatrix :
           * of processors of this matrix */
         void setDistributionFunction(std::function<TIdx(TIdx, TIdx)> distributionLambda)
         {
-            _distributionLambda = distributionLambda;
+            distributionLambda_ = distributionLambda;
         }
 
         /** @return the number of non-zero entries in the matrix */
         TIdx nonZeros() const
         {
-            return _nz;
+            return nz_;
         }
 
         // this is kind of like a reduce in mapreduce, implementing this such that
@@ -175,10 +175,10 @@ class DSparseMatrix :
                     result[proc] = func(image);
                 };
 
-            std::vector<std::thread> threads(this->_subs.size());
+            std::vector<std::thread> threads(this->subs_.size());
 
             TIdx p = 0;
-            for (const auto& image : _subs) {
+            for (const auto& image : subs_) {
                 threads[p] = std::thread(push_result, p, image);
                 ++p;
             }
@@ -197,7 +197,7 @@ class DSparseMatrix :
             std::vector<std::thread> threads;
 
             TIdx s = 0;
-            for (auto& image : _subs) {
+            for (auto& image : subs_) {
                 threads.push_back(std::thread(func, image, s++));
             }
 
@@ -214,7 +214,7 @@ class DSparseMatrix :
         double loadImbalance()
         {
             double eps = 1.0;
-            for (auto& pimg : _subs)
+            for (auto& pimg : subs_)
             {
                 double eps_i = ((double)this->getProcs() * pimg->nonZeros())
                     / this->nonZeros();
@@ -259,7 +259,7 @@ class DSparseMatrix :
 
             // FIXME: parallelize, using generalized compute
             TIdx s = 0;
-            for (auto& pimg : _subs) {
+            for (auto& pimg : subs_) {
                 for (auto key_count : pimg->getRowSet()) {
                     auto i = key_count.first;
                     lambda[i % this->getProcs()][i / this->getProcs()].a += 1;
@@ -307,12 +307,12 @@ class DSparseMatrix :
             const TInputIterator& begin,
             const TInputIterator& end)
         {
-            _subs.clear();
+            subs_.clear();
 
-            _nz = 0;
+            nz_ = 0;
 
-            if (_partitioning == partitioning_scheme::custom) {
-                if (!_distributionLambda) {
+            if (partitioning_ == partitioning_scheme::custom) {
+                if (!distributionLambda_) {
                     ZeeLogError << "Trying to apply a custom partitioning, but"
                         " no distribution function was set. The matrix remains"
                         " uninitialized." << endLog;
@@ -321,7 +321,7 @@ class DSparseMatrix :
             }
 
             for (TIdx i = 0; i < this->getProcs(); ++i)
-                _subs.push_back(std::make_shared<Image>());
+                subs_.push_back(std::make_shared<Image>());
 
             // FIXME: only if partitioning is random
             std::random_device rd;
@@ -332,7 +332,7 @@ class DSparseMatrix :
             for (TInputIterator it = begin; it != end; it++)
             {
                 TIdx target_proc = 0;
-                switch (_partitioning)
+                switch (partitioning_)
                 {
                 case partitioning_scheme::cyclic:
                     target_proc = (*it).row() % this->getProcs();
@@ -347,7 +347,7 @@ class DSparseMatrix :
                     break;
 
                 case partitioning_scheme::custom:
-                    target_proc = _distributionLambda((*it).row(), (*it).col());
+                    target_proc = distributionLambda_((*it).row(), (*it).col());
                     break;
 
                 default:
@@ -356,29 +356,29 @@ class DSparseMatrix :
                     break;
                 }
 
-                _subs[target_proc]->pushTriplet(*it);
-                _nz++;
+                subs_[target_proc]->pushTriplet(*it);
+                nz_++;
             }
 
-            _initialized = true;
+            initialized_ = true;
         }
 
         void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
         {
             // update the number of processors
             this->procs_ = new_images.size();
-            _subs.resize(this->getProcs());
+            subs_.resize(this->getProcs());
 
             for(TIdx i = 0; i < new_images.size(); ++i)
-                _subs[i].reset(new_images[i].release());
+                subs_[i].reset(new_images[i].release());
 
-            // update _nz
-            _nz = 0;
-            for (auto& pimg : _subs) {
-                _nz += pimg->nonZeros();
+            // update nz_
+            nz_ = 0;
+            for (auto& pimg : subs_) {
+                nz_ += pimg->nonZeros();
             }
 
-            _initialized = true;
+            initialized_ = true;
         }
 
         /** Obtain the number of nonzeros in a column */
@@ -404,12 +404,12 @@ class DSparseMatrix :
         /** Obtain a list of images */
         const std::vector<std::shared_ptr<Image>>& getImages() const
         {
-            return _subs;
+            return subs_;
         }
 
         std::vector<std::shared_ptr<Image>>& getMutableImages()
         {
-            return _subs;
+            return subs_;
         }
 
         void spy(std::string title = "anonymous", bool show = false)
@@ -445,7 +445,7 @@ class DSparseMatrix :
             fout << this->getRows() << " " << this->getCols() << " " << this->nonZeros() << endl;
 
             TIdx s = 0;
-            for (auto& image : _subs) {
+            for (auto& image : subs_) {
                 for (auto& triplet : *image) {
                     fout << triplet.row() << " " << triplet.col() << " " << s << endl;
                 }
@@ -581,11 +581,11 @@ class DSparseMatrix :
             setFromTriplets(coefficients.begin(), coefficients.end());
         }
 
-        TIdx _nz;
-        partitioning_scheme _partitioning;
-        std::vector<std::shared_ptr<Image>> _subs;
-        std::function<TIdx(TIdx, TIdx)> _distributionLambda;
-        bool _initialized = false;
+        TIdx nz_;
+        partitioning_scheme partitioning_;
+        std::vector<std::shared_ptr<Image>> subs_;
+        std::function<TIdx(TIdx, TIdx)> distributionLambda_;
+        bool initialized_ = false;
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -607,7 +607,7 @@ class DSparseMatrixImage
 
         /** Default constructor */
         DSparseMatrixImage() :
-            _storage(new CStorage())
+            storage_(new CStorage())
         {
             // FIXME: Switch cases between different storage types
         }
@@ -615,70 +615,70 @@ class DSparseMatrixImage
         // Because we are using a unique pointer we need to move ownership
         // upon copying
         DSparseMatrixImage(DSparseMatrixImage&& other) :
-            _storage(std::move(other._storage)) { }
+            storage_(std::move(other.storage_)) { }
 
         ~DSparseMatrixImage() = default;
 
         void popElement(TIdx element) {
-            auto t = _storage->popElement(element);
-            _rowset.lower(t.row());
-            _colset.lower(t.col());
+            auto t = storage_->popElement(element);
+            rowset_.lower(t.row());
+            colset_.lower(t.col());
         }
 
         void pushTriplet(Triplet<TVal, TIdx> t) {
-            if (!_storage) {
+            if (!storage_) {
                 ZeeLogError << "Can not push triplet without storage." << endLog;
                 return;
             }
-            _rowset.raise(t.row());
-            _colset.raise(t.col());
-            _storage->pushTriplet(t);
+            rowset_.raise(t.row());
+            colset_.raise(t.col());
+            storage_->pushTriplet(t);
         }
 
         const counted_set<TIdx>& getRowSet() const {
-            return _rowset;
+            return rowset_;
         }
 
         const counted_set<TIdx>& getColSet() const {
-            return _colset;
+            return colset_;
         }
 
         using iterator = typename CStorage::it_traits::iterator;
 
         iterator begin() const
         {
-            return _storage->begin();
+            return storage_->begin();
         }
 
         iterator end() const
         {
-            return _storage->end();
+            return storage_->end();
         }
 
         /** @return The number of nonzeros in this image */
         TIdx nonZeros() const
         {
-            return _storage->size();
+            return storage_->size();
         }
 
         /** @return The \f$i\f$-th element in this image */
         Triplet<TVal, TIdx> getElement(TIdx i) const {
-            return _storage->getElement(i);
+            return storage_->getElement(i);
         }
 
     private:
         /** We delegate the storage to a superclass (to simplify choosing
          * a storage mechanism) */
-        std::unique_ptr<CStorage> _storage;
+        std::unique_ptr<CStorage> storage_;
 
         /** A set (with counts) that stores the non-empty rows in this image */
-        counted_set<TIdx> _rowset;
+        counted_set<TIdx> rowset_;
         /** A set (with counts) that stores the non-empty columns in this image */
-        counted_set<TIdx> _colset;
+        counted_set<TIdx> colset_;
 
         /** We hold a reference to the other images */
         // FIXME implement and use
-        std::vector<std::weak_ptr<DSparseMatrixImage<TVal, TIdx, CStorage>>> _images;
+        std::vector<std::weak_ptr<DSparseMatrixImage<TVal, TIdx, CStorage>>> images_;
 };
 
 //-----------------------------------------------------------------------------

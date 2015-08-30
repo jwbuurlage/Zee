@@ -1,5 +1,5 @@
 /*
-File: include/matrix/base_operations.hpp
+File: include/matrix/base/base_operations.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -16,8 +16,6 @@ License, or (at your option) any later version.
 //
 // Here we mimic the behaviour of Eigen
 // http://eigen.tuxfamily.org/dox/TopicInsideEigenExample.html
-
-// OPERATORS //////////////////////////////////////////////////////////////////
 
 template <operation::type S, typename T, typename U>
 void operator= (const BinaryOperation<S, T, U>& op) {
