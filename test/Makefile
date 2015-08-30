@@ -14,4 +14,5 @@ dirs:
 	mkdir -p ${OUTPUT_DIR}
 
 tests: $(SOURCES)
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $(SOURCES) ${LIB_DEPS}
+	@echo 'CC $(SOURCES)'
+	@${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $(SOURCES) ${LIB_DEPS}

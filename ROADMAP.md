@@ -2,7 +2,6 @@ TODAY:
 ------
 
 [!] Generalize to Epiphany
-[ ] Unit testing, using catch.hpp
 [ ] Output performance graphs
     [ ] plots for communication volume
 [ ] Generalize spy for large matrices
@@ -77,3 +76,4 @@ possible level. In particular make (dense) vectors distributed and add
 dense matrix type. #wontfix
     -> For dense matrices we will either specialize or explicitely distribute
        in the algorithm for now
+[x] Unit testing, using catch.hpp

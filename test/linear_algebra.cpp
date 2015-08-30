@@ -16,13 +16,11 @@ TEST_CASE("vector operations", "[linear algebra]") {
 
     SECTION("we can add vectors") {
         z = x + y;
-
         REQUIRE(z[0] == 2.0f);
     }
 
     SECTION("we can subtract vectors") {
         z = x - y;
-
         REQUIRE(z[0] == 0.0f);
     }
 
