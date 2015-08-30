@@ -64,15 +64,24 @@ class DMatrixBase {
             return procs_;
         }
 
+        /** @return a reference to the derived matrix */
         Derived& derived()
         {
             return *(Derived*)this;
-        };
+        }
 
+        /** @return a const reference to the derived matrix */
         const Derived& derived() const
         {
             return *(Derived*)this;
-        };
+        }
+
+        /** @return resize the matrix to rows x cols */
+        virtual void resize(TIdx rows, TIdx cols)
+        {
+            cols_ = cols;
+            rows_ = rows;
+        }
 
         #include "base_operations.hpp"
 
