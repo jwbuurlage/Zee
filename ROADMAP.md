@@ -1,6 +1,5 @@
 TODAY:
 ------
-[!] Add dense matrix
 [!] Generalize to Epiphany
 [ ] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
@@ -15,9 +14,6 @@ HIGH PRIORITY:
 --------------
 
 # Distributed types
-[!] Generalize base class even further, add support for distribution at highest
-possible level. In particular make (dense) vectors distributed and add
-dense matrix type.
 [ ] Add support for compressed storage
 
 # Partitioning
@@ -42,7 +38,7 @@ REFINEMENT:
 requirements and low computational complexity, also ability to cache?
     [ ] Implement this using streaming on parallella
     [ ] Add precompute support to Zee matrices
-    [ ] Implement BSP matrix, to run on cartesius
+    [ ] Implement BSP matrix, to run on Cartesius
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
@@ -64,7 +60,7 @@ Need to devise an interface that makes partitioning as general as possible.
     - Possible to cache and (incrementally) update?
 [x] Consider Iterative Refinement (IR) methods and how to implement them.
 [x] Implement MG
-[x] Benchmarking `<chrono>` 
+[x] Benchmarking `<chrono>`
 [x] Make operations encapsulated in objects, and only perform them at an
 = operation on a distributed type. (expression templates).  Requires careful
 design.
@@ -79,3 +75,9 @@ In particular implement for BSP.
 [x] Fix binary operation nesting and resulting type
     - Need to use base with CRT, and specialize in Derived where implementation is needed
 [x] Underscores are ugly..
+[x] Add dense matrix
+[!] Generalize base class even further, add support for distribution at highest
+possible level. In particular make (dense) vectors distributed and add
+dense matrix type. #wontfix
+    -> For dense matrices we will either specialize or explicitely distribute
+       in the algorithm for now
