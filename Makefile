@@ -34,4 +34,5 @@ test:
 docs:
 	doxygen docs/Doxyfile
 	@cd docs/sphinx && make html
-	firefox docs/sphinx/_build/html/index.html
+	firefox docs/sphinx/_build/html/index.html&
+	@cd ../..

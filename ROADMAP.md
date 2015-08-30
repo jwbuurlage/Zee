@@ -1,5 +1,6 @@
 TODAY:
 ------
+
 [!] Generalize to Epiphany
 [ ] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
@@ -10,8 +11,8 @@ TODAY:
     [ ] plots for communication volume
 [ ] Generalize spy for large matrices
 
-HIGH PRIORITY:
---------------
+TODO:
+-----
 
 # Distributed types
 [ ] Add support for compressed storage
@@ -23,15 +24,12 @@ HIGH PRIORITY:
 # Images
 [ ] Need to think of an approach to make an image something more physical.
 In particular for distributed systems we require that the image is something
-which exists for longer time spans and can be reused. We want to do this in
-a portable way.
+which exists for longer time spans and can be reused. We might want to try to
+do this in a portable way.
 - Idea: serialize an image somehow, and extract it at a 'physical location'.
  * not portable (because we want to do this in a distributed fashion), unless
  * the storage is never really packed, but instead some kind of generator
    approach is used.
-
-REFINEMENT:
------------
 
 # SpMV
 [!] Completely parallel version of SPMD, without O(n) storage
@@ -43,7 +41,8 @@ requirements and low computational complexity, also ability to cache?
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
 
-# Done
+DONE:
+-----
 [x] move `using` aliases to Zee namespace
 [x] Make triplet iteration more general, is it necessary to add iteration in
 templatized argument? Rather have storage templatized, and alias or typedef
