@@ -22,6 +22,7 @@ dense matrix type.
 
 # Partitioning
 [ ] Need to consider in-place (re)partitioning, reusing images in particular
+[ ] Implement coarsening (multi-level)
 
 # Images
 [ ] Need to think of an approach to make an image something more physical.
@@ -39,11 +40,12 @@ REFINEMENT:
 # SpMV
 [!] Completely parallel version of SPMD, without O(n) storage
 requirements and low computational complexity, also ability to cache?
-Implement this using streaming on parallella
+    [ ] Implement this using streaming on parallella
+    [ ] Add precompute support to Zee matrices
+    [ ] Implement BSP matrix, to run on cartesius
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
-[ ] Underscores are ugly..
 
 # Done
 [x] move `using` aliases to Zee namespace
@@ -76,4 +78,4 @@ In particular implement for BSP.
 [x] Split into more files
 [x] Fix binary operation nesting and resulting type
     - Need to use base with CRT, and specialize in Derived where implementation is needed
-
+[x] Underscores are ugly..
