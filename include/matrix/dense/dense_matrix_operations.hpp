@@ -54,3 +54,26 @@ DVector<TVal, TIdx> perform_operation(
 
     return u;
 }
+
+template <typename TVal, typename TIdx>
+DMatrix<TVal, TIdx> perform_operation(
+        BinaryOperation<operation::type::product,
+        DMatrix<TVal, TIdx>,
+        DMatrix<TVal, TIdx>> op)
+{
+    const auto& A = op.getLHS();
+    const auto& B = op.getRHS();
+    DMatrix<TVal, TIdx> C(A.getRows(), B.getCols());
+
+    ZeeAssert(A.getCols() == B.getRows());
+
+    for (TIdx i = 0; i < C.getRows(); ++i) {
+        for (TIdx j = 0; j < C.getRows(); ++j) {
+            for (TIdx k = 0; k < A.getCols(); ++k) {
+                C.at(i, j) += A.at(i, k) * B.at(k, j);
+            }
+        }
+    }
+
+    return C;
+}

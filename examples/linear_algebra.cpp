@@ -38,11 +38,11 @@ int main()
     z = x / 2.0;
     ZeeLogVar(z);
 
-    // Matrices
+    // Sparse Matrices
     std::string matrix = "karate";
-    auto A = DSparseMatrix<TVal, TIdx>("data/matrices/" + matrix + ".mtx", 4);
-    auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
-    auto u = DVector<TVal, TIdx>{A.getRows(), 1.0};
+    DSparseMatrix<TVal, TIdx> A("data/matrices/" + matrix + ".mtx", 4);
+    DVector<TVal, TIdx> v{A.getCols(), 1.0};
+    DVector<TVal, TIdx> u{A.getRows(), 1.0};
 
     u = A * v;
     ZeeLogVar(u);
@@ -50,5 +50,14 @@ int main()
     u = A * (v + v) + v;
     ZeeLogVar(u);
 
-    // ...
+    // Dense matrices
+    DMatrix<TVal, TIdx> D("data/matrices/dense_example.mtx");
+    DMatrix<TVal, TIdx> E("data/matrices/dense_example.mtx");
+    E.transpose();
+    DMatrix<TVal, TIdx> F(D.getRows(), D.getRows());
+
+    F = D * E;
+    ZeeLogVar(D);
+    ZeeLogVar(E);
+    ZeeLogVar(F);
 }

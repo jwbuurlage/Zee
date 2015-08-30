@@ -19,8 +19,7 @@ License, or (at your option) any later version.
 
 template <operation::type S, typename T, typename U>
 void operator= (const BinaryOperation<S, T, U>& op) {
-    auto w = perform_operation(op);
-    derived() = std::move(w);
+    derived() = std::move(perform_operation(op));
 }
 
 template <operation::type S, typename T, typename U>
