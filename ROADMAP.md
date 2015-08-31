@@ -2,11 +2,14 @@ TODAY:
 ------
 [!] Add dense matrix
 [!] Generalize to Epiphany
+[ ] Recursion for k-way partitioning
+[ ] OpenCL SpMV support
 [ ] Unit testing, custom solution w/ Python
     - Unit tests using `script/test.py [category]`
     - Actual tests in  `test/category.c`
     - See unit tests in `munificent/wren`
     - OR use something like Catch, gtest, etc.
+    - LLVM lit
 [ ] Output performance graphs
     [ ] plots for communication volume
 [ ] Split into more files
@@ -63,7 +66,7 @@ Need to devise an interface that makes partitioning as general as possible.
     - Possible to cache and (incrementally) update?
 [x] Consider Iterative Refinement (IR) methods and how to implement them.
 [x] Implement MG
-[x] Benchmarking `<chrono>` 
+[x] Benchmarking `<chrono>`
 [x] Make operations encapsulated in objects, and only perform them at an
 = operation on a distributed type. (expression templates).  Requires careful
 design.

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# FIXME: REQUIRES USETEX, PNGDVI, etc.
 #
 # -------------------------------
 # FILE:    spy.py
