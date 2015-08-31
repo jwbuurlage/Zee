@@ -1,8 +1,8 @@
 #include <zee.hpp>
 
-#include "pulp/pulp.hpp"
-#include "medium_grain/medium_grain.hpp"
-#include "multi_level/multi_level.hpp"
+#include "partitioners/pulp.hpp"
+#include "partitioners/medium_grain.hpp"
+#include "partitioners/multi_level.hpp"
 
 #include <string>
 #include <cstdint>
@@ -14,13 +14,15 @@ using namespace Zee;
 
 int main()
 {
+    using TVal = double;
+    using TIdx = uint32_t;
+
     std::string matrix = "karate";
 
     ZeeLogInfo << "-- Starting partitioning example" << endLog;
 
     // Initialize the centralized base matrix from file
-    DSparseMatrix<double, int> baseMatrix =
-        fromMatrixMarket<double, int>("data/matrices/" + matrix  + ".mtx", 1);
+    DSparseMatrix<TVal, TIdx> baseMatrix{"data/matrices/" + matrix  + ".mtx", 1};
     baseMatrix.spy("karate");
     auto& A = baseMatrix;
 

@@ -1,23 +1,17 @@
-CCPP = clang++
+CCPP = g++
 CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall -g
 
 OUTPUT_DIR = bin
-INCLUDE_DIRS = -Iinclude -Iunpain/include
+INCLUDE_DIRS = -Iinclude
 
 LIB_DEPS = -lpthread
 
 .PHONY: lint test docs
 
-all: dirs spmv cycpart part
+all: dirs part ir gmres lial
 
 dirs:
 	mkdir -p ${OUTPUT_DIR}
-
-spmv: examples/spmv.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-cycpart: examples/cyclic_partitioner.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 part: examples/partitioner.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
@@ -28,7 +22,7 @@ ir: examples/ir.cpp
 gmres: examples/gmres.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
-mm: examples/matrix_market.cpp
+lial: examples/linear_algebra.cpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
 
 lint:
@@ -40,4 +34,5 @@ test:
 docs:
 	doxygen docs/Doxyfile
 	@cd docs/sphinx && make html
-	firefox docs/sphinx/_build/html/index.html
+	firefox docs/sphinx/_build/html/index.html&
+	@cd ../..

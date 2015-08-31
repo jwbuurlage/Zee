@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/matrix/base/base.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -14,26 +14,31 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
-
 #include <memory>
 
-#include <unpain_base.hpp>
+#include "../../default_types.hpp"
+#include "../../operations/operation_types.hpp"
 
 namespace Zee {
 
+template <operation::type op, typename TLHS, typename TRHS>
+class BinaryOperation;
+
 /** Base class for matrices */
-template <typename TVal, typename TIdx = int32_t>
+template <typename Derived,
+         typename TVal = default_scalar_type,
+         typename TIdx = default_index_type>
 class DMatrixBase {
     public:
-        DMatrixBase(std::shared_ptr<UnpainBase::Center<TIdx>> center,
-                TIdx rows, TIdx cols)
-            : center_(center),
-              cols_(cols),
+        DMatrixBase(TIdx rows, TIdx cols)
+            : cols_(cols),
               rows_(rows),
-              procs_((TIdx)1)
+              procs_(1)
         { }
 
-        virtual ~DMatrixBase() = default;
+        DMatrixBase()
+            : DMatrixBase(0, 0)
+        { }
 
         /** @return the total number of (possible) entries of the matrix  */
         TIdx size() const
@@ -59,19 +64,33 @@ class DMatrixBase {
             return procs_;
         }
 
-        /** @return the unpain center */
-        std::shared_ptr<UnpainBase::Center<TIdx>> getCenter() const
+        /** @return a reference to the derived matrix */
+        Derived& derived()
         {
-            return center_;
-        };
+            return *(Derived*)this;
+        }
+
+        /** @return a const reference to the derived matrix */
+        const Derived& derived() const
+        {
+            return *(Derived*)this;
+        }
+
+        /** @return resize the matrix to rows x cols */
+        virtual void resize(TIdx rows, TIdx cols)
+        {
+            cols_ = cols;
+            rows_ = rows;
+        }
+
+        #include "base_operations.hpp"
 
     protected:
-        std::shared_ptr<UnpainBase::Center<TIdx>> center_;
-
         TIdx cols_ = 0;
         TIdx rows_ = 0;
 
         TIdx procs_ = 0;
 };
 
+#include "base_operations_global.hpp"
 } // namespace Zee

@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/operations/operation_types.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -13,44 +13,18 @@ License, or (at your option) any later version.
 
 #pragma once
 
-#include <vector>
-#include <thread>
-#include <iostream>
-
 namespace Zee {
 
 namespace operation
 {
-    enum type
+    enum class type
     {
         product,
-        add,
-        subtract,
+        addition,
+        subtraction,
         scalar_product,
         scalar_division
     };
 } // namespace operation
-
-template <operation::type opType, typename LHS, typename RHS>
-class BinaryOperation
-{
-    public:
-        BinaryOperation(const LHS& lhs, const RHS& rhs)
-            : lhs_(lhs), rhs_(rhs)
-        {
-        }
-
-        const LHS& getLHS() const {
-            return lhs_;
-        }
-
-        const RHS& getRHS() const {
-            return rhs_;
-        }
-
-    private:
-        const LHS& lhs_;
-        const RHS& rhs_;
-};
 
 } // namespace Zee

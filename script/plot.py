@@ -81,7 +81,7 @@ def finalize_plt(filename):
     elif args.showfile:
         outfilename = filename[:-extension_length] + args.filetype
         plt.savefig(outfilename)
-        os.system("xdg-open " + outfilename)
+        os.system("mupdf-x11 " + outfilename)
     else:
         plt.show()
 

@@ -11,7 +11,8 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
         Zee::DVector<TVal, TIdx>& x,
         TIdx maxIterations,
         TIdx m,
-        TVal tol)
+        TVal tol,
+        bool plotResiduals = false)
 {
     ZeeLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
         " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
@@ -25,29 +26,27 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     // make sure m is not larger than RHS vector
     m = std::min(A.getRows(), m);
 
-    const auto& center = A.getCenter();
-
     TVector r = b;
-    TVector e{center, A.getRows()};
+    TVector e{A.getRows()};
 
     // We store V as a (centralized) pseudo matrix
     // I would think this is fine as long as m is small
     // This contains the orthogonal basis of our Krylov subspace
-    std::vector<TVector> V(m, TVector(center, r.size()));
+    std::vector<TVector> V(m, TVector(r.size()));
 
     // We store the upper Hessenberg H matrix containing increasingly
     // large vectors
     std::vector<TVector> H;
     H.reserve(m);
     for (auto i = 0; i < m; ++i) {
-        H.push_back(TVector(center, i + 2));
+        H.push_back(TVector(i + 2));
     }
 
     // Similarly we store the matrix R
-    std::vector<TVector> R(m, TVector(center, r.size()));
+    std::vector<TVector> R(m, TVector(r.size()));
 
     // Store \hat{b}
-    TVector bHat(center, A.getRows());
+    TVector bHat(A.getRows());
 
     // Additional variables used for the algorithm
     std::vector<TVal> c(m);
@@ -71,7 +70,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
 
             // We introduce a new basis vector which we will orthogonalize
             // using modified Gramm-Schmidt
-            TVector w(center, A.getRows());
+            TVector w(A.getRows());
             w = A * V[i];
 
             for (int k = 0; k <= i; ++k) {
@@ -145,14 +144,16 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     // we finalize the benchmark
     bench.finish();
 
-    // We plot the residuals
-    auto p = Zee::Plotter<>();
-    p["xlabel"] = "iterations";
-    p["ylabel"] = "$\\rho$";
-    p["yscale"] = "log";
-    p["title"] = "GMRES: residual norm";
-    p.addLine(rhos, "rhos");
-    p.plot("residual_test", true);
+    if (plotResiduals) {
+        // We plot the residuals
+        auto p = Zee::Plotter<>();
+        p["xlabel"] = "iterations";
+        p["ylabel"] = "$\\rho$";
+        p["yscale"] = "log";
+        p["title"] = "GMRES: residual norm";
+        p.addLine(rhos, "rhos");
+        p.plot("residual_test", true);
+    }
 }
 
 } // namespace GMRES

@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/color_output.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -45,31 +45,5 @@ static std::map<std::string, std::string> start =
 static std::string end = "\033[0m";
 
 } // namespace colors
-
-
-//string colorOutput(Color tc)
-//{
-//    switch(tc)
-//    {
-//        case Color::orange:
-//            return "\033[1;32m";
-//
-//        case Color::red:
-//            return "\033[1;31m";
-//
-//        case Color::green:
-//            return "\033[1;32m";
-//
-//        case Color::yellow:
-//            return "\033[1;33m";
-//
-//        case Color::blue:
-//            return "\033[1;34m";
-//
-//        case Color::clear:
-//        default:
-//            return "\033[0m";
-//    }
-//}
 
 }

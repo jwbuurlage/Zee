@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/default_types.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -11,18 +11,7 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#pragma once
+#include <cstdint>
 
-// THIS IS A SEPARATE PROJECT "UPI/HUB"
-
-namespace Zee {
-
-// Parallel providers
-enum ParallelProvider {
-    P_CPP,
-    P_BSP,
-    P_MPI
-    // ...
-};
-
-}
+using default_scalar_type = float;
+using default_index_type = int32_t;

@@ -1,55 +1,46 @@
 TODAY:
 ------
-[!] Add dense matrix
+
 [!] Generalize to Epiphany
 [ ] Recursion for k-way partitioning
 [ ] OpenCL SpMV support
-[ ] Unit testing, custom solution w/ Python
-    - Unit tests using `script/test.py [category]`
-    - Actual tests in  `test/category.c`
-    - See unit tests in `munificent/wren`
-    - OR use something like Catch, gtest, etc.
-    - LLVM lit
 [ ] Output performance graphs
     [ ] plots for communication volume
-[ ] Split into more files
 [ ] Generalize spy for large matrices
 
-HIGH PRIORITY:
---------------
+TODO:
+-----
 
 # Distributed types
-[!] Generalize base class even further, add support for distribution at highest
-possible level. In particular make (dense) vectors distributed and add
-dense matrix type.
 [ ] Add support for compressed storage
 
 # Partitioning
 [ ] Need to consider in-place (re)partitioning, reusing images in particular
+[ ] Implement coarsening (multi-level)
 
 # Images
 [ ] Need to think of an approach to make an image something more physical.
 In particular for distributed systems we require that the image is something
-which exists for longer time spans and can be reused. We want to do this in
-a portable way.
+which exists for longer time spans and can be reused. We might want to try to
+do this in a portable way.
 - Idea: serialize an image somehow, and extract it at a 'physical location'.
  * not portable (because we want to do this in a distributed fashion), unless
  * the storage is never really packed, but instead some kind of generator
    approach is used.
 
-REFINEMENT:
------------
-
 # SpMV
 [!] Completely parallel version of SPMD, without O(n) storage
 requirements and low computational complexity, also ability to cache?
-Implement this using streaming on parallella
+    [ ] Implement this using streaming on parallella
+    [ ] Add precompute support to Zee matrices
+    [ ] Implement BSP matrix, to run on Cartesius
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
-[ ] Underscores are ugly..
+[ ] Files should be relative to running binary, use common.hpp
 
-# Done
+DONE:
+-----
 [x] move `using` aliases to Zee namespace
 [x] Make triplet iteration more general, is it necessary to add iteration in
 templatized argument? Rather have storage templatized, and alias or typedef
@@ -77,3 +68,14 @@ In particular implement for BSP.
 [x] Think of data output, write python scripts for plotting
 [x] spy-ish distribution visualization
 [x] need to define filetypes for output data (see e.g. spy)
+[x] Split into more files
+[x] Fix binary operation nesting and resulting type
+    - Need to use base with CRT, and specialize in Derived where implementation is needed
+[x] Underscores are ugly..
+[x] Add dense matrix
+[!] Generalize base class even further, add support for distribution at highest
+possible level. In particular make (dense) vectors distributed and add
+dense matrix type. #wontfix
+    -> For dense matrices we will either specialize or explicitely distribute
+       in the algorithm for now
+[x] Unit testing, using catch.hpp
