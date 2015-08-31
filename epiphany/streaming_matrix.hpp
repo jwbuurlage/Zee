@@ -35,8 +35,13 @@ DStreamingVector<TVal, TIdx> perform_operation(
         DStreamingSparseMatrix<TVal, TIdx>,
         DStreamingVector<TVal, TIdx>> op)
 {
-    DStreamingVector<TVal, TIdx> y(1, 1.0);
+    const auto& A = op.getLHS();
+    const auto& x = op.getRHS();
+    DStreamingVector<TVal, TIdx> y(A.getRows(), 1.0);
+
     ZeeLogInfo << "SpMV on Epiphany" << endLog;
+    ZeeLogVar(A.nonZeros());
+    ZeeLogVar(x.size());
     return y;
 }
 

@@ -8,5 +8,5 @@ LIB_DEPS = -lpthread
 
 all: gmres
 
-gmres: gmres_host.cpp
+gmres: gmres_host.cpp streaming_matrix.hpp
 	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
