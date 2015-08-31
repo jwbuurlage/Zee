@@ -39,9 +39,6 @@ namespace Zee {
 template <class TMatrix>
 class Partitioner;
 
-template <typename TVal, typename TIdx>
-class DVector;
-
 template <typename TVal, typename TIdx = uint32_t,
          class CStorage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
@@ -85,13 +82,28 @@ class Triplet
 
 //-----------------------------------------------------------------------------
 
-/** Different partitioning schemes */
+/** FIXME DEPRECATED: Different partitioning schemes */
 enum class partitioning_scheme
 {
     cyclic,
     block,
     random,
     custom
+};
+
+template <typename Derived,
+         typename TVal,
+         typename TIdx>
+class DSparseMatrixBase
+    : public DMatrixBase<Derived, TVal, TIdx>
+{
+    public:
+        using Base = DMatrixBase<Derived, TVal, TIdx>;
+        using Base::operator=;
+
+        DSparseMatrixBase(std::string file, TIdx procs = 0) :
+            Base(0, 0)
+        { }
 };
 
 /** The class DSparseMatrix is a distributed matrix type inspired by

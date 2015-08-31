@@ -1,50 +1,43 @@
 namespace Zee {
 
 template <typename TVal, typename TIdx>
-class DStreamingVector;
-
-template <typename TVal, typename TIdx>
 class DStreamingSparseMatrix :
-    public DSparseMatrix<TVal, TIdx>
+    public DSparseMatrixBase<
+        DStreamingSparseMatrix<TVal, TIdx>, TVal, TIdx>
 {
     public:
-        DStreamingSparseMatrix(
-                std::shared_ptr<UnpainBase::Center<TIdx>> center,
-                std::string file,
-                TIdx procs = 0) :
-            DSparseMatrix<TVal, TIdx>(center, file, procs)
-        { }
+        using Base = DSparseMatrixBase<
+            DStreamingSparseMatrix<TVal, TIdx>, TVal, TIdx>;
 
-        BinaryOperation<operation::type::product,
-            DStreamingSparseMatrix<TVal, TIdx>,
-            DStreamingVector<TVal, TIdx>>
-            operator* (const DStreamingVector<TVal, TIdx>& rhs) const
-        {
-            return BinaryOperation<operation::type::product,
-                DStreamingSparseMatrix<TVal, TIdx>,
-                DStreamingVector<TVal, TIdx>>(*this, rhs);
-        }
+        DStreamingSparseMatrix(std::string file,
+                TIdx procs = 0) :
+            Base(file, procs)
+        { }
+};
+
+template <typename TVal = default_scalar_type,
+         typename TIdx = default_index_type>
+class DStreamingVector
+    : public DVectorBase<DStreamingVector<TVal, TIdx>, TVal, TIdx>
+{
+    public:
+        using Base = DVectorBase<DStreamingVector<TVal, TIdx>, TVal, TIdx>;
+        using Base::operator=;
+
+        DStreamingVector(TIdx size, TVal defaultValue = 0.0)
+            : Base(size, defaultValue)
+        { }
 };
 
 template <typename TVal, typename TIdx>
-class DStreamingVector :
-    public DVector<TVal, TIdx>
+DStreamingVector<TVal, TIdx> perform_operation(
+        BinaryOperation<operation::type::product,
+        DStreamingSparseMatrix<TVal, TIdx>,
+        DStreamingVector<TVal, TIdx>> op)
 {
-    public:
-        DStreamingVector(std::shared_ptr<UnpainBase::Center<TIdx>> center, TIdx n, TVal defaultValue = (TVal)0)
-            : DVector<TVal, TIdx>(center, n, defaultValue)
-        {
-        }
-
-        using DVector<TVal, TIdx>::operator=;
-
-        void operator= (const BinaryOperation<operation::type::product,
-            DStreamingSparseMatrix<TVal, TIdx>,
-            DStreamingVector<TVal, TIdx>>& op)
-        {
-            // TODO
-            ZeeLogInfo << "Epiphany SpMV" << endLog;
-        }
-};
+    DStreamingVector<TVal, TIdx> y(1, 1.0);
+    ZeeLogInfo << "SpMV on Epiphany" << endLog;
+    return y;
+}
 
 } // namespace Zee
