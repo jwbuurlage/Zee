@@ -529,12 +529,14 @@ class DSparseMatrixImage
 
         ~DSparseMatrixImage() = default;
 
+        // FIXME rename to erase
         void popElement(TIdx element) {
             auto t = storage_->popElement(element);
             rowset_.lower(t.row());
             colset_.lower(t.col());
         }
 
+        // rename to push
         void pushTriplet(Triplet<TVal, TIdx> t) {
             if (!storage_) {
                 ZeeLogError << "Can not push triplet without storage." << endLog;
