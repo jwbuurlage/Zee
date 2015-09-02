@@ -37,12 +37,10 @@ namespace matrix_market
         skew_symmetric = 1 << 6
     };
 
-    template <typename TVal, typename TIdx>
-    void loadMatrix(int info, std::ifstream& fs, DSparseMatrix<TVal, TIdx>& target)
+    template <typename Derived, typename TVal, typename TIdx>
+    void loadMatrix(int info, std::ifstream& fs, DSparseMatrixBase<Derived, TVal, TIdx>& target)
     {
-
         if (info & matrix_market::info::array) {
-            // error dense matrix
             ZeeLogError << "Trying to load dense matrix .mtx "
                 "file format into a sparse matrix." << endLog;
         }
@@ -115,7 +113,6 @@ namespace matrix_market
     {
 
         if (info & matrix_market::info::coordinate) {
-            // error dense matrix
             ZeeLogError << "Trying to load sparse matrix .mtx "
                 "file format into a dense matrix." << endLog;
         }
@@ -204,7 +201,7 @@ namespace matrix_market
             }
         }
 
-        loadMatrix<TVal, TIdx>(info, fs, target.derived());
+        loadMatrix<Derived, TVal, TIdx>(info, fs, target.derived());
     }
 } //namespace matrix_market
 

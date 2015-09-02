@@ -39,9 +39,6 @@ namespace Zee {
 template <class TMatrix>
 class Partitioner;
 
-template <typename TVal, typename TIdx>
-class DVector;
-
 template <typename TVal, typename TIdx = uint32_t,
          class CStorage = StorageTriplets<TVal, TIdx>>
 class DSparseMatrixImage;
@@ -85,7 +82,7 @@ class Triplet
 
 //-----------------------------------------------------------------------------
 
-/** Different partitioning schemes */
+/** FIXME DEPRECATED: Different partitioning schemes */
 enum class partitioning_scheme
 {
     cyclic,
@@ -94,216 +91,27 @@ enum class partitioning_scheme
     custom
 };
 
-/** The class DSparseMatrix is a distributed matrix type inspired by
-  * Eigen's SparseMatrix. It is distributed over multiple processing units,
-  */
-template <typename TVal = double, typename TIdx = uint32_t,
+template <typename Derived,
+         typename TVal,
+         typename TIdx,
          class Image = DSparseMatrixImage<TVal, TIdx,
             StorageTriplets<TVal, TIdx>>>
-class DSparseMatrix :
-    public DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>
+class DSparseMatrixBase
+    : public DMatrixBase<Derived, TVal, TIdx>
 {
-    using Base = DMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx>;
-
     public:
-        using image_type = Image;
-        using index_type = TIdx;
-        using value_type = TVal;
+        using Base = DMatrixBase<Derived, TVal, TIdx>;
+        using Base::operator=;
 
-        /** Initialize from .mtx format */
-        DSparseMatrix(std::string file, TIdx procs = 0) :
-            Base(0, 0)
-        {
-            setDistributionScheme(partitioning_scheme::cyclic, procs);
-            matrix_market::load(file, *this);
-        }
-
-        /** Initialize an (empty) sparse (rows x cols) oatrix */
-        DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) :
-            Base(rows, cols)
-        {
-            setDistributionScheme(partitioning_scheme::cyclic, procs);
-        }
-
-        DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0)
+        DSparseMatrixBase(TIdx rows, TIdx cols)
+            : Base(rows, cols)
         { }
 
-        /** Default deconstructor */
-        ~DSparseMatrix() { }
-
-        /** Move constructor */
-        DSparseMatrix(DSparseMatrix&& o) = default;
-
-        bool isInitialized() const {
-            return initialized_;
-        }
-
-        /** Sets the distribution scheme for this matrix */
-        void setDistributionScheme(partitioning_scheme partitioning,
-                TIdx procs)
+        DSparseMatrixBase(std::string file, TIdx procs = 0)
+            : Base(0, 0)
         {
-            partitioning_ = partitioning;
-            this->procs_ = procs;
-        }
-
-        /** Sets the distribution scheme for this matrix. The function should be of the form
-          * \f[ f: Z_m \times Z_n \to Z_p \f]
-          * where m is the number of columns, n is the number of rows, and p is the number
-          * of processors of this matrix */
-        void setDistributionFunction(std::function<TIdx(TIdx, TIdx)> distributionLambda)
-        {
-            distributionLambda_ = distributionLambda;
-        }
-
-        /** @return the number of non-zero entries in the matrix */
-        TIdx nonZeros() const
-        {
-            return nz_;
-        }
-
-        // this is kind of like a reduce in mapreduce, implementing this such that
-        // we can get some sample code going
-        // perhaps think about pregel-like approach as well
-        // An alternative function signature could be:
-        //   template<typename TReturn, typename TFunc>
-        //   std::vector<TReturn> compute(TFunc func) const
-        // which would construct a separate function for each lambda, but remove overhead
-        // of using std::function.
-        template<typename TReturn>
-        std::vector<TReturn> compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const
-        {
-            auto result = std::vector<TReturn>(this->getProcs());
-
-            // capture function and result by-reference
-            auto push_result = [&func, &result] (TIdx proc,
-                    const std::shared_ptr<image_type>& image) mutable {
-                    result[proc] = func(image);
-                };
-
-            std::vector<std::thread> threads(this->subs_.size());
-
-            TIdx p = 0;
-            for (const auto& image : subs_) {
-                threads[p] = std::thread(push_result, p, image);
-                ++p;
-            }
-
-            for (auto& t : threads) {
-                t.join();
-            }
-
-            return result;
-        }
-
-        // template specialization for void which does not return anything
-        void compute(std::function<void(std::shared_ptr<image_type>, TIdx s)> func) const
-        {
-            // capture function and result by-reference
-            std::vector<std::thread> threads;
-
-            TIdx s = 0;
-            for (auto& image : subs_) {
-                threads.push_back(std::thread(func, image, s++));
-            }
-
-            for (auto& t : threads) {
-                t.join();
-            }
-        }
-
-        /** Returns the load imbalance of the current partitioning.
-         * Load imbalance is defined as:
-         * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
-         * and should be smaller than some predetermined value \f$\epsilon\f$.
-         */
-        double loadImbalance()
-        {
-            double eps = 1.0;
-            for (auto& pimg : subs_)
-            {
-                double eps_i = ((double)this->getProcs() * pimg->nonZeros())
-                    / this->nonZeros();
-                if (eps_i > eps) {
-                    eps = eps_i;
-                }
-            }
-
-            return eps;
-        }
-
-        /** Returns the communication volume of the current Partitioning
-          * Let \f$\lambda_i\f$ be the number of processors in a (non-empty)
-          * row \f$i\f$, and \f$\mu_j\f$ be the number of processors in a
-          * (non-empty) column \f$j\f$. Then the total communication volume is:
-          * \f[ V = \sum_i (\lambda_i - 1) + \sum_j (\mu_j - 1) \f]
-          * */
-        TIdx communicationVolume()
-        {
-            // here we assume that v_i is owned by a processor holding
-            // a_ik =/= 0 for some k, and u_j is owned by a processor
-            // holding a_kj =/= 0 for some k.
-            //
-            // We then ask the images themselves how much communciation
-            // is necessary for spmv communication.
-            //
-            // We preprocess a 'rows' and 'cols' vector in each image.
-            // e.g. for i in rows, send (1, i) to (i % p) proc.
-            //
-            // proc adds 1 to lambda_i for each O(n / p) i's it owns.
-            //
-            // In the end lambda's are distributed over procs, let them compute
-            // partial sums and send it upwards.
-
-            std::atomic<TIdx> V { 0 };
-
-            // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
-            std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->getProcs(),
-                    std::vector<atomic_wrapper<TIdx>>(this->getRows() / this->getProcs() + 1));
-            std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->getProcs(),
-                    std::vector<atomic_wrapper<TIdx>>(this->getCols() / this->getProcs() + 1));
-
-            // FIXME: parallelize, using generalized compute
-            TIdx s = 0;
-            for (auto& pimg : subs_) {
-                for (auto key_count : pimg->getRowSet()) {
-                    auto i = key_count.first;
-                    lambda[i % this->getProcs()][i / this->getProcs()].a += 1;
-                }
-
-                for (auto key_count : pimg->getColSet()) {
-                    auto j = key_count.first;
-                    mu[j % this->getProcs()][j / this->getProcs()].a += 1;
-                }
-
-                ++s;
-            }
-
-            // now let each proc compute partial sum
-
-            // sum over lambdas
-            // FIXME: parallelize, using generalized compute
-            // FIXME: can also parallelize.. O(n) -> O(n / p)
-            // with extra superstep
-            std::vector<TIdx> lambda_s(this->getProcs(), 0);
-            for (TIdx proc = 0; proc < this->getProcs(); ++proc) {
-                TIdx V_s = 0;
-
-                for (TIdx i = 0; i < lambda[proc].size(); ++i) {
-                    if (lambda[proc][i].a > 1) {
-                        V_s += lambda[proc][i].a - 1;
-                    }
-                }
-
-                for (TIdx i = 0; i < mu[proc].size(); ++i) {
-                    if (mu[proc][i].a > 1) {
-                        V_s += mu[proc][i].a - 1;
-                    }
-                }
-
-                V += V_s;
-            }
-
-            return V;
+            setDistributionScheme(partitioning_scheme::cyclic, procs);
+            matrix_market::load(file, *(Derived*)this);
         }
 
         /** Construct a matrix from a set of triplets */
@@ -368,42 +176,27 @@ class DSparseMatrix :
             initialized_ = true;
         }
 
-        void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
+        /** Sets the distribution scheme for this matrix */
+        void setDistributionScheme(partitioning_scheme partitioning,
+                TIdx procs)
         {
-            // update the number of processors
-            this->procs_ = new_images.size();
-            subs_.resize(this->getProcs());
-
-            for(TIdx i = 0; i < new_images.size(); ++i)
-                subs_[i].reset(new_images[i].release());
-
-            // update nz_
-            nz_ = 0;
-            for (auto& pimg : subs_) {
-                nz_ += pimg->nonZeros();
-            }
-
-            initialized_ = true;
+            this->partitioning_ = partitioning;
+            this->procs_ = procs;
         }
 
-        /** Obtain the number of nonzeros in a column */
-        TIdx getColumnWeight(TIdx j) const
+        /** Sets the distribution scheme for this matrix. The function should be of the form
+          * \f[ f: Z_m \times Z_n \to Z_p \f]
+          * where m is the number of columns, n is the number of rows, and p is the number
+          * of processors of this matrix */
+        void setDistributionFunction(std::function<TIdx(TIdx, TIdx)> distributionLambda)
         {
-            // TODO precompute
-            // TODO optimize
-            auto columnCount =
-                [j] (std::shared_ptr<image_type> image) -> TIdx {
-                    TIdx count = 0;
-                    for (auto& trip : *image)
-                        if (trip.col() == j)
-                            count++;
-                    return count;
-                };
+            distributionLambda_ = distributionLambda;
+        }
 
-            auto counts = this->template compute<TIdx>(columnCount);
-            TIdx count = std::accumulate(counts.begin(), counts.end(), (TIdx)0);
-
-            return count;
+        /** @return the number of non-zero entries in the matrix */
+        TIdx nonZeros() const
+        {
+            return nz_;
         }
 
         /** Obtain a list of images */
@@ -417,6 +210,7 @@ class DSparseMatrix :
             return subs_;
         }
 
+        /** Obtain a spy image of the sparse matrix */
         void spy(std::string title = "anonymous", bool show = false)
         {
             using std::endl;
@@ -450,7 +244,7 @@ class DSparseMatrix :
             fout << this->getRows() << " " << this->getCols() << " " << this->nonZeros() << endl;
 
             TIdx s = 0;
-            for (auto& image : subs_) {
+            for (auto& image : this->subs_) {
                 for (auto& triplet : *image) {
                     fout << triplet.row() << " " << triplet.col() << " " << s << endl;
                 }
@@ -465,14 +259,243 @@ class DSparseMatrix :
             }
         }
 
-    private:
-
-
+    protected:
         TIdx nz_;
         partitioning_scheme partitioning_;
         std::vector<std::shared_ptr<Image>> subs_;
         std::function<TIdx(TIdx, TIdx)> distributionLambda_;
         bool initialized_ = false;
+};
+
+/** The class DSparseMatrix is a distributed matrix type inspired by
+  * Eigen's SparseMatrix. It is distributed over multiple processing units,
+  */
+template <typename TVal = default_scalar_type,
+         typename TIdx = default_index_type,
+         class Image = DSparseMatrixImage<TVal, TIdx,
+            StorageTriplets<TVal, TIdx>>>
+class DSparseMatrix :
+    public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx, Image>
+{
+    using Base = DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx, Image>;
+    using Base::operator=;
+
+    public:
+        using image_type = Image;
+        using index_type = TIdx;
+        using value_type = TVal;
+
+        /** Initialize from .mtx format */
+        DSparseMatrix(std::string file, TIdx procs = 1) :
+            Base(0, 0)
+        {
+        }
+
+        /** Initialize an (empty) sparse (rows x cols) matrix */
+        DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) :
+            Base(rows, cols)
+        {
+            setDistributionScheme(partitioning_scheme::cyclic, procs);
+        }
+
+        DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0)
+        { }
+
+        /** Default deconstructor */
+        ~DSparseMatrix() { }
+
+        /** Move constructor */
+        DSparseMatrix(DSparseMatrix&& o) = default;
+
+        bool isInitialized() const {
+            return this->initialized_;
+        }
+
+
+        // this is kind of like a reduce in mapreduce, implementing this such that
+        // we can get some sample code going
+        // perhaps think about pregel-like approach as well
+        // An alternative function signature could be:
+        //   template<typename TReturn, typename TFunc>
+        //   std::vector<TReturn> compute(TFunc func) const
+        // which would construct a separate function for each lambda, but remove overhead
+        // of using std::function.
+        template<typename TReturn>
+        std::vector<TReturn> compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const
+        {
+            auto result = std::vector<TReturn>(this->getProcs());
+
+            // capture function and result by-reference
+            auto push_result = [&func, &result] (TIdx proc,
+                    const std::shared_ptr<image_type>& image) mutable {
+                    result[proc] = func(image);
+                };
+
+            std::vector<std::thread> threads(this->subs_.size());
+
+            TIdx p = 0;
+            for (const auto& image : this->subs_) {
+                threads[p] = std::thread(push_result, p, image);
+                ++p;
+            }
+
+            for (auto& t : threads) {
+                t.join();
+            }
+
+            return result;
+        }
+
+        // template specialization for void which does not return anything
+        void compute(std::function<void(std::shared_ptr<image_type>, TIdx s)> func) const
+        {
+            // capture function and result by-reference
+            std::vector<std::thread> threads;
+
+            TIdx s = 0;
+            for (auto& image : this->subs_) {
+                threads.push_back(std::thread(func, image, s++));
+            }
+
+            for (auto& t : threads) {
+                t.join();
+            }
+        }
+
+        /** Returns the load imbalance of the current partitioning.
+         * Load imbalance is defined as:
+         * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
+         * and should be smaller than some predetermined value \f$\epsilon\f$.
+         */
+        double loadImbalance()
+        {
+            double eps = 1.0;
+            for (auto& pimg : this->subs_)
+            {
+                double eps_i = ((double)this->getProcs() * pimg->nonZeros())
+                    / this->nonZeros();
+                if (eps_i > eps) {
+                    eps = eps_i;
+                }
+            }
+
+            return eps;
+        }
+
+        /** Returns the communication volume of the current Partitioning
+          * Let \f$\lambda_i\f$ be the number of processors in a (non-empty)
+          * row \f$i\f$, and \f$\mu_j\f$ be the number of processors in a
+          * (non-empty) column \f$j\f$. Then the total communication volume is:
+          * \f[ V = \sum_i (\lambda_i - 1) + \sum_j (\mu_j - 1) \f]
+          * */
+        TIdx communicationVolume()
+        {
+            // here we assume that v_i is owned by a processor holding
+            // a_ik =/= 0 for some k, and u_j is owned by a processor
+            // holding a_kj =/= 0 for some k.
+            //
+            // We then ask the images themselves how much communciation
+            // is necessary for spmv communication.
+            //
+            // We preprocess a 'rows' and 'cols' vector in each image.
+            // e.g. for i in rows, send (1, i) to (i % p) proc.
+            //
+            // proc adds 1 to lambda_i for each O(n / p) i's it owns.
+            //
+            // In the end lambda's are distributed over procs, let them compute
+            // partial sums and send it upwards.
+
+            std::atomic<TIdx> V { 0 };
+
+            // {lambda,mu}_i = {lambda,mu}[i % p][i / p];
+            std::vector<std::vector<atomic_wrapper<TIdx>>> lambda(this->getProcs(),
+                    std::vector<atomic_wrapper<TIdx>>(this->getRows() / this->getProcs() + 1));
+            std::vector<std::vector<atomic_wrapper<TIdx>>> mu(this->getProcs(),
+                    std::vector<atomic_wrapper<TIdx>>(this->getCols() / this->getProcs() + 1));
+
+            // FIXME: parallelize, using generalized compute
+            TIdx s = 0;
+            for (auto& pimg : this->subs_) {
+                for (auto key_count : pimg->getRowSet()) {
+                    auto i = key_count.first;
+                    lambda[i % this->getProcs()][i / this->getProcs()].a += 1;
+                }
+
+                for (auto key_count : pimg->getColSet()) {
+                    auto j = key_count.first;
+                    mu[j % this->getProcs()][j / this->getProcs()].a += 1;
+                }
+
+                ++s;
+            }
+
+            // now let each proc compute partial sum
+
+            // sum over lambdas
+            // FIXME: parallelize, using generalized compute
+            // FIXME: can also parallelize.. O(n) -> O(n / p)
+            // with extra superstep
+            std::vector<TIdx> lambda_s(this->getProcs(), 0);
+            for (TIdx proc = 0; proc < this->getProcs(); ++proc) {
+                TIdx V_s = 0;
+
+                for (TIdx i = 0; i < lambda[proc].size(); ++i) {
+                    if (lambda[proc][i].a > 1) {
+                        V_s += lambda[proc][i].a - 1;
+                    }
+                }
+
+                for (TIdx i = 0; i < mu[proc].size(); ++i) {
+                    if (mu[proc][i].a > 1) {
+                        V_s += mu[proc][i].a - 1;
+                    }
+                }
+
+                V += V_s;
+            }
+
+            return V;
+        }
+
+        void resetImages(std::vector<std::unique_ptr<Image>>& new_images)
+        {
+            // update the number of processors
+            this->procs_ = new_images.size();
+            this->subs_.resize(this->getProcs());
+
+            for(TIdx i = 0; i < new_images.size(); ++i)
+                this->subs_[i].reset(new_images[i].release());
+
+            // update nz_
+            this->nz_ = 0;
+            for (auto& pimg : this->subs_) {
+                this->nz_ += pimg->nonZeros();
+            }
+
+            this->initialized_ = true;
+        }
+
+        /** Obtain the number of nonzeros in a column */
+        TIdx getColumnWeight(TIdx j) const
+        {
+            // TODO precompute
+            // TODO optimize
+            auto columnCount =
+                [j] (std::shared_ptr<image_type> image) -> TIdx {
+                    TIdx count = 0;
+                    for (auto& trip : *image)
+                        if (trip.col() == j)
+                            count++;
+                    return count;
+                };
+
+            auto counts = this->template compute<TIdx>(columnCount);
+            TIdx count = std::accumulate(counts.begin(), counts.end(), (TIdx)0);
+
+            return count;
+        }
+
+
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -506,12 +529,14 @@ class DSparseMatrixImage
 
         ~DSparseMatrixImage() = default;
 
+        // FIXME rename to erase
         void popElement(TIdx element) {
             auto t = storage_->popElement(element);
             rowset_.lower(t.row());
             colset_.lower(t.col());
         }
 
+        // rename to push
         void pushTriplet(Triplet<TVal, TIdx> t) {
             if (!storage_) {
                 ZeeLogError << "Can not push triplet without storage." << endLog;

@@ -33,16 +33,35 @@ namespace Zee {
 //-----------------------------------------------------------------------------
 // VECTOR
 
+template <typename Derived,
+         typename TVal,
+         typename TIdx>
+class DVectorBase
+    : public DMatrixBase<Derived, TVal, TIdx>
+{
+    public:
+        using Base = DMatrixBase<Derived, TVal, TIdx>;
+        using Base::operator=;
+
+        DVectorBase(TIdx n, TVal defaultValue = 0)
+            : Base(n, 1)
+        { }
+};
+
 // FIXME: should be a specialization of a general dense matrix
 // FIXME: saved as pairs? or just owners distributed cyclically
 template <typename TVal = default_scalar_type,
          typename TIdx = default_index_type>
-class DVector :
-    public DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>
+class DVector
+    : public DVectorBase<DVector<TVal, TIdx>,
+        TVal, TIdx>
 {
-    using Base = DMatrixBase<DVector<TVal, TIdx>, TVal, TIdx>;
+    using Base = DVectorBase<DVector<TVal, TIdx>, TVal, TIdx>;
 
     public:
+        using value_type = TVal;
+        using index_type = TIdx;
+
         DVector(TIdx n, TVal defaultValue = 0)
             : Base(n, 1)
         {
