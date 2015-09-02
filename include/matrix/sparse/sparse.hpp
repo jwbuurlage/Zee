@@ -287,9 +287,8 @@ class DSparseMatrix :
 
         /** Initialize from .mtx format */
         DSparseMatrix(std::string file, TIdx procs = 1) :
-            Base(0, 0)
-        {
-        }
+            Base(file, procs)
+        { }
 
         /** Initialize an (empty) sparse (rows x cols) matrix */
         DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) :
