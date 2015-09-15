@@ -1,21 +1,25 @@
 #include <zee.hpp>
 #include <random>
 
-// FIXME: TMP
-#include <iostream>
-using std::cout;
-using std::cerr;
-using std::endl;
-
 #include <memory>
 using std::shared_ptr;
 
-template <class TMatrix = Zee::DSparseMatrix<double>>
+
+template <class TMatrix = Zee::DSparseMatrix<>>
 class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
 {
+    using TIdx = TMatrix::index_type;
+    //using TVal = TMatrix::value_type;
+    constexpr const static TIdx default_number_iterations = 100;
+
     public:
-        virtual TMatrix& refine(TMatrix& A) override
-        {
+        PulpPartitioner(TMatrix& A) :
+            Zee::IterativePartitioner(A)
+        {} 
+
+        //TODO
+        //refineWithIterations()
+        virtual TMatrix& refineWithIterations(TIdx iters) {
             std::random_device rd;
             std::mt19937 mt(rd());
             std::uniform_int_distribution<typename TMatrix::index_type>
@@ -97,7 +101,10 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
                 image->popElement(element_index);
                 images[max_index]->pushTriplet(trip);
             }
+        }
 
-            return A;
+        void TMatrix& refine() override
+        {
+            refineWithIterations(default_number_iterations);
         }
 };
