@@ -42,16 +42,19 @@ class GreedyVectorPartitioner : Zee::VectorPartitioner<TMatrix, TVector>
             for (TIdx i = 0; i < v.size(); ++i) {
                 // FIXME implement vector.reassign
                 if (diagonalTargets[i] != -1) {
-                    vector.reassign(i, diagonalTargets[i]);
+                    v.reassign(i, diagonalTargets[i]);
+                    u.reassign(i, diagonalTargets[i]);
                 }
-                else if (intersection != empty) {
+                else if (/* intersection != empty */) {
                     // compute intersection
-                    // balance
+                    // ask processors if they have non-empty row/column k
+                    // excluding diagonal
+                    // greedily balance
                     // hard
                 }
                 else {
                     // compute union
-                    // balance
+                    // greedily balance
                     // hard
                 }
             }

@@ -46,6 +46,8 @@ class DVectorBase
         DVectorBase(TIdx n, TVal defaultValue = 0)
             : Base(n, 1)
         { }
+
+        virtual void reassign(TIdx, TIdx) = 0;
 };
 
 // FIXME: should be a specialization of a general dense matrix
@@ -131,6 +133,10 @@ class DVector
             for (auto& elem : elements_) {
                 elem = 0;
             }
+        }
+
+        void reassign(TIdx element, TIdx processorTarget) override {
+            ZeeLogError << "DVector.reassign() not implemented" << endLog;
         }
 
         // Operator overloads and algorithm implementations

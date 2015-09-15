@@ -40,7 +40,7 @@ class Partitioner
         virtual TMatrix& partition(
                 TMatrix& A) = 0;
 
-        virtual void initialize(TMatrix& A) { }
+        virtual void initialize() { }
 
         /** Set the number of processors
           * @param procs Number of processors _after_ partitioning.
@@ -56,6 +56,9 @@ class Partitioner
         /* The number of processors _before_ partitioning
          * The value 0 is used for an arbitrary number */
         int procs_in_ = 0;
+
+        /* We only want to initialize the partitioner once */
+        bool initialized_ = false;
 };
 
 

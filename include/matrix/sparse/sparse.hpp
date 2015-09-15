@@ -107,10 +107,12 @@ class DSparseMatrixBase
             : Base(rows, cols)
         { }
 
-        DSparseMatrixBase(std::string file, TIdx procs = 0)
+        DSparseMatrixBase(std::string file,
+                partitioning_scheme scheme = partitioning_scheme::cyclic,
+                TIdx procs = 1)
             : Base(0, 0)
         {
-            setDistributionScheme(partitioning_scheme::cyclic, procs);
+            setDistributionScheme(scheme, procs);
             matrix_market::load(file, *(Derived*)this);
         }
 
@@ -258,6 +260,8 @@ class DSparseMatrixBase
                 std::system(command.c_str());
             }
         }
+
+        virtual void localizeIndices() = 0;
 
     protected:
         TIdx nz_;
@@ -495,6 +499,11 @@ class DSparseMatrix :
         }
 
 
+        /* Use the vector distribution to compute local indices and propagate this
+         * to storage */
+        void localizeIndices() override {
+            ZeeLogError << "Localizing indices not implemented" << endLog;
+        }
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
