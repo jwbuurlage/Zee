@@ -19,7 +19,7 @@ int main()
     PulpPartitioner<decltype(A)> pA(A);
     pA.refineWithIterations(1000);
 
-    GreedyVectorPartitioner<decltype(v)> pVecs(A, v, u);
+    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
     pVecs.partition();
 
     A.localizeIndices(v, u);

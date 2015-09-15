@@ -23,10 +23,18 @@ template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
 class VectorPartitioner
 {
     public:
-        VectorPartitioner(TMatrix& A_,
-                TVector& v_,
-                TVector& u_)
-        {};
+        VectorPartitioner(TMatrix& A,
+                TVector& v,
+                TVector& u)
+            : A_(A), v_(v), u_(u)
+        { }
+
+        virtual void partition() { }
+
+    protected:
+        TMatrix& A_;
+        TVector& v_;
+        TVector& u_;
 };
 
 } // namespace Zee

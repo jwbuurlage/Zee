@@ -64,8 +64,8 @@ class IterativePartitioner : public Partitioner<TMatrix>
 {
     public:
         // FIXME should probably hold a shared_ptr to A, dangling reference danger
-        IterativePartitioner(TMatrix& A) : A_(A) {};
-        virtual ~IterativePartitioner() { };
+        IterativePartitioner(TMatrix& A) : A_(A) { }
+        virtual ~IterativePartitioner() { }
 
         /** Partitioning with an IP means the initial partitioning. A call to this function is optional.
           * Default behaviour is to forward to refine. */
