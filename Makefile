@@ -10,6 +10,8 @@ LIB_DEPS = -lpthread
 
 all: dirs part ir gmres lial
 
+.phony: docs
+
 dirs:
 	mkdir -p ${OUTPUT_DIR}
 

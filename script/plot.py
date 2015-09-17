@@ -31,11 +31,12 @@ import os
 import yaml
 
 import matplotlib
-matplotlib.use('GTK3Cairo')
+#matplotlib.use('GTK3Cairo')
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.ticker as ticker
+import numpy as np
 
 from math import log, ceil
 
@@ -71,7 +72,7 @@ def get_color(proc):
     color = numerator / denumerator
     color -= 0.5
     if (color < 0.0):
-        color += 1.0;
+        color += 1.0
     return matplotlib.colors.hsv_to_rgb([color, 1, 1])
 
 def finalize_plt(filename):
@@ -81,7 +82,7 @@ def finalize_plt(filename):
     elif args.showfile:
         outfilename = filename[:-extension_length] + args.filetype
         plt.savefig(outfilename)
-        os.system("mupdf-x11 " + outfilename)
+        os.system("xdg-open " + outfilename)
     else:
         plt.show()
 
@@ -92,34 +93,46 @@ def spy(matrix_file):
     marker_size = 0.8
     marker_offset = 0.5 * (1 - marker_size)
 
-    print("INFO: Opening:", matrix_file);
+    print("INFO: Opening:", matrix_file)
     with open(matrix_file, 'r') as fin:
         line = fin.readline()
-        while (len(line) == 0 or line[0] == '%'):
-            line = fin.readline()
-        title = line
+        if line.startswith("%%MatrixMarket matrix array"):
+            while (len(line) == 0 or line[0] == '%'):
+                line = fin.readline()
+            m, n = map(int, line.split(' '))
+            data = np.ndarray((m, n))
+            for i in range(0, m):
+                for j in range(0, n):
+                    data[i][j] = float(fin.readline())
+            plt.imshow(data)
+            finalize_plt(matrix_file)
+        elif line.startswith("%%Extended-MatrixMarket distributed-matrix coordinate"):
+            while (len(line) == 0 or line[0] == '%'):
+                line = fin.readline()
+            title = line
 
-        m, n, nz = map(int, fin.readline().split(' '))
+            m, n, nz = map(int, fin.readline().split(' '))
 
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1, aspect='equal')
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1, aspect='equal')
 
-        # force integer labels
-        ax.get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
-        ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+            # force integer labels
+            ax.get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+            ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
 
-        # set the appropriate limits
-        plt.xlim([0, n])
-        plt.ylim([m, 0])
+            # set the appropriate limits
+            plt.xlim([0, n])
+            plt.ylim([m, 0])
 
-        for _ in range(0, nz):
-            i, j, p = map(int, fin.readline().split(' '))
-            ax.add_patch(patches.Rectangle((j + marker_offset,
-                i + marker_offset),
-                marker_size, marker_size, color=get_color(p)))
+            for _ in range(0, nz):
+                i, j, p = map(int, fin.readline().split(' '))
+                ax.add_patch(patches.Rectangle((j + marker_offset,
+                    i + marker_offset),
+                    marker_size, marker_size, color=get_color(p)))
 
-        finalize_plt(matrix_file)
-
+            finalize_plt(matrix_file)
+        else:
+            print("ERROR: Unrecognized matrix format.")
 
 ###################################################
 # PLOT YAML
@@ -128,7 +141,7 @@ def plot(plot_file):
     f = open(plot_file, 'r')
 
     # FIXME: check if zee plot file or error
-    contents = f.read();
+    contents = f.read()
     contents = contents.replace("\\", "\\\\")
 
     plot_data = yaml.load(contents)
@@ -148,7 +161,7 @@ for f in args.files:
     f = args.directory + f
     extension = f.split('.')[-1]
     if extension == "mtx":
-        spy(f);
+        spy(f)
     elif extension == "yaml":
         plot(f)
     else:

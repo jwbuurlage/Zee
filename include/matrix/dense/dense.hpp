@@ -264,6 +264,41 @@ class DMatrix :
             elements_ = std::move(new_elements);
         }
 
+        /** Obtain a spy image of the dense matrix */
+        void spy(std::string title = "anonymous", bool show = false)
+        {
+            using std::endl;
+
+            std::stringstream ss;
+            ss << "data/spies/" << title << ".mtx";
+            auto filename = ss.str();
+            int i = 1;
+            while(fileExists(filename)) {
+                ss.str("");
+                ss.clear();
+                ss << "data/spies/" << title << "_" << i++ << ".mtx";
+                filename = ss.str();
+            }
+            std::ofstream fout(filename);
+
+            fout << "%%MatrixMarket matrix array real general" << endl;
+
+            fout << this->getRows() << " " << this->getCols() << endl;
+
+            for (TIdx j = 0; j < this->getCols(); ++j) {
+                for (TIdx i = 0; i < this->getRows(); ++i) {
+                    fout << this->at(i, j) << endl;
+                }
+            }
+
+            ZeeLogInfo << "Spy saved to file: " << filename << Logger::end();
+
+            if (show) {
+                auto command = "./script/plot.py --showfile " + filename;
+                std::system(command.c_str());
+            }
+        }
+
     private:
         // stored column major
         std::vector<std::vector<TVal>> elements_;
