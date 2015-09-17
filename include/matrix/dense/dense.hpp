@@ -160,7 +160,8 @@ Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
  * dense matrices, instead the distribution will be chosen in the implementation
  * of the algorithms.
  * When running a decentralized algorithm this class must be specialized. */
-template <typename TVal, typename TIdx = int32_t>
+template <typename TVal = default_scalar_type,
+         typename TIdx = default_index_type>
 class DMatrix :
     public DMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>
 {

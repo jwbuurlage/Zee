@@ -108,7 +108,7 @@ namespace matrix_market
         target.setFromTriplets(coefficients.begin(), coefficients.end());
     }
 
-    template <typename TVal, typename TIdx>
+    template <typename Derived, typename TVal, typename TIdx>
     void loadMatrix(int info, std::ifstream& fs, DMatrix<TVal, TIdx>& target)
     {
 
