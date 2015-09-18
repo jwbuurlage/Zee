@@ -1,11 +1,15 @@
 TODAY:
 ------
 
-[!] Generalize to Epiphany
+[ ] Implement Vector distribution
+- [ ] Implent Biss.'s heuristic
+- [ ] Vec. Dist information in Image
+- [ ] Change to using local indices
+[ ] Generalize to Epiphany
 [ ] Recursion for k-way partitioning
-[ ] OpenCL SpMV support
+[?] OpenCL SpMV support
 [ ] Output performance graphs
-    [ ] plots for communication volume
+- [ ] plots for communication volume
 [ ] Generalize spy for large matrices
 
 TODO:
@@ -31,9 +35,9 @@ do this in a portable way.
 # SpMV
 [!] Completely parallel version of SPMD, without O(n) storage
 requirements and low computational complexity, also ability to cache?
-    [ ] Implement this using streaming on parallella
-    [ ] Add precompute support to Zee matrices
-    [ ] Implement BSP matrix, to run on Cartesius
+- [ ] Implement this using streaming on parallella
+- [ ] Add precompute support to Zee matrices
+- [ ] Implement BSP matrix, to run on Cartesius
 
 # General improvements
 [ ] Write virtual container with iterators for triplets generation
