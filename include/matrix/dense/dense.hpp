@@ -156,6 +156,24 @@ Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
 //-----------------------------------------------------------------------------
 // MATRIX
 
+// The dense base matrix
+template <typename Derived,
+         typename TVal = default_scalar_type,
+         typename TIdx = default_index_type>
+class DDenseMatrixBase
+    : public DMatrixBase<Derived, TVal, TIdx>
+{
+    public:
+        using Base = DMatrixBase<Derived, TVal, TIdx>;
+        using Base::operator=;
+
+        DDenseMatrixBase() { }
+
+        DDenseMatrixBase(TIdx rows, TIdx cols)
+            : Base(rows, cols)
+        { }
+};
+
 /* Contrary to a sparse matrix, we choose to not have a fixed distribution for
  * dense matrices, instead the distribution will be chosen in the implementation
  * of the algorithms.
@@ -163,13 +181,14 @@ Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
 template <typename TVal = default_scalar_type,
          typename TIdx = default_index_type>
 class DMatrix :
-    public DMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>
+    public DDenseMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>
 {
     public:
-        using Base = DMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>;
+        using Base = DDenseMatrixBase<DMatrix<TVal, TIdx>, TVal, TIdx>;
+        using Base::operator=;
 
         DMatrix(TIdx rows, TIdx cols)
-        {
+            : Base(rows, cols) {
             resize(rows, cols);
         }
 
@@ -178,7 +197,6 @@ class DMatrix :
         {
             matrix_market::load(file, *this);
         }
-
 
         DMatrix(DMatrix& other)
         {
@@ -189,8 +207,6 @@ class DMatrix :
         {
             *this = other;
         }
-
-        using Base::operator=;
 
         void operator= (DMatrix& other) {
             elements_ = other.elements_;
@@ -233,6 +249,7 @@ class DMatrix :
 
         void resize(TIdx rows, TIdx cols) override
         {
+
             Base::resize(rows, cols);
 
             elements_.resize(rows);
