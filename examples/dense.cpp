@@ -4,10 +4,8 @@ using namespace Zee;
 
 int main()
 {
-    int N = 4;
-    int M = 16;
-    int core_block_size = 8;
-    int matrix_size = core_block_size * N * M;
+
+    int matrix_size = 16;
 
     // Dense matrices
     DMatrix<> A(matrix_size, matrix_size);
@@ -15,8 +13,8 @@ int main()
 
     for (int i = 0; i < matrix_size; ++i)
         for (int j = 0; j < matrix_size; ++j) {
-            A.at(i, j) = (float)i / 10.0f;
-            B.at(i, j) = (float)j / 10.0f;
+            A.at(i, j) = (float)i;
+            B.at(i, j) = (float)j;
         }
     A.spy("A");
     B.spy("B");
@@ -25,6 +23,7 @@ int main()
 
     C = A * B;
     ZeeLogVar(matrix_size);
+    ZeeLogVar(C);
     C.spy("C");
 
     return 0;
