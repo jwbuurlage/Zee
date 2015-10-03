@@ -40,13 +40,6 @@ class DMatrixBase {
             : DMatrixBase(0, 0)
         { }
 
-        template <typename OtherDerived>
-        DMatrixBase& operator=(DMatrixBase<OtherDerived, TVal, TIdx>&& rhs) {
-            rows_ = rhs.rows_;
-            cols_ = rhs.cols_;
-            procs_ = rhs.procs_;
-        }
-
         /** @return the total number of (possible) entries of the matrix  */
         TIdx size() const
         {

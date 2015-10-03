@@ -173,12 +173,6 @@ class DDenseMatrixBase
             : Base(rows, cols)
         { }
 
-        template <typename OtherDerived>
-        DDenseMatrixBase&
-        operator=(DDenseMatrixBase<OtherDerived, TVal, TIdx>&& rhs) {
-            Base::operator=(std::move(rhs));
-        }
-
         virtual TVal& at(TIdx i, TIdx j) = 0;
         virtual const TVal& at(TIdx i, TIdx j) const = 0;
 
