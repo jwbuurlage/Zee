@@ -1,5 +1,5 @@
 /*
-File: include/sparse_matrix.h
+File: include/operations/operation_types.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -15,12 +15,16 @@ License, or (at your option) any later version.
 
 namespace Zee {
 
-// Parallel providers
-enum ParallelProvider {
-    P_CPP,
-    P_BSP,
-    P_MPI
-    // ...
-};
+namespace operation
+{
+    enum class type
+    {
+        product,
+        addition,
+        subtraction,
+        scalar_product,
+        scalar_division
+    };
+} // namespace operation
 
-}
+} // namespace Zee

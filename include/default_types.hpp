@@ -1,5 +1,5 @@
 /*
-File: include/zee.hpp
+File: include/default_types.hpp
 
 This file is part of the Zee partitioning framework
 
@@ -11,13 +11,11 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
-#include "matrix/base/base.hpp"
-#include "matrix/sparse/sparse.hpp"
-#include "matrix/dense/dense.hpp"
-#include "benchmarking.hpp"
-#include "partitioner.hpp"
-#include "matrix_market.hpp"
-#include "logging.hpp"
-#include "plotter.hpp"
-#include "common.hpp"
-#include "default_types.hpp"
+#include <cstdint>
+
+namespace Zee {
+
+using default_scalar_type = float;
+using default_index_type = int32_t;
+
+} // namespace Zee
