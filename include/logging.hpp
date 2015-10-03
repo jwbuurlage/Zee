@@ -35,8 +35,13 @@ License, or (at your option) any later version.
     ZeeLogError << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << endLog;\
     exit(-1);\
 }
+#define ZeeAssertMsg(ASSERT, MESSAGE) if (!(ASSERT)) {\
+    ZeeLogError << "assertion '" #ASSERT "' failed at " << __FILE__  << ":" << __LINE__ << "\n" << "\"" << MESSAGE << "\"" << endLog;\
+    exit(-1);\
+}
 #else
 #define ZeeAssert(ASSERT)
+#define ZeeAssertMsg(ASSERT, MESSAGE)
 #endif
 
 namespace Zee {
