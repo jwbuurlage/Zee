@@ -16,6 +16,7 @@ License, or (at your option) any later version.
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "color_output.hpp"
 
