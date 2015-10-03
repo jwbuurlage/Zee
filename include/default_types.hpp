@@ -13,5 +13,9 @@ License, or (at your option) any later version.
 
 #include <cstdint>
 
+namespace Zee {
+
 using default_scalar_type = float;
 using default_index_type = int32_t;
+
+} // namespace Zee

@@ -20,3 +20,4 @@ License, or (at your option) any later version.
 #include "logging.hpp"
 #include "plotter.hpp"
 #include "common.hpp"
+#include "default_types.hpp"
