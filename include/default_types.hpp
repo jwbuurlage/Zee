@@ -16,6 +16,6 @@ License, or (at your option) any later version.
 namespace Zee {
 
 using default_scalar_type = float;
-using default_index_type = int32_t;
+using default_index_type = uint32_t;
 
 } // namespace Zee
