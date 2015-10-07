@@ -100,6 +100,10 @@ class DSparseMatrixBase
     : public DMatrixBase<Derived, TVal, TIdx>
 {
     public:
+        using index_type = TIdx;
+        using value_type = TVal;
+        using image_type = Image;
+
         using Base = DMatrixBase<Derived, TVal, TIdx>;
         using Base::operator=;
 
@@ -114,8 +118,8 @@ class DSparseMatrixBase
             matrix_market::load(file, *(Derived*)this);
         }
 
-        virtual double loadImbalance() = 0;
-        virtual TIdx communicationVolume() = 0;
+        virtual double loadImbalance() const = 0;
+        virtual TIdx communicationVolume() const = 0;
 
         /** Construct a matrix from a set of triplets */
         template<typename TInputIterator>
@@ -284,9 +288,9 @@ class DSparseMatrix :
     using Base::operator=;
 
     public:
-        using image_type = Image;
-        using index_type = TIdx;
-        using value_type = TVal;
+        using index_type = typename Base::index_type;
+        using value_type = typename Base::value_type;
+        using image_type = typename Base::image_type;
 
         /** Initialize from .mtx format */
         DSparseMatrix(std::string file, TIdx procs = 1) :
@@ -369,7 +373,7 @@ class DSparseMatrix :
          * \f[ \tilde{\epsilon} = \max_{i \in P} \frac{p \cdot |A_i|}{|A|} \f]
          * and should be smaller than some predetermined value \f$\epsilon\f$.
          */
-        double loadImbalance()
+        double loadImbalance() const
         {
             double eps = 1.0;
             for (auto& pimg : this->subs_)
@@ -390,7 +394,7 @@ class DSparseMatrix :
           * (non-empty) column \f$j\f$. Then the total communication volume is:
           * \f[ V = \sum_i (\lambda_i - 1) + \sum_j (\mu_j - 1) \f]
           * */
-        TIdx communicationVolume()
+        TIdx communicationVolume() const
         {
             // here we assume that v_i is owned by a processor holding
             // a_ik =/= 0 for some k, and u_j is owned by a processor
