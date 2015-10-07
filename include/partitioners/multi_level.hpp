@@ -12,6 +12,8 @@
 
 #include <zee.hpp>
 
+namespace Zee {
+
 #include <algorithm>
 
 #include <vector>
@@ -352,3 +354,5 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         vector<vector<TIdx>> colNets;
         vector<vector<TIdx>> rowNets;
 };
+
+} // namespace Zee
