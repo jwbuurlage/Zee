@@ -12,12 +12,16 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
         TIdx maxIterations,
         TIdx m,
         TVal tol,
-        bool plotResiduals = false)
+        bool plotResiduals = false,
+        bool benchmark = false)
 {
     ZeeLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
         " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
 
+    // FIXME pointless to make bench if we dont benchmark
     auto bench = Zee::Benchmark("GMRES");
+    if (!benchmark)
+        bench.silence();
 
     ZeeAssert(A.getRows() == b.size());
 
@@ -38,7 +42,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     // large vectors
     std::vector<TVector> H;
     H.reserve(m);
-    for (auto i = 0; i < m; ++i) {
+    for (TIdx i = 0; i < m; ++i) {
         H.push_back(TVector(i + 2));
     }
 
@@ -56,8 +60,8 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     std::vector<TVal> rhos;
 
     auto finished = false;
-    auto nr = -1;
-    for (auto run = 0; run < maxIterations; ++run) {
+    TIdx nr = 0;
+    for (TIdx run = 0; run < maxIterations; ++run) {
         // We construct the initial basis vector from the residual
         auto beta = r.norm();
         V[0] = r / beta;
@@ -65,7 +69,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
         bHat[0] = beta;
 
         // We run for i [0, m)
-        for (auto i = 0; i < m; ++i)
+        for (TIdx i = 0; i < m; ++i)
         {
 
             // We introduce a new basis vector which we will orthogonalize
@@ -73,7 +77,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             TVector w(A.getRows());
             w = A * V[i];
 
-            for (int k = 0; k <= i; ++k) {
+            for (TIdx k = 0; k <= i; ++k) {
                 H[i][k] = V[k].dot(w);
                 w -= V[k] * H[i][k];
             }
@@ -86,7 +90,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             R[i][0] = H[i][0];
 
             // Givens rotation
-            for (int k = 1; k <= i; ++k) {
+            for (TIdx k = 1; k <= i; ++k) {
                 auto gamma = c[k - 1] * R[i][k - 1] + s[k - 1] * H[i][k];
                 R[i][k] = c[k - 1] * H[i][k] - s[k - 1] * R[i][k - 1];
                 R[i][k - 1] = gamma;
@@ -105,7 +109,6 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             // update rho
             auto rho = std::abs(bHat[i + 1]);
             rhos.push_back(rho);
-
 
             // check if we are within tolerance level
             if (rho < tol) {
@@ -142,7 +145,8 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
     }
 
     // we finalize the benchmark
-    bench.finish();
+    if (benchmark)
+        bench.finish();
 
     if (plotResiduals) {
         // We plot the residuals

@@ -114,6 +114,9 @@ class DSparseMatrixBase
             matrix_market::load(file, *(Derived*)this);
         }
 
+        virtual double loadImbalance() = 0;
+        virtual TIdx communicationVolume() = 0;
+
         /** Construct a matrix from a set of triplets */
         template<typename TInputIterator>
         void setFromTriplets(
@@ -294,7 +297,7 @@ class DSparseMatrix :
         DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) :
             Base(rows, cols)
         {
-            setDistributionScheme(partitioning_scheme::cyclic, procs);
+            this->setDistributionScheme(partitioning_scheme::cyclic, procs);
         }
 
         DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0)

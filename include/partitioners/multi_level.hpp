@@ -36,8 +36,8 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
 
         MultiLevelOneD() {
-            this->_procs = 2;
-            this->_procs_in = 1;
+            this->procs_ = 2;
+            this->procs_in_ = 1;
         }
 
         virtual void initialize(TMatrix& A) override

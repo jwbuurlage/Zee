@@ -43,18 +43,18 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         using TTriplet = Zee::Triplet<TVal, TIdx>;
 
         MGPartitioner() {
-            this->_procs = 2;
-            this->_procs_in = 1;
+            this->procs_ = 2;
+            this->procs_in_ = 1;
         }
 
         virtual void initialize(TMatrix& A) override
         {
             this->split(A);
-            _initialized = true;
+            initialized_ = true;
         }
 
         bool locallyOptimal() const {
-            return _locallyOptimal;
+            return locallyOptimal_;
         }
 
         /** Split matrix A into A_r + A_c using score function */
@@ -71,7 +71,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             TIdx n = A.getCols();
             TIdx p = A.getProcs();
 
-            _tripletInRow.resize(A.nonZeros());
+            tripletInRow_.resize(A.nonZeros());
 
             // we need to count the number of elements in each row
             // and column, use compute
@@ -114,7 +114,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
                     auto s_c_j = col_count[j % p][j / p].a.load();
 
                     // this is the score function
-                    _tripletInRow[cur++] = (s_r_i < s_c_j);
+                    tripletInRow_[cur++] = (s_r_i < s_c_j);
                 }
 
                 ++s;
@@ -142,7 +142,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             TIdx cur = 0;
             for (auto& pimg : images) {
                 for (auto t : *pimg) {
-                    bool tripletInAr = _tripletInRow[cur++];
+                    bool tripletInAr = tripletInRow_[cur++];
                     auto bTriplet = TTriplet(
                                 bRow(tripletInAr, t.row(), t.col(), A),
                                 bCol(tripletInAr, t.row(), t.col(), A),
@@ -214,7 +214,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             for (auto& pimg : images) {
                 for (auto triplet : *pimg) {
                     auto targetProc = 0;
-                    if (_tripletInRow[cur++]) {
+                    if (tripletInRow_[cur++]) {
                         auto colProc = triplet.row() + A.getCols();
                         targetProc =
                             procForCol[colProc % p][colProc / p];
@@ -235,7 +235,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         {
             // FIXME: many of these operations can be done in place
 
-            if (_initialized) {
+            if (initialized_) {
                 ZeeLogWarning << "Already applied an initial partitioning"
                     " instead refining the partitioning on A" << endLog;
                 this->refine(A);
@@ -299,17 +299,17 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             std::set<TIdx> rowset;
             std::set<TIdx> colset;
 
-            std::fill(_tripletInRow.begin(), _tripletInRow.end(), false);
+            std::fill(tripletInRow_.begin(), tripletInRow_.end(), false);
 
             // PHASE 1: We construct the matrix B according to the partitioning of A
             TIdx cur = 0;
             for (auto& t : *aImages[0]) {
                 auto bTriplet = TTriplet(
-                            bRow(_phaseRow, t.row(), t.col(), A),
-                            bCol(_phaseRow, t.row(), t.col(), A),
+                            bRow(phaseRow_, t.row(), t.col(), A),
+                            bCol(phaseRow_, t.row(), t.col(), A),
                             t.value());
-                if (_phaseRow) {
-                    _tripletInRow[cur] = true;
+                if (phaseRow_) {
+                    tripletInRow_[cur] = true;
                 }
                 rowset.insert(bTriplet.row());
                 colset.insert(bTriplet.col());
@@ -319,13 +319,13 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
 
             for (auto& t : *aImages[1]) {
                 auto bTriplet = TTriplet(
-                            bRow(!_phaseRow, t.row(), t.col(), A),
-                            bCol(!_phaseRow, t.row(), t.col(), A),
+                            bRow(!phaseRow_, t.row(), t.col(), A),
+                            bCol(!phaseRow_, t.row(), t.col(), A),
                             t.value());
                 rowset.insert(bTriplet.row());
                 colset.insert(bTriplet.col());
-                if (!_phaseRow) {
-                    _tripletInRow[cur] = true;
+                if (!phaseRow_) {
+                    tripletInRow_[cur] = true;
                 }
                 coefficients.push_back(bTriplet);
                 cur++;
@@ -364,16 +364,16 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
             }
 
             if (A.communicationVolume() == priorVolume) {
-                if (!_phaseRow && _rowOptimal) {
-                    _locallyOptimal = true;
-                } else if (_phaseRow) {
-                    _rowOptimal = true;
+                if (!phaseRow_ && rowOptimal_) {
+                    locallyOptimal_ = true;
+                } else if (phaseRow_) {
+                    rowOptimal_ = true;
                 }
-                _phaseRow = !_phaseRow;
+                phaseRow_ = !phaseRow_;
             }
             else {
-                if (!_phaseRow) {
-                    _rowOptimal = false;
+                if (!phaseRow_) {
+                    rowOptimal_ = false;
                 }
             }
 
@@ -381,9 +381,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix>
         }
 
     private:
-        vector<bool> _tripletInRow;
-        bool _initialized = false;
-        bool _locallyOptimal = false;
-        bool _rowOptimal = false;
-        bool _phaseRow = true;
+        vector<bool> tripletInRow_;
+        bool initialized_ = false;
+        bool locallyOptimal_ = false;
+        bool rowOptimal_ = false;
+        bool phaseRow_ = true;
 };
