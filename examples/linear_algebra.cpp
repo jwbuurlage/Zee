@@ -5,7 +5,7 @@ using namespace Zee;
 int main()
 {
     using TVal = double;
-    using TIdx = int;
+    using TIdx = unsigned int;
 
     constexpr auto size = 10;
 
