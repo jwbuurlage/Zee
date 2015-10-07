@@ -16,23 +16,22 @@
 
 #pragma once
 
+// FIXME -- only what we need
 #include <zee.hpp>
-
-namespace Zee {
-
 #include "kernighan_lin.hpp"
 
 #include <random>
-
 #include <vector>
-using std::vector;
-
 #include <memory>
+#include <atomic>
+
+namespace Zee {
+
+using std::atomic;
 using std::unique_ptr;
 using std::make_unique;
+using std::vector;
 
-#include <atomic>
-using std::atomic;
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MGPartitioner : Zee::IterativePartitioner<TMatrix> {

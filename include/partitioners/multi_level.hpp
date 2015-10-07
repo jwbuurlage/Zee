@@ -10,24 +10,22 @@
 
 #pragma once
 
+// FIXME -- only what we need
 #include <zee.hpp>
+
+#include <algorithm>
+#include <vector>
+#include <list>
+#include <set>
+#include <iostream>
 
 namespace Zee {
 
-#include <algorithm>
-
-#include <vector>
-using std::vector;
-
-#include <list>
 using std::list;
-
-#include <set>
 using std::set;
-
-#include <iostream>
 using std::cout;
 using std::endl;
+using std::vector;
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MultiLevelOneD : Zee::Partitioner<TMatrix>

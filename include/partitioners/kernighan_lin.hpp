@@ -1,20 +1,16 @@
 #pragma once
 
-namespace Zee {
-
 #include <random>
 #include <algorithm>
-
 #include <vector>
-using std::vector;
-
 #include <list>
-using std::list;
-
 #include <set>
-using std::set;
-
 #include <memory>
+
+namespace Zee {
+using std::vector;
+using std::list;
+using std::set;
 using std::unique_ptr;
 
 template <typename TMatrix>
