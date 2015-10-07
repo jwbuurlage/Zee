@@ -1,8 +1,6 @@
 #include <zee.hpp>
 
 #include "partitioners/pulp.hpp"
-#include "partitioners/medium_grain.hpp"
-#include "partitioners/multi_level.hpp"
 
 #include <string>
 #include <cstdint>

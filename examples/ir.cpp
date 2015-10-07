@@ -1,7 +1,5 @@
 #include <zee.hpp>
 
-#include "partitioners/medium_grain.hpp"
-
 #include <string>
 
 using namespace Zee;

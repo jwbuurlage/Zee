@@ -14,6 +14,8 @@
  * This partitioner is a 'stateful iterative partitioner'.
  */
 
+#pragma once
+
 #include <zee.hpp>
 using Zee::atomic_wrapper;
 
