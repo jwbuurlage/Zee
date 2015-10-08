@@ -61,6 +61,11 @@ enum LogType {
 class Logger {
 
     public:
+        ~Logger() {
+            if (!finalized_)
+                finalize();
+        }
+
         struct end { };
 
         Logger& operator <<(LogType t) {
@@ -102,7 +107,15 @@ class Logger {
         }
 
         void operator <<(end) {
-            // output ss
+            finalize();
+        }
+
+    private:
+        std::stringstream ss;
+        LogType t_ = LogType::info;
+        bool finalized_ = false;
+
+        void finalize() {
             switch (t_) {
                 case LogType::info:
                     cout << Zee::colors::start["cyan"] << "INFO: ";
@@ -130,12 +143,9 @@ class Logger {
 
             cout << Zee::colors::end;
             cout << ss.str() << endl;
+
+            finalized_ = true;
         }
-
-    private:
-        std::stringstream ss;
-        LogType t_ = LogType::info;
 };
-
 
 } // namespace Zee

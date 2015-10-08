@@ -2,9 +2,9 @@ TODAY:
 ------
 
 [ ] Implement Vector distribution
-- [ ] Implent Biss.'s heuristic
-- [ ] Vec. Dist information in Image
-- [ ] Change to using local indices
+- [ ] Implement: `diag > intersection > union`. This information has to be made available to DSpMat. Call it \phi
+- [ ] Send vector distribution information down to DSpMatImg, which can use this to compute its local indices using the column set. Permute such that non-local indices come last.
+- [ ] Update storage to use local indices. We can map back to global indices via DSpMatImg, so from now on its safe to overwrite. Use two statesa
 [ ] Generalize to Epiphany
 [ ] Recursion for k-way partitioning
 [?] OpenCL SpMV support

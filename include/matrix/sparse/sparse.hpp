@@ -418,6 +418,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
     bool isInitialized() const { return this->initialized_; }
 
+    virtual void localizeIndices() = 0;
 
   protected:
     TIdx nz_;
@@ -459,6 +460,12 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
 
     /** Move constructor */
     DSparseMatrix(DSparseMatrix&& o) = default;
+
+    /* Use the vector distribution to compute local indices and propagate this
+     * to storage */
+    void localizeIndices() override {
+        ZeeLogError << "Localizing indices not implemented" << endLog;
+    }
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
