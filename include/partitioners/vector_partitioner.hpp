@@ -20,21 +20,22 @@ License, or (at your option) any later version.
 namespace Zee {
 
 template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
-class VectorPartitioner
-{
-    public:
-        VectorPartitioner(TMatrix& A,
-                TVector& v,
-                TVector& u)
-            : A_(A), v_(v), u_(u)
-        { }
+class VectorPartitioner {
+  public:
+    VectorPartitioner(TMatrix& A, TVector& v, TVector& u)
+        : A_(A), v_(v), u_(u) {}
 
-        virtual void partition() { }
+    virtual void partition() {}
 
-    protected:
-        TMatrix& A_;
-        TVector& v_;
-        TVector& u_;
+    virtual void localizeMatrix() {
+        /* Use the vector distribution to compute local indices and
+         * propagate this to storage */
+    }
+
+  protected:
+    TMatrix& A_;
+    TVector& v_;
+    TVector& u_;
 };
 
 } // namespace Zee

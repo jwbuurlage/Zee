@@ -1,16 +1,23 @@
 #include <zee.hpp>
 
+namespace Zee {
+
 template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
-class GreedyVectorPartitioner : Zee::VectorPartitioner<TMatrix, TVector>
+class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector>
 {
-    using TIdx = TMatrix::index_type;
+    using TIdx = typename TMatrix::index_type;
 
     public:
         GreedyVectorPartitioner(TMatrix& A, TVector& v, TVector& u)
-            : Zee::VectorPartitioner(A, v, u)
-        {} 
+            : VectorPartitioner<TMatrix, TVector>(A, v, u)
+        {}
 
         void partition() override {
+            // Aliases
+            auto& A = this->A_;
+            auto& u = this->u_;
+            auto& v = this->v_;
+
             // We assign P_v(k) = P_u(k) according to the following scheme:
             // 1. Assign to P_A(k, k)
             // 2. If empty, assign to target to some proc in intersection of
@@ -35,7 +42,7 @@ class GreedyVectorPartitioner : Zee::VectorPartitioner<TMatrix, TVector>
             // request diagonals from images
             // can preallocate (distributed) array of size n
             // let them write into that.. or use message queue system
-            vector<int> diagonalTargets{-1, n};
+            std::vector<int> diagonalTargets(n, -1);
             // assume diagonal locations are known
             // (in diagonal targets)
 
@@ -45,7 +52,7 @@ class GreedyVectorPartitioner : Zee::VectorPartitioner<TMatrix, TVector>
                     v.reassign(i, diagonalTargets[i]);
                     u.reassign(i, diagonalTargets[i]);
                 }
-                else if (/* intersection != empty */) {
+                else if (true /* intersection != empty */) {
                     // compute intersection
                     // ask processors if they have non-empty row/column k
                     // excluding diagonal
@@ -60,3 +67,5 @@ class GreedyVectorPartitioner : Zee::VectorPartitioner<TMatrix, TVector>
             }
         };
 };
+
+} // namespace Zee

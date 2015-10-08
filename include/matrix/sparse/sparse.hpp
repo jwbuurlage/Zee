@@ -99,6 +99,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     DSparseMatrixBase(std::string file, TIdx procs = 0) : Base(0, 0) {
         setDistributionScheme(partitioning_scheme::cyclic, procs);
         matrix_market::load(file, *(Derived*)this);
+        ZeeLogVar(this->getProcs());
     }
 
     /** Construct a matrix from a set of triplets */
@@ -108,6 +109,8 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         subs_.clear();
 
         nz_ = 0;
+
+        ZeeAssert(this->getProcs() > 0);
 
         if (partitioning_ == partitioning_scheme::custom) {
             if (!distributionLambda_) {
@@ -418,8 +421,6 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
     bool isInitialized() const { return this->initialized_; }
 
-    virtual void localizeIndices() = 0;
-
   protected:
     TIdx nz_;
     partitioning_scheme partitioning_;
@@ -461,11 +462,6 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
     /** Move constructor */
     DSparseMatrix(DSparseMatrix&& o) = default;
 
-    /* Use the vector distribution to compute local indices and propagate this
-     * to storage */
-    void localizeIndices() override {
-        ZeeLogError << "Localizing indices not implemented" << endLog;
-    }
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
