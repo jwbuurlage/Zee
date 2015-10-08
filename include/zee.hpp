@@ -11,18 +11,27 @@ as published by the Free Software Foundation, either version 3 of the
 License, or (at your option) any later version.
 */
 
+#pragma once
+
+#include "default_types.hpp"
+
 #include "matrix/base/base.hpp"
 #include "matrix/sparse/sparse.hpp"
 #include "matrix/dense/dense.hpp"
+
 #include "operations/operation_types.hpp"
 #include "operations/operations.hpp"
+
 #include "partitioners/partitioner.hpp"
 #include "partitioners/kernighan_lin.hpp"
 #include "partitioners/medium_grain.hpp"
 #include "partitioners/multi_level.hpp"
+
 #include "benchmarking.hpp"
+
 #include "matrix_market.hpp"
+#include "matrix_toolbox.hpp"
+
 #include "logging.hpp"
 #include "plotter.hpp"
 #include "common.hpp"
-#include "default_types.hpp"

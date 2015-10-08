@@ -90,7 +90,7 @@ TEST_CASE("matrix operations", "[linear algebra]") {
             REQUIRE(C.getCols() == B.getRows());
             REQUIRE(C.at(3, 2) == 12.0f);
         }
-        
+
         SECTION("we can multiply dense matrices") {
             D = B * C;
             REQUIRE(D.at(2, 2) == 270.0f);
