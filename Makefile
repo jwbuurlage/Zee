@@ -8,27 +8,20 @@ LIB_DEPS = -lpthread
 
 .PHONY: lint test docs
 
-all: dirs part ir gmres lial
+all: dirs \
+	$(OUTPUT_DIR)/partitioner \
+	$(OUTPUT_DIR)/vector_partitioner \
+	$(OUTPUT_DIR)/ir \
+	$(OUTPUT_DIR)/gmres \
+	$(OUTPUT_DIR)/lial
 
 .phony: docs
 
 dirs:
 	mkdir -p ${OUTPUT_DIR}
 
-part: examples/partitioner.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-ir: examples/ir.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-gmres: examples/gmres.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-lial: examples/linear_algebra.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
-
-dense: examples/dense.cpp
-	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o ${OUTPUT_DIR}/$@ $< ${LIB_DEPS}
+$(OUTPUT_DIR)/%: examples/%.cpp
+	${CCPP} ${CCPP_FLAGS} ${INCLUDE_DIRS} -o $@ $< ${LIB_DEPS}
 
 lint:
 	./script/cpplint.py --filter=-whitespace,-build/c++11 --extensions=hpp include/*.hpp include/*/*.hpp
