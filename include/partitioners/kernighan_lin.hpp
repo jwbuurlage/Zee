@@ -45,68 +45,68 @@ class KernighanLin {
     using TImage = typename TMatrix::image_type;
 
     // initialize the necessary constructs
-    KernighanLin(TMatrix& A) : _A(A) {
+    KernighanLin(TMatrix& A) : A_(A) {
         // if bipartitioned we take this partitioning
         // as initial for hypergraph
-        if (_A.getProcs() == 2) {
-            _columnInA.resize(_A.getCols());
-            std::fill(_columnInA.begin(), _columnInA.end(), false);
+        if (A_.getProcs() == 2) {
+            columnInA_.resize(A_.getCols());
+            std::fill(columnInA_.begin(), columnInA_.end(), false);
 
             // columnInA from A
-            // 1: get colset from _A images
-            auto colSetOne = _A.getImages()[0]->getColSet();
+            // 1: get colset from A_ images
+            auto colSetOne = A_.getImages()[0]->getColSet();
 
             // 2: set columnInA from these
             for (auto pColCount : colSetOne) {
-                _columnInA[pColCount.first] = true;
+                columnInA_[pColCount.first] = true;
             }
         } else {
             // otherwise we randomize a partitioning
-            _columnInA = randomColumnDistribution(_A.getCols());
+            columnInA_ = randomColumnDistribution(A_.getCols());
         }
 
-        _H.initialize(_A);
+        H_.initialize(A_);
 
-        auto& colNets = _H.colNets();
-        auto& rowNets = _H.rowNets();
+        auto& colNets = H_.colNets();
+        auto& rowNets = H_.rowNets();
 
         // The allowed load imbalance FIXME as param
-        _epsilon = 0.03;
+        epsilon_ = 0.03;
 
-        _allowedSize = (TIdx)(0.5 * _A.nonZeros() * (1 + _epsilon));
+        allowedSize_ = (TIdx)(0.5 * A_.nonZeros() * (1 + epsilon_));
 
         // Weights are number of elements in each column of the matrix
-        _columnWeights.resize(_A.getCols());
-        for (TIdx j = 0; j < _A.getCols(); ++j) {
-            _columnWeights[j] = _A.getColumnWeight(j);
+        columnWeights_.resize(A_.getCols());
+        for (TIdx j = 0; j < A_.getCols(); ++j) {
+            columnWeights_[j] = A_.getColumnWeight(j);
         }
 
         // We need to make sure the distribution satisfies the imbalance
         // otherwise we flip the first `x` until it does
-        _counts[0] = 0;
-        _counts[1] = 0;
+        counts_[0] = 0;
+        counts_[1] = 0;
 
-        for (TIdx j = 0; j < _A.getCols(); ++j) {
-            if (_columnInA[j]) {
-                _counts[0] += _columnWeights[j];
+        for (TIdx j = 0; j < A_.getCols(); ++j) {
+            if (columnInA_[j]) {
+                counts_[0] += columnWeights_[j];
             } else {
-                _counts[1] += _columnWeights[j];
+                counts_[1] += columnWeights_[j];
             }
         }
 
-        if (_counts[0] > _allowedSize) {
+        if (counts_[0] > allowedSize_) {
             // FIXME prefix
-        } else if (_counts[1] > _allowedSize) {
+        } else if (counts_[1] > allowedSize_) {
             // FIXME prefix
         }
 
         // Store the distribution for each net
         // rowCountA[row] yields the #elements in A in row
-        _rowCountA = obtainRowCountA(_columnInA);
+        rowCountA_ = obtainRowCountA(columnInA_);
 
         // `max_size` is the maximum degree of a column
         // This is equal to the maximum size of a colNet
-        _maxSize =
+        maxSize_ =
             std::accumulate(colNets.begin(), colNets.end(), (TIdx)0,
                             [](TIdx rhs, const vector<TIdx>& elem) {
                                 return (rhs > elem.size()) ? rhs : elem.size();
@@ -114,32 +114,32 @@ class KernighanLin {
 
         // Next we make the bucketed lists.
         // We need a vector of size 2*m + 1 containing lists
-        _buckets.clear();
-        for (TIdx i = 0; i < 2 * _maxSize + 1; ++i) {
-            _buckets.push_back(list<TIdx>());
+        buckets_.clear();
+        for (TIdx i = 0; i < 2 * maxSize_ + 1; ++i) {
+            buckets_.push_back(list<TIdx>());
         }
 
-        _vertexGains.resize(_A.getCols());
-        std::fill(_vertexGains.begin(), _vertexGains.end(), 0);
+        vertexGains_.resize(A_.getCols());
+        std::fill(vertexGains_.begin(), vertexGains_.end(), 0);
 
         // Next we loop over all vertices, obtaining vertex gain
         // if it is the *only* element of {A, B} in a net, a gain of 1
         // if the net is and stays mixed then a gain of 0
         // if the net is pure then flipping it is a gain of -1
-        for (TIdx row = 0; row < _A.getRows(); ++row) {
+        for (TIdx row = 0; row < A_.getRows(); ++row) {
             for (const auto& pin : rowNets[row]) {
-                _vertexGains[pin] += gainForPinInRow(
-                    _columnInA[pin], _rowCountA[row], _H.rowNets()[row].size());
+                vertexGains_[pin] += gainForPinInRow(
+                    columnInA_[pin], rowCountA_[row], H_.rowNets()[row].size());
             }
         }
 
         // We initialize the buckets, and store the list elements for each
         // column in M
-        _listElements.clear();
-        _listElements.resize(_A.getCols());
-        for (TIdx j = 0; j < _A.getCols(); ++j) {
-            _buckets[_vertexGains[j] + _maxSize].push_back(j);
-            _listElements[j] = --_buckets[_vertexGains[j] + _maxSize].end();
+        listElements_.clear();
+        listElements_.resize(A_.getCols());
+        for (TIdx j = 0; j < A_.getCols(); ++j) {
+            buckets_[vertexGains_[j] + maxSize_].push_back(j);
+            listElements_[j] = --buckets_[vertexGains_[j] + maxSize_].end();
         }
     };
 
@@ -159,9 +159,9 @@ class KernighanLin {
     }
 
     vector<TIdx> obtainRowCountA(const vector<bool>& columnInA) {
-        vector<TIdx> rowCountA(_H.rowNets().size());
+        vector<TIdx> rowCountA(H_.rowNets().size());
         auto r_idx = 0;
-        for (auto& rowNet : _H.rowNets()) {
+        for (auto& rowNet : H_.rowNets()) {
             for (auto& pin : rowNet) {
                 if (columnInA[pin] == true) {
                     rowCountA[r_idx]++;
@@ -191,7 +191,7 @@ class KernighanLin {
         TIdx p = 2;
 
         // FIXME: We reset the partitioning
-        // to the current bipartitioning of _A
+        // to the current bipartitioning of A_
 
         // We need to choose A or B at random if they tie for an elements
         // with largest gain
@@ -202,7 +202,7 @@ class KernighanLin {
         // We copy the bool vector to store the best split
         // FIXME: instead we could just store the swaps and
         // reverse engineer
-        vector<bool> bestSplit = _columnInA;
+        vector<bool> bestSplit = columnInA_;
 
         // We maintain the current and maximum net gain
         TIdx netGain = 0;
@@ -211,22 +211,22 @@ class KernighanLin {
         // Store the pins that become 'dirty' after a flip
         set<std::pair<TIdx, TIdx>> verticesToUpdate;
 
-        auto& colNets = _H.colNets();
-        auto& rowNets = _H.rowNets();
+        auto& colNets = H_.colNets();
+        auto& rowNets = H_.rowNets();
 
         // Choose the base cell (e.g. tail of highest non-trivial list)
-        for (TIdx iter = 0; iter < _H.colNets().size(); ++iter) {
+        for (TIdx iter = 0; iter < H_.colNets().size(); ++iter) {
             // FIXME: we want to change this to support BigNums etc.
             signed long baseCell = -1;
 
             // FIXME can we do this in constant time? the loop is possibly
             // unnecessary.. maybe linked list as well
-            for (TIdx bucket = _buckets.size() - 1; bucket >= 0; --bucket) {
-                for (auto cell : _buckets[bucket]) {
-                    if (_counts[_columnInA[cell] ? 1 : 0] + 1 > _allowedSize)
+            for (TIdx bucket = buckets_.size() - 1; bucket >= 0; --bucket) {
+                for (auto cell : buckets_[bucket]) {
+                    if (counts_[columnInA_[cell] ? 1 : 0] + 1 > allowedSize_)
                         continue;
                     baseCell = cell;
-                    netGain += bucket - _maxSize;
+                    netGain += bucket - maxSize_;
                     break;
                 }
 
@@ -256,54 +256,54 @@ class KernighanLin {
             // first we nullify the effects of the effected nets (if necessary)
             for (auto row : colNets[baseCell]) {
                 for (auto pin : rowNets[row]) {
-                    _vertexGains[pin] -=
-                        gainForPinInRow(_columnInA[pin], _rowCountA[row],
-                                        _H.rowNets()[row].size());
+                    vertexGains_[pin] -=
+                        gainForPinInRow(columnInA_[pin], rowCountA_[row],
+                                        H_.rowNets()[row].size());
                 }
 
                 // FIXME: do we require this?
-                //  if (_H.rowNets()[row].size() == 1)
+                //  if (H_.rowNets()[row].size() == 1)
                 //      continue;
 
-                _rowCountA[row] += _columnInA[baseCell] ? -1 : 1;
+                rowCountA_[row] += columnInA_[baseCell] ? -1 : 1;
             }
 
             // We flip the base cell
-            _columnInA[baseCell] = !_columnInA[baseCell];
-            _counts[_columnInA[baseCell] ? 0 : 1] += _columnWeights[baseCell];
-            _counts[_columnInA[baseCell] ? 1 : 0] -= _columnWeights[baseCell];
+            columnInA_[baseCell] = !columnInA_[baseCell];
+            counts_[columnInA_[baseCell] ? 0 : 1] += columnWeights_[baseCell];
+            counts_[columnInA_[baseCell] ? 1 : 0] -= columnWeights_[baseCell];
 
             // We fix the gains in the affected rows
-            for (auto row : _H.colNets()[baseCell]) {
+            for (auto row : H_.colNets()[baseCell]) {
                 // FIXME can probably be made more efficient, similar to
                 // nullifying step
-                for (auto pin : _H.rowNets()[row]) {
-                    _vertexGains[pin] +=
-                        gainForPinInRow(_columnInA[pin], _rowCountA[row],
-                                        _H.rowNets()[row].size());
+                for (auto pin : H_.rowNets()[row]) {
+                    vertexGains_[pin] +=
+                        gainForPinInRow(columnInA_[pin], rowCountA_[row],
+                                        H_.rowNets()[row].size());
                 }
             }
 
-            for (auto row : _H.colNets()[baseCell]) {
-                for (auto pin : _H.rowNets()[row]) {
+            for (auto row : H_.colNets()[baseCell]) {
+                for (auto pin : H_.rowNets()[row]) {
                     verticesToUpdate.insert(
-                        std::make_pair(pin, _vertexGains[pin]));
+                        std::make_pair(pin, vertexGains_[pin]));
                 }
             }
 
             for (auto pPinGain : verticesToUpdate) {
                 // remove and reinsert
-                auto originalBucket = pPinGain.second + _maxSize;
-                auto newBucket = _vertexGains[pPinGain.first] + _maxSize;
-                _buckets[originalBucket].erase(_listElements[pPinGain.first]);
-                _buckets[newBucket].push_back(pPinGain.first);
-                _listElements[pPinGain.first] = --_buckets[newBucket].end();
+                auto originalBucket = pPinGain.second + maxSize_;
+                auto newBucket = vertexGains_[pPinGain.first] + maxSize_;
+                buckets_[originalBucket].erase(listElements_[pPinGain.first]);
+                buckets_[newBucket].push_back(pPinGain.first);
+                listElements_[pPinGain.first] = --buckets_[newBucket].end();
             }
 
             // We update max gain, and copy columnInA again if it is better
             if (netGain > maxNetGain) {
                 maxNetGain = netGain;
-                bestSplit = _columnInA;
+                bestSplit = columnInA_;
             }
         }
 
@@ -312,38 +312,38 @@ class KernighanLin {
         for (TIdx i = 0; i < p; ++i)
             newImages.push_back(std::make_unique<TImage>());
 
-        for (auto& pimg : _A.getImages()) {
+        for (auto& pimg : A_.getImages()) {
             for (auto& triplet : *pimg) {
                 newImages[(TIdx)(bestSplit[triplet.col()])]->pushTriplet(
                     triplet);
             }
         }
 
-        _A.resetImages(newImages);
+        A_.resetImages(newImages);
     };
 
   private:
     // Bi-partitioned matrix
-    TMatrix& _A;
+    TMatrix& A_;
 
     // Underyling hypergraph of A
-    Hypergraph<TMatrix> _H;
+    Hypergraph<TMatrix> H_;
 
     // The maximum gain of a vertex, equal to the maximum row degree
-    TIdx _maxSize;
+    TIdx maxSize_;
 
     // The 'load-imbalance'
-    double _epsilon;
-    TIdx _allowedSize;
+    double epsilon_;
+    TIdx allowedSize_;
 
     // We cache various information on the hypergraph
-    vector<bool> _columnInA;
-    vector<TIdx> _columnWeights;
-    vector<TIdx> _rowCountA;
-    TIdx _counts[2];
-    vector<list<TIdx>> _buckets;
-    vector<TIdx> _vertexGains;
-    vector<typename std::list<TIdx>::iterator> _listElements;
+    vector<bool> columnInA_;
+    vector<TIdx> columnWeights_;
+    vector<TIdx> rowCountA_;
+    TIdx counts_[2];
+    vector<list<TIdx>> buckets_;
+    vector<TIdx> vertexGains_;
+    vector<typename std::list<TIdx>::iterator> listElements_;
 };
 
 } // namespace Zee
