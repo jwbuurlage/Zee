@@ -1,29 +1,8 @@
 #!/usr/bin/python3
+
+# plot.py reads descriptive.mtx, .plt, ... files and plots these` using matplotlib
+#
 # FIXME: REQUIRES USETEX, PNGDVI, etc.
-#
-# -------------------------------
-# FILE:    spy.py
-# AUTHOR:  Jan-Willem Buurlage
-# -------------------------------
-#
-# spy reads a descriptive .mtx file and plots this using matplotlib
-#
-# I think it would be cool if we would use full spectrum of colors, and sample
-# uniformly using the tree:
-#       1/2
-#      /   \
-#     1/4   3/4
-#    / \    / \
-# 1/8 3/8  5/8  7/8
-# ..  ..   ..   ..
-#
-# i.e.
-#
-# |------------------------------------------------|
-#      4    2    5       1    6       3      7
-#
-# etc.
-#
 # TODO: zplot support
 
 import argparse
