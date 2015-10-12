@@ -1,71 +1,100 @@
 #include <zee.hpp>
 
+#include <vector>
+#include <algorithm>
+
 namespace Zee {
 
 template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
-class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector>
-{
+class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
     using TIdx = typename TMatrix::index_type;
 
-    public:
-        GreedyVectorPartitioner(TMatrix& A, TVector& v, TVector& u)
-            : VectorPartitioner<TMatrix, TVector>(A, v, u)
-        {}
+  public:
+    GreedyVectorPartitioner(TMatrix& A, TVector& v, TVector& u)
+        : VectorPartitioner<TMatrix, TVector>(A, v, u) {}
 
-        void partition() override {
-            // Aliases
-            auto& A = this->A_;
-            auto& u = this->u_;
-            auto& v = this->v_;
+    void partition() override {
+        // Aliases
+        auto& A = this->A_;
+        auto& u = this->u_;
+        auto& v = this->v_;
 
-            // We assign P_v(k) = P_u(k) according to the following scheme:
-            // 1. Assign to P_A(k, k)
-            // 2. If empty, assign to target to some proc in intersection of
-            //    P(k, *) and P(*, k), greedily balancing the assignment load
-            // 3. If empty, assign to target to some proc in union of P(k, *)
-            //    and P(*, k), greedily balancing the assignment load
+        using TIdx = typename TMatrix::index_type;
 
-            // We assume the matrix A_ is partitioned
-            ZeeAssert(A.isInitialized());
+        // We assign P_v(k) = P_u(k) according to the following scheme:
+        // 1. Assign to P_A(k, k)
+        // 2. If empty, assign to target to some proc in intersection of
+        //    P(k, *) and P(*, k), greedily balancing the assignment load
+        // 3. If empty, assign to target to some proc in union of P(k, *)
+        //    and P(*, k), greedily balancing the assignment load
 
-            // need to assert matrix A_ is square for this particular solver
-            // TODO figure out how does CGLS work, and how to generalize
-            // dist(u) = dist(v) for those solvers
-            ZeeAssert(A.getRows() == A.getCols());
-            ZeeAssert(v.size() == A.getRows());
-            ZeeAssert(u.size() == v.size());
+        // We assume the matrix A_ is partitioned
+        ZeeAssert(A.isInitialized());
 
-            int n = v.size();
-            int p = A.getProcs();
+        // need to assert matrix A_ is square for this particular solver
+        // TODO figure out how does CGLS work, and how to generalize
+        // dist(u) = dist(v) for those solvers
+        ZeeAssert(A.getRows() == A.getCols());
+        ZeeAssert(v.size() == A.getRows());
+        ZeeAssert(u.size() == v.size());
 
-            // We need to know if diagonal is nonzero
-            // request diagonals from images
-            // can preallocate (distributed) array of size n
-            // let them write into that.. or use message queue system
-            std::vector<int> diagonalTargets(n, -1);
-            // assume diagonal locations are known
-            // (in diagonal targets)
+        TIdx n = v.size();
+        TIdx p = A.getProcs();
 
-            for (TIdx i = 0; i < v.size(); ++i) {
-                // FIXME implement vector.reassign
-                if (diagonalTargets[i] != -1) {
-                    v.reassign(i, diagonalTargets[i]);
-                    u.reassign(i, diagonalTargets[i]);
+        std::vector<std::set<TIdx>> processorsInRow(n);
+        std::vector<std::set<TIdx>> processorsInCol(n);
+
+        // We need to know if diagonal is nonzero
+        // FIXME: To parallelize: request diagonals from images
+        // can preallocate (distributed) array of size n
+        // let them write into that.. or use message queue system
+        std::vector<TIdx> diagonalTargets(n, p);
+
+        TIdx s = 0;
+        for (auto& img : A.getImages()) {
+            for (auto& triplet : *img) {
+                if (triplet.col() == triplet.row()) {
+                    diagonalTargets[triplet.col()] = s;
                 }
-                else if (true /* intersection != empty */) {
-                    // compute intersection
-                    // ask processors if they have non-empty row/column k
-                    // excluding diagonal
-                    // greedily balance
-                    // hard
-                }
-                else {
-                    // compute union
-                    // greedily balance
-                    // hard
-                }
+                processorsInRow[triplet.row()].insert(s);
+                processorsInCol[triplet.col()].insert(s);
             }
-        };
+            ++s;
+        }
+
+        std::vector<TIdx> elementCount(p, 0);
+
+        for (TIdx i = 0; i < v.size(); ++i) {
+            // FIXME implement vector.reassign
+            if (diagonalTargets[i] != p) {
+                v.reassign(i, diagonalTargets[i]);
+                u.reassign(i, diagonalTargets[i]);
+                elementCount[diagonalTargets[i]]++;
+            } else {
+                std::set<TIdx> lookUpSet; //intersection or union
+                std::set_intersection(
+                    processorsInRow[i].begin(), processorsInRow[i].end(),
+                    processorsInCol[i].begin(), processorsInCol[i].end(),
+                    std::inserter(lookUpSet, lookUpSet.begin()));
+                if (lookUpSet.empty()) {
+                    std::set_union(
+                        processorsInRow[i].begin(), processorsInRow[i].end(),
+                        processorsInCol[i].begin(), processorsInCol[i].end(),
+                        std::inserter(lookUpSet, lookUpSet.begin()));
+                }
+                auto minElement = std::min_element(
+                    lookUpSet.begin(), lookUpSet.end(),
+                    [&, elementCount](const TIdx& a, const TIdx& b) {
+                        return elementCount[a] < elementCount[b];
+                    });
+
+                TIdx lightestProc = *minElement;
+                v.reassign(i, lightestProc);
+                u.reassign(i, lightestProc);
+                elementCount[lightestProc]++;
+            }
+        }
+    };
 };
 
 } // namespace Zee

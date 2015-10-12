@@ -68,7 +68,9 @@ class DVector
             : Base(n, 1)
         {
             elements_.resize(n);
+            owners_.resize(n);
             std::fill(elements_.begin(), elements_.end(), defaultValue);
+            std::fill(owners_.begin(), owners_.end(), (TIdx)0);
         }
 
         DVector(const DVector& other) :
@@ -136,13 +138,16 @@ class DVector
         }
 
         void reassign(TIdx element, TIdx processorTarget) override {
-            ZeeLogError << "DVector.reassign() not implemented" << endLog;
+            owners_[element] = processorTarget;
         }
+
+        const std::vector<TIdx>& getOwners() const { return owners_; }
 
         // Operator overloads and algorithm implementations
 
     private:
         std::vector<TVal> elements_;
+        std::vector<TIdx> owners_;
 };
 
 // We add an operator such that we can log vectors

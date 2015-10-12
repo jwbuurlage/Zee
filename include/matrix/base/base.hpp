@@ -64,7 +64,7 @@ class DMatrixBase {
             return procs_;
         }
 
-        TIdx setProcs(TIdx procs) {
+        void setProcs(TIdx procs) {
             procs_ = procs;
         }
 

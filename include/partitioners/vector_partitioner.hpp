@@ -30,6 +30,11 @@ class VectorPartitioner {
     virtual void localizeMatrix() {
         /* Use the vector distribution to compute local indices and
          * propagate this to storage */
+        // 1. image should receive a list of its vector indices I_s { j | P(v_j) = s }
+        // 2. image then constructs a map i = {1, 2, 3, ..} -> j -> I_s
+        // 3. storage updates using the inverse of this map
+        // 4. MAKE THIS GENERAL, do not assume dist(u) = dist(v)
+        ZeeLogDebug << "Localizing" << endLog;
     }
 
   protected:

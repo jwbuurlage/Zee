@@ -17,6 +17,7 @@ License, or (at your option) any later version.
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "color_output.hpp"
 
@@ -90,6 +91,18 @@ class Logger {
 
         template <typename S>
         Logger& operator <<(const std::vector<S>& rhs) {
+            auto sep = "";
+            *this << "[";
+            for (S value : rhs) {
+                *this << sep << value;
+                sep = ", ";
+            }
+            *this << "]";
+            return *this;
+        }
+
+        template <typename S>
+        Logger& operator <<(const std::set<S>& rhs) {
             auto sep = "";
             *this << "[";
             for (S value : rhs) {
