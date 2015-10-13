@@ -509,6 +509,13 @@ class DSparseMatrixImage {
         storage_->pushTriplet(t);
     }
 
+    void setLocalIndices(std::vector<TIdx>&& localIndices) {
+        localIndices_ = localIndices;
+        // add necessary remote indices to list of local indices
+        // construct inverse map
+        // call storage.localize(inverseMap)
+    }
+
     const counted_set<TIdx>& getRowSet() const { return rowset_; }
 
     const counted_set<TIdx>& getColSet() const { return colset_; }
@@ -531,6 +538,7 @@ class DSparseMatrixImage {
     /** We delegate the storage to a superclass (to simplify choosing
      * a storage mechanism) */
     std::unique_ptr<CStorage> storage_;
+    std::vector<TIdx> localIndices_;
 
     /** A set (with counts) that stores the non-empty rows in this image */
     counted_set<TIdx> rowset_;

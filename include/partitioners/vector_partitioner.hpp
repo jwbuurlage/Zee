@@ -28,13 +28,41 @@ class VectorPartitioner {
     virtual void partition() {}
 
     virtual void localizeMatrix() {
+        using TIdx = typename TMatrix::index_type;
+
         /* Use the vector distribution to compute local indices and
          * propagate this to storage */
+        // MAKE THIS GENERAL, do not assume dist(u) = dist(v)
         // 1. image should receive a list of its vector indices I_s { j | P(v_j) = s }
         // 2. image then constructs a map i = {1, 2, 3, ..} -> j -> I_s
         // 3. storage updates using the inverse of this map
-        // 4. MAKE THIS GENERAL, do not assume dist(u) = dist(v)
         ZeeLogDebug << "Localizing" << endLog;
+
+        TIdx p = A_.getProcs();
+
+        // 1. construct list of vector indices
+        std::vector<std::vector<TIdx>> localIndicesV(p);
+        auto& ownersV = v_.getOwners();
+        TIdx i = 0;
+        for (auto owner : ownersV) {
+            localIndicesV[owner].push_back(i++);
+        }
+
+        std::vector<std::vector<TIdx>> localIndicesU(p);
+        auto& ownersU = u_.getOwners();
+        i = 0;
+        for (auto owner : owners) {
+            localIndicesU[owner].push_back(i++);
+        }
+
+        // 2 + 3. inform images
+        TIdx s = 0;
+        for (auto& image : A_.getMutableImages()) {
+            image->setLocalIndices(std::move(localIndicesV[s], localIndicesU[s]));
+            s++;
+        }
+        localIndicesV.clear();
+        localIndicesU.clear();
     }
 
   protected:
