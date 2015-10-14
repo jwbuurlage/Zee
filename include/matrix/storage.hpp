@@ -18,6 +18,8 @@ License, or (at your option) any later version.
 #include <memory>
 #include <vector>
 
+#include "../logging.hpp"
+
 namespace Zee {
 
 using std::vector;
@@ -270,6 +272,14 @@ class DSparseStorage
          *  @note Complexity depends on implementation.
          *  @return triplet at index i */
         virtual Triplet<TVal, TIdx> getElement(TIdx i) const = 0;
+
+        void localize(const std::map<TIdx, TIdx>& globalToLocalV,
+                      const std::map<TIdx, TIdx>& globalToLocalU) {
+            for (auto& triplet : *this) {
+                triplet.setCol(globalToLocalV.at(triplet.col()));
+                triplet.setRow(globalToLocalU.at(triplet.row()));
+            }
+        }
 
         /** We define iterators and constant iterators for iterating over
           * triplets */

@@ -18,6 +18,7 @@ License, or (at your option) any later version.
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 
 #include "color_output.hpp"
 
@@ -110,6 +111,18 @@ class Logger {
                 sep = ", ";
             }
             *this << "]";
+            return *this;
+        }
+
+        template <typename S, typename T>
+        Logger& operator <<(const std::map<S, T>& rhs) {
+            auto sep = "";
+            *this << "{";
+            for (auto& pair : rhs) {
+                *this << sep << pair.first << " -> " << pair.second;
+                sep = ", ";
+            }
+            *this << "}";
             return *this;
         }
 

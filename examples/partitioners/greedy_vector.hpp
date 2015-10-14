@@ -65,7 +65,6 @@ class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
         std::vector<TIdx> elementCount(p, 0);
 
         for (TIdx i = 0; i < v.size(); ++i) {
-            // FIXME implement vector.reassign
             if (diagonalTargets[i] != p) {
                 v.reassign(i, diagonalTargets[i]);
                 u.reassign(i, diagonalTargets[i]);
@@ -81,6 +80,10 @@ class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
                         processorsInRow[i].begin(), processorsInRow[i].end(),
                         processorsInCol[i].begin(), processorsInCol[i].end(),
                         std::inserter(lookUpSet, lookUpSet.begin()));
+                    ZeeLogDebug
+                        << "Intersection " << i
+                        << " empty! Communication volume cannot be realized."
+                        << endLog;
                 }
                 auto minElement = std::min_element(
                     lookUpSet.begin(), lookUpSet.end(),

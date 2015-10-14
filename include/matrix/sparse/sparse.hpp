@@ -71,6 +71,18 @@ class Triplet {
     /** @return the column position inside the matrix */
     TIdx col() const { return j_; }
 
+    void setRow(TIdx row)  {
+        i_ = row;
+    }
+
+    void setCol(TIdx col)  {
+        j_ = col;
+    }
+
+    void setValue(TVal val)  {
+        value_ = val;
+    }
+
   private:
     TIdx i_;
     TIdx j_;
@@ -99,7 +111,6 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     DSparseMatrixBase(std::string file, TIdx procs = 0) : Base(0, 0) {
         setDistributionScheme(partitioning_scheme::cyclic, procs);
         matrix_market::load(file, *(Derived*)this);
-        ZeeLogVar(this->getProcs());
     }
 
     /** Construct a matrix from a set of triplets */
@@ -509,11 +520,38 @@ class DSparseMatrixImage {
         storage_->pushTriplet(t);
     }
 
-    void setLocalIndices(std::vector<TIdx>&& localIndices) {
-        localIndices_ = localIndices;
+    void setLocalIndices(std::vector<TIdx>&& localIndicesV,
+                         std::vector<TIdx>&& localIndicesU) {
+        localIndicesV_ = localIndicesV;
+        localIndicesU_ = localIndicesU;
+
+        // obtain number of local components
+        numLocalV_ = localIndicesV.size();
+        numLocalU_ = localIndicesU.size();
+
         // add necessary remote indices to list of local indices
-        // construct inverse map
-        // call storage.localize(inverseMap)
+        computeLocalIndices_(localIndicesV_, colset_);
+        computeLocalIndices_(localIndicesU_, rowset_);
+    }
+
+    void localizeStorage() {
+        ZeeLogDebug << "Localize storage" << endLog;
+        // 1. construct inverse map
+        std::map<TIdx, TIdx> globalToLocalV;
+        std::map<TIdx, TIdx> globalToLocalU;
+        for (TIdx idx = 0; idx < localIndicesV_.size(); ++idx) {
+            globalToLocalV[localIndicesV_[idx]] = idx;
+        }
+        for (TIdx idx = 0; idx < localIndicesU_.size(); ++idx) {
+            globalToLocalU[localIndicesU_[idx]] = idx;
+        }
+        ZeeLogVar(globalToLocalV);
+        ZeeLogVar(globalToLocalU);
+
+        // 2. let storage localize itself
+        storage_->localize(globalToLocalV, globalToLocalU);
+
+        localizedStorage_ = true;
     }
 
     const counted_set<TIdx>& getRowSet() const { return rowset_; }
@@ -534,16 +572,65 @@ class DSparseMatrixImage {
         return storage_->getElement(i);
     }
 
+    std::vector<TIdx>& getLocalIndicesU() { return localIndicesU_; }
+    std::vector<TIdx>& getLocalIndicesV() { return localIndicesV_; }
+
+    TIdx getNumLocalU() { return numLocalU_; }
+    TIdx getNumLocalV() { return numLocalV_; }
+
+    std::vector<TIdx>& getRemoteOwnersU() { return remoteOwnersU_; }
+    std::vector<TIdx>& getRemoteOwnersV() { return remoteOwnersV_; }
+
+    bool localizedStorage() const { return localizedStorage_; }
+
   private:
+    void computeLocalIndices_(std::vector<TIdx>& partialLocalIndices,
+            const counted_set<TIdx>& countedSetOfIndices) {
+        TIdx numLocal = partialLocalIndices.size();
+        TIdx localIdx = 0;
+        for (auto& idx : countedSetOfIndices) {
+            while (localIdx < numLocal &&
+                   partialLocalIndices[localIdx] < idx.first) {
+                // we do not own anything in the column
+                // localIndicesV[localIdxV], but hold the index because of the
+                // other vector, we *may still have idx.first*, so we increase
+                // the local index until we reach idx.first
+                localIdx++;
+            }
+
+            if (localIdx == numLocal ||
+                idx.first != partialLocalIndices[localIdx]) {
+                // we dont own it
+                partialLocalIndices.push_back(idx.first);
+            }
+            else {
+                // we own it
+                localIdx++;
+            }
+        }
+    }
+
     /** We delegate the storage to a superclass (to simplify choosing
      * a storage mechanism) */
     std::unique_ptr<CStorage> storage_;
-    std::vector<TIdx> localIndices_;
+
+    // local vector indices
+    std::vector<TIdx> localIndicesU_;
+    std::vector<TIdx> localIndicesV_;
+    // number of local components U
+    TIdx numLocalU_;
+    TIdx numLocalV_;
+    // where to obtain missing non-local components
+    std::vector<TIdx> remoteOwnersU_;
+    std::vector<TIdx> remoteOwnersV_;
 
     /** A set (with counts) that stores the non-empty rows in this image */
     counted_set<TIdx> rowset_;
     /** A set (with counts) that stores the non-empty columns in this image */
     counted_set<TIdx> colset_;
+
+    // whether we already localized storage
+    bool localizedStorage_ = false;
 
     /** We hold a reference to the other images */
     // FIXME implement and use

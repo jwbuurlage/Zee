@@ -13,10 +13,8 @@ License, or (at your option) any later version.
 
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::product,
-        DSparseMatrix<TVal, TIdx>,
-        DVector<TVal, TIdx>> op)
-{
+    BinaryOperation<operation::type::product, DSparseMatrix<TVal, TIdx>,
+                    DVector<TVal, TIdx>> op) {
     using TImage = typename DSparseMatrix<TVal, TIdx>::image_type;
 
     const auto& A = op.getLHS();
@@ -29,11 +27,13 @@ DVector<TVal, TIdx> perform_operation(
     std::mutex writeMutex;
     Barrier<TIdx> barrier(p);
 
-    A.compute([&] (std::shared_ptr<TImage> submatrixPtr,
-                TIdx s) {
-        std::map<TIdx, TVal> u_s;
+    A.compute([&](std::shared_ptr<TImage> submatrixPtr, TIdx s) {
+        std::vector<TIdx> localU(submatrixPtr->getLocalIndicesU().size());
+        auto& localIndicesV = submatrixPtr->getLocalIndicesV();
         for (const auto& triplet : *submatrixPtr) {
-             u_s[triplet.row()] += triplet.value() * v[triplet.col()];
+            // FIXME V should be distributed too
+            localU[triplet.row()] +=
+                triplet.value() * v[localIndicesV[triplet.col()]];
         }
 
         // if RHS is a reference to *this then we can only reset here,
@@ -46,9 +46,11 @@ DVector<TVal, TIdx> perform_operation(
 
         barrier.sync();
 
-        for (const auto& pKeyValue : u_s) {
+        TIdx i = 0;
+        auto& localIndicesU = submatrixPtr->getLocalIndicesU();
+        for (const auto& val : localU) {
             std::lock_guard<std::mutex> lock(writeMutex);
-            u[pKeyValue.first] += pKeyValue.second;
+            u[localIndicesU[i++]] += val;
         }
     });
 
@@ -56,11 +58,9 @@ DVector<TVal, TIdx> perform_operation(
 }
 
 template <typename TVal, typename TIdx>
-DMatrix<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::product,
-        DMatrix<TVal, TIdx>,
-        DMatrix<TVal, TIdx>> op)
-{
+DMatrix<TVal, TIdx>
+perform_operation(BinaryOperation<operation::type::product, DMatrix<TVal, TIdx>,
+                                  DMatrix<TVal, TIdx>> op) {
     const auto& A = op.getLHS();
     const auto& B = op.getRHS();
     DMatrix<TVal, TIdx> C(A.getRows(), B.getCols());

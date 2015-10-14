@@ -51,18 +51,35 @@ class VectorPartitioner {
         std::vector<std::vector<TIdx>> localIndicesU(p);
         auto& ownersU = u_.getOwners();
         i = 0;
-        for (auto owner : owners) {
+        for (auto owner : ownersU) {
             localIndicesU[owner].push_back(i++);
         }
 
         // 2 + 3. inform images
         TIdx s = 0;
         for (auto& image : A_.getMutableImages()) {
-            image->setLocalIndices(std::move(localIndicesV[s], localIndicesU[s]));
+            image->setLocalIndices(std::move(localIndicesV[s]),
+                                   std::move(localIndicesU[s]));
             s++;
         }
         localIndicesV.clear();
         localIndicesU.clear();
+
+        // set owners for images
+        for (auto& image : A_.getMutableImages()) {
+            for (TIdx idx = image->getNumLocalV();
+                 idx < image->getLocalIndicesV().size(); ++idx) {
+                image->getRemoteOwnersV().push_back(
+                    v_.getOwners()[image->getLocalIndicesV()[idx]]);
+            }
+            for (TIdx idx = image->getNumLocalU();
+                 idx < image->getLocalIndicesU().size(); ++idx) {
+                image->getRemoteOwnersU().push_back(
+                    u_.getOwners()[image->getLocalIndicesU()[idx]]);
+            }
+
+            image->localizeStorage();
+        }
     }
 
   protected:
