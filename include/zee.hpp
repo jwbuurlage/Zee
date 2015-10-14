@@ -26,12 +26,12 @@ License, or (at your option) any later version.
 #include "partitioners/kernighan_lin.hpp"
 #include "partitioners/medium_grain.hpp"
 #include "partitioners/multi_level.hpp"
-
-#include "benchmarking.hpp"
+#include "partitioners/vector_partitioner.hpp"
 
 #include "matrix_market.hpp"
 #include "matrix_toolbox.hpp"
 
+#include "benchmarking.hpp"
 #include "logging.hpp"
 #include "plotter.hpp"
 #include "common.hpp"

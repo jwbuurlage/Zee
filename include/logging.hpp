@@ -17,6 +17,8 @@ License, or (at your option) any later version.
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
+#include <map>
 
 #include "color_output.hpp"
 
@@ -61,6 +63,11 @@ enum LogType {
 class Logger {
 
     public:
+        ~Logger() {
+            if (!finalized_)
+                finalize();
+        }
+
         struct end { };
 
         Logger& operator <<(LogType t) {
@@ -95,6 +102,30 @@ class Logger {
             return *this;
         }
 
+        template <typename S>
+        Logger& operator <<(const std::set<S>& rhs) {
+            auto sep = "";
+            *this << "[";
+            for (S value : rhs) {
+                *this << sep << value;
+                sep = ", ";
+            }
+            *this << "]";
+            return *this;
+        }
+
+        template <typename S, typename T>
+        Logger& operator <<(const std::map<S, T>& rhs) {
+            auto sep = "";
+            *this << "{";
+            for (auto& pair : rhs) {
+                *this << sep << pair.first << " -> " << pair.second;
+                sep = ", ";
+            }
+            *this << "}";
+            return *this;
+        }
+
         template <typename S, typename T>
         Logger& operator <<(std::pair<S, T> rhs) {
             ss << "[ " << rhs.first << ",\t" << rhs.second << " ]";
@@ -102,7 +133,15 @@ class Logger {
         }
 
         void operator <<(end) {
-            // output ss
+            finalize();
+        }
+
+    private:
+        std::stringstream ss;
+        LogType t_ = LogType::info;
+        bool finalized_ = false;
+
+        void finalize() {
             switch (t_) {
                 case LogType::info:
                     cout << Zee::colors::start["cyan"] << "INFO: ";
@@ -130,12 +169,9 @@ class Logger {
 
             cout << Zee::colors::end;
             cout << ss.str() << endl;
+
+            finalized_ = true;
         }
-
-    private:
-        std::stringstream ss;
-        LogType t_ = LogType::info;
 };
-
 
 } // namespace Zee

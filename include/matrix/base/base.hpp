@@ -64,6 +64,10 @@ class DMatrixBase {
             return procs_;
         }
 
+        void setProcs(TIdx procs) {
+            procs_ = procs;
+        }
+
         /** @return a reference to the derived matrix */
         Derived& derived()
         {

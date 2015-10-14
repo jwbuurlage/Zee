@@ -46,6 +46,8 @@ class DVectorBase
         DVectorBase(TIdx n, TVal defaultValue = 0)
             : Base(n, 1)
         { }
+
+        virtual void reassign(TIdx, TIdx) = 0;
 };
 
 // FIXME: should be a specialization of a general dense matrix
@@ -66,7 +68,9 @@ class DVector
             : Base(n, 1)
         {
             elements_.resize(n);
+            owners_.resize(n);
             std::fill(elements_.begin(), elements_.end(), defaultValue);
+            std::fill(owners_.begin(), owners_.end(), (TIdx)0);
         }
 
         DVector(const DVector& other) :
@@ -133,10 +137,17 @@ class DVector
             }
         }
 
+        void reassign(TIdx element, TIdx processorTarget) override {
+            owners_[element] = processorTarget;
+        }
+
+        const std::vector<TIdx>& getOwners() const { return owners_; }
+
         // Operator overloads and algorithm implementations
 
     private:
         std::vector<TVal> elements_;
+        std::vector<TIdx> owners_;
 };
 
 // We add an operator such that we can log vectors
