@@ -94,10 +94,11 @@ class KernighanLin {
             }
         }
 
-        if (counts_[0] > allowedSize_) {
-            // FIXME prefix
-        } else if (counts_[1] > allowedSize_) {
-            // FIXME prefix
+        if (counts_[0] > allowedSize_ || counts_[1] > allowedSize_) {
+            ZeeLogDebug << "KL: Initial distribution imbalanced" << endLog;
+            ZeeLogVar(allowedSize_);
+            ZeeLogVar(counts_[0]);
+            ZeeLogVar(counts_[1]);
         }
 
         // Store the distribution for each net

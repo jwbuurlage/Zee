@@ -235,7 +235,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         this->initialize(A);
 
         auto B = TMatrix(2 * A.getRows(), 2 * A.getCols());
-        B.setProcs(2);
+        B.setProcs(1);
         constructExtendedMatrix(A, B);
 
         // PHASE 2: call column partitioner
