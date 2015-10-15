@@ -16,6 +16,7 @@ License, or (at your option) any later version.
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <array>
 #include <vector>
 #include <set>
 #include <map>
@@ -101,6 +102,20 @@ class Logger {
             *this << "]";
             return *this;
         }
+
+        template <typename S, size_t size>
+        Logger& operator <<(const std::array<S, size>& rhs) {
+            auto sep = "";
+            *this << "[";
+            for (S value : rhs) {
+                *this << sep << value;
+                sep = ", ";
+            }
+            *this << "]";
+            return *this;
+        }
+
+
 
         template <typename S>
         Logger& operator <<(const std::set<S>& rhs) {
