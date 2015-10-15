@@ -1,7 +1,5 @@
 #include <zee.hpp>
 
-#include "partitioners/greedy_vector.hpp"
-
 using namespace Zee;
 
 int main()

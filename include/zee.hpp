@@ -27,6 +27,7 @@ License, or (at your option) any later version.
 #include "partitioners/medium_grain.hpp"
 #include "partitioners/multi_level.hpp"
 #include "partitioners/vector_partitioner.hpp"
+#include "partitioners/greedy_vector.hpp"
 
 #include "matrix_market.hpp"
 #include "matrix_toolbox.hpp"

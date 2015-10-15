@@ -535,7 +535,6 @@ class DSparseMatrixImage {
     }
 
     void localizeStorage() {
-        ZeeLogDebug << "Localize storage" << endLog;
         // 1. construct inverse map
         std::map<TIdx, TIdx> globalToLocalV;
         std::map<TIdx, TIdx> globalToLocalU;
@@ -545,8 +544,6 @@ class DSparseMatrixImage {
         for (TIdx idx = 0; idx < localIndicesU_.size(); ++idx) {
             globalToLocalU[localIndicesU_[idx]] = idx;
         }
-        ZeeLogVar(globalToLocalV);
-        ZeeLogVar(globalToLocalU);
 
         // 2. let storage localize itself
         storage_->localize(globalToLocalV, globalToLocalU);

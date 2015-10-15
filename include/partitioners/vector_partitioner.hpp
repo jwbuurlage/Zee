@@ -36,8 +36,6 @@ class VectorPartitioner {
         // 1. image should receive a list of its vector indices I_s { j | P(v_j) = s }
         // 2. image then constructs a map i = {1, 2, 3, ..} -> j -> I_s
         // 3. storage updates using the inverse of this map
-        ZeeLogDebug << "Localizing" << endLog;
-
         TIdx p = A_.getProcs();
 
         // 1. construct list of vector indices
