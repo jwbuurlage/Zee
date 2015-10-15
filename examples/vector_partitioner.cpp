@@ -4,10 +4,10 @@ using namespace Zee;
 
 int main()
 {
-    using TVal = double;
+    using TVal = float;
     using TIdx = uint32_t;
-    std::string matrix = "karate";
-    TIdx procs = 2;
+    std::string matrix = "mesh1e1";
+    TIdx procs = 1;
 
     // Initialize the matrix from file
     DSparseMatrix<TVal, TIdx> A{
@@ -26,6 +26,7 @@ int main()
     partitioner.partition(A);
 
     ZeeLogVar(A.communicationVolume());
+    ZeeLogVar(A.loadImbalance());
 
     GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
     pVecs.partition();
