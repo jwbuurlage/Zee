@@ -4,72 +4,68 @@
 #include <memory>
 using std::shared_ptr;
 
-
 template <class TMatrix = Zee::DSparseMatrix<>>
-class PulpPartitioner : Zee::IterativePartitioner<TMatrix>
-{
+class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     using TIdx = typename TMatrix::index_type;
     using TVal = typename TMatrix::value_type;
 
     constexpr const static TIdx default_number_iterations = 100;
 
-    public:
-        PulpPartitioner(TMatrix& A, TIdx procs) :
-            Zee::IterativePartitioner<TMatrix>(A)
-        {
-            setProcs(procs);
-            initialize();
-        }
+  public:
+    PulpPartitioner(TMatrix& A, TIdx procs)
+        : Zee::IterativePartitioner<TMatrix>(A) {
+        setProcs(procs);
+        initialize();
+    }
 
-        void initialize() override {
-            if (initialized_)
-                return;
+    void initialize() override {
+        if (initialized_)
+            return;
 
-            // initalize structures
-        }
+        // initalize structures
+    }
 
-        virtual TMatrix& refineWithIterations(TIdx iters) {
-/********            auto& images = A.getMutableImages();
-            auto p = A.getProcs();
+    virtual TMatrix& refineWithIterations(TIdx iters) {
+        /* auto& images = A.getMutableImages();
+                    auto p = A.getProcs();
 
-            void distCs = [] (
-                std::shared_ptr<typename TMatrix::image_type> _img,
-                TIdx s)
-            {
-                for (auto& pRowCount : img->getRowSet()) {
-                    auto row = pRowCount.first;
-                    auto count = pRowCount.second;
+                    void distCs = [] (
+                        std::shared_ptr<typename TMatrix::image_type> _img,
+                        TIdx s)
+                    {
+                        for (auto& pRowCount : img->getRowSet()) {
+                            auto row = pRowCount.first;
+                            auto count = pRowCount.second;
 
-                    // TODO Fixme syntax how
-                    Zee::message::put(s, row % p);
-                    Zee::message::put(row, row % p);
-                    Zee::message::put(count, row % p);
-                }
+                            // TODO Fixme syntax how
+                            Zee::message::put(s, row % p);
+                            Zee::message::put(row, row % p);
+                            Zee::message::put(count, row % p);
+                        }
 
-                for (auto& pColCount : img->getColSet()) {
-                    auto col = pColCount.first;
-                    auto count = pColCount.second;
+                        for (auto& pColCount : img->getColSet()) {
+                            auto col = pColCount.first;
+                            auto count = pColCount.second;
 
-                    // TODO Fixme
-                    Zee::message::put(s, col % p);
-                    Zee::message::put(row, col % p);
-                    Zee::message::put(count, col % p);
-                }
-            };
+                            // TODO Fixme
+                            Zee::message::put(s, col % p);
+                            Zee::message::put(row, col % p);
+                            Zee::message::put(count, col % p);
+                        }
+                    };
 
-            void redistCs = [] (
-                std::shared_ptr<typename TMatrix::image_type> _img,
-                TIdx s)
-            {
+                    void redistCs = [] (
+                        std::shared_ptr<typename TMatrix::image_type> _img,
+                        TIdx s)
+                    {
 
-            }; */
-        }
+                    }; */
+    }
 
-        TMatrix& refine() override
-        {
-            // refineWithIterations(default_number_iterations);
-        }
+    TMatrix& refine() override {
+        // refineWithIterations(default_number_iterations);
+    }
 
-    private:
-        bool initialized_ = false;
+  private:
+    bool initialized_ = false;
 };
