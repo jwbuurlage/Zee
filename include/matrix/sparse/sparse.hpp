@@ -117,7 +117,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     template <typename TInputIterator>
     void setFromTriplets(const TInputIterator& begin,
                          const TInputIterator& end) {
-        subs_.clear();
+        images_.clear();
 
         nz_ = 0;
 
@@ -134,7 +134,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         }
 
         for (TIdx i = 0; i < this->getProcs(); ++i)
-            subs_.push_back(std::make_shared<Image>());
+            images_.push_back(std::make_shared<Image>());
 
         // FIXME: only if partitioning is random
         std::random_device rd;
@@ -168,7 +168,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
                 break;
             }
 
-            subs_[target_proc]->pushTriplet(*it);
+            images_[target_proc]->pushTriplet(*it);
             nz_++;
         }
 
@@ -197,10 +197,10 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
     /** Obtain a list of images */
     const std::vector<std::shared_ptr<Image>>& getImages() const {
-        return subs_;
+        return images_;
     }
 
-    std::vector<std::shared_ptr<Image>>& getMutableImages() { return subs_; }
+    std::vector<std::shared_ptr<Image>>& getMutableImages() { return images_; }
 
     // this is kind of like a reduce in mapreduce, implementing this such that
     // we can get some sample code going
@@ -222,10 +222,10 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
             result[proc] = func(image);
         };
 
-        std::vector<std::thread> threads(this->subs_.size());
+        std::vector<std::thread> threads(this->images_.size());
 
         TIdx p = 0;
-        for (const auto& image : this->subs_) {
+        for (const auto& image : this->images_) {
             threads[p] = std::thread(push_result, p, image);
             ++p;
         }
@@ -244,7 +244,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         std::vector<std::thread> threads;
 
         TIdx s = 0;
-        for (auto& image : this->subs_) {
+        for (auto& image : this->images_) {
             threads.push_back(std::thread(func, image, s++));
         }
 
@@ -260,7 +260,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
      */
     virtual double loadImbalance() const {
         double eps = 1.0;
-        for (auto& pimg : this->subs_) {
+        for (auto& pimg : this->images_) {
             double eps_i = ((double)this->getProcs() * pimg->nonZeros()) /
                            this->nonZeros();
             if (eps_i > eps) {
@@ -305,7 +305,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
         // FIXME: parallelize, using generalized compute
         TIdx s = 0;
-        for (auto& pimg : this->subs_) {
+        for (auto& pimg : this->images_) {
             for (auto key_count : pimg->getRowSet()) {
                 auto i = key_count.first;
                 lambda[i % this->getProcs()][i / this->getProcs()].a += 1;
@@ -347,17 +347,22 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         return V;
     }
 
+    void moveNonZero(TIdx i, TIdx j, TIdx from, TIdx to) {
+        auto t = this->images_[from]->popElement(i, j);
+        this->images_[to]->pushTriplet(t);
+    }
+
     void resetImages(std::vector<std::unique_ptr<Image>>& new_images) {
         // update the number of processors
         this->procs_ = new_images.size();
-        this->subs_.resize(this->getProcs());
+        this->images_.resize(this->getProcs());
 
         for (TIdx i = 0; i < new_images.size(); ++i)
-            this->subs_[i].reset(new_images[i].release());
+            this->images_[i].reset(new_images[i].release());
 
         // update nz_
         this->nz_ = 0;
-        for (auto& pimg : this->subs_) {
+        for (auto& pimg : this->images_) {
             this->nz_ += pimg->nonZeros();
         }
 
@@ -414,7 +419,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
              << this->nonZeros() << endl;
 
         TIdx s = 0;
-        for (auto& image : this->subs_) {
+        for (auto& image : this->images_) {
             for (auto& triplet : *image) {
                 fout << triplet.row() << " " << triplet.col() << " " << s
                      << endl;
@@ -435,7 +440,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
   protected:
     TIdx nz_;
     partitioning_scheme partitioning_;
-    std::vector<std::shared_ptr<Image>> subs_;
+    std::vector<std::shared_ptr<Image>> images_;
     std::function<TIdx(TIdx, TIdx)> distributionLambda_;
     bool initialized_ = false;
 };
@@ -503,10 +508,24 @@ class DSparseMatrixImage {
     ~DSparseMatrixImage() = default;
 
     // FIXME rename to erase
-    void popElement(TIdx element) {
+    Triplet<TVal, TIdx> popElement(TIdx element) {
         auto t = storage_->popElement(element);
         rowset_.lower(t.row());
         colset_.lower(t.col());
+        return t;
+    }
+
+    Triplet<TVal, TIdx> popElement(TIdx i, TIdx j) {
+        TIdx element = 0;
+        for (auto& trip : *storage_) {
+            if (trip.row() == i && trip.col() == j) {
+                break;
+            }
+            element++;
+        }
+        ZeeAssert(element != storage_->size());
+
+        return popElement(element);
     }
 
     // rename to push

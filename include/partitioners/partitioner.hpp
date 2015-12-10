@@ -30,6 +30,8 @@ using std::vector;
 template <class TMatrix = DSparseMatrix<double>>
 class Partitioner
 {
+    using TIdx = typename TMatrix::index_type;
+
     public:
         Partitioner() { }
 
@@ -45,17 +47,17 @@ class Partitioner
         /** Set the number of processors
           * @param procs Number of processors _after_ partitioning.
           * */
-        void setProcs(int procs) {
+        void setProcs(TIdx procs) {
             procs_ = procs;
         }
 
     protected:
         /* The number of processors _after_ partitioning */
-        int procs_ = 0;
+        TIdx procs_ = 0;
 
         /* The number of processors _before_ partitioning
          * The value 0 is used for an arbitrary number */
-        int procs_in_ = 0;
+        TIdx procs_in_ = 0;
 };
 
 

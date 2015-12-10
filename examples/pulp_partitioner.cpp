@@ -21,23 +21,29 @@ int main()
     auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
     auto u = DVector<TVal, TIdx>{A.getRows()};
 
-    PulpPartitioner<decltype(A)> pA(A);
-    pA.refineWithIterations(1000);
+    PulpPartitioner<decltype(A)> pA(A, 2);
+    A.spy("pulp_rand");
+
+    ZeeLogVar(A.communicationVolume());
+    pA.refineWithIterations(100);
+    A.spy("pulp_first_refine");
+
+    ZeeLogVar(A.communicationVolume());
+    pA.refineWithIterations(100);
+    A.spy("pulp_second_refine");
+
+    ZeeLogVar(A.communicationVolume());
+    pA.refineWithIterations(100);
+    A.spy();
 
     ZeeLogVar(A.communicationVolume());
     ZeeLogVar(A.loadImbalance());
 
     GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
     pVecs.partition();
-
-    ZeeLogVar(v.getOwners());
-    ZeeLogVar(u.getOwners());
-
     pVecs.localizeMatrix();
 
-    ZeeLogVar(u);
     u = A * v;
-    ZeeLogVar(u);
 
     return 0;
 }

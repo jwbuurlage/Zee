@@ -10,7 +10,6 @@ import os
 import yaml
 
 import matplotlib
-#matplotlib.use('GTK3Cairo')
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -41,6 +40,8 @@ parser.add_argument('files', type=str, nargs='+',
 
 args = parser.parse_args()
 
+if args.filetype is 'pgf':
+    matplotlib.use('pgf')
 
 def get_color(proc):
     # ith element of has denumerator of 2^ceil(2log(p) + 1)
@@ -85,7 +86,7 @@ def spy(matrix_file):
                     data[i][j] = float(fin.readline())
             plt.imshow(data)
             finalize_plt(matrix_file)
-        elif line.startswith("%%Extended-MatrixMarket distributed-matrix coordinate"):
+        elif line.startswith("%%MatrixMarket matrix coordinate"):
             while (len(line) == 0 or line[0] == '%'):
                 line = fin.readline()
             title = line
