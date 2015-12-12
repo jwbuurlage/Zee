@@ -126,10 +126,10 @@ def plot(plot_file):
 
     plot_data = yaml.load(contents)
 
-    plt.title(plot_data["title"])
-    plt.xlabel(plot_data["xlabel"])
-    plt.ylabel(plot_data["ylabel"])
-    plt.yscale(plot_data["yscale"])
+    attributes = ["title", "xlabel", "ylabel", "yscale"]
+    for attr in attributes:
+        if attr in plot_data:
+            getattr(plt, attr)(plot_data[attr])
 
     for line in plot_data["lines"]:
         line_data = plot_data["lines"][line]["data"]

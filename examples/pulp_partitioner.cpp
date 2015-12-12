@@ -7,43 +7,61 @@ int main()
 {
     using TVal = float;
     using TIdx = uint32_t;
-    std::string matrix = "mesh1e1";
-    TIdx procs = 1;
+    std::string matrix = "fpga_dcop_05";
+    TIdx procs = 2;
+
+    double epsilon = 0.03;
 
     // Initialize the matrix from file
     DSparseMatrix<TVal, TIdx> A{
         "data/matrices/" + matrix  + ".mtx",
-        procs
+        1
     };
 
-    ZeeAssert(A.getRows() == A.getCols());
+    ZeeLogInfo << "Matrix of size (" << A.getRows() << " x " << A.getCols()
+               << ")" << endLog;
+
+    //ZeeAssert(A.getRows() == A.getCols());
 
     auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
     auto u = DVector<TVal, TIdx>{A.getRows()};
 
-    PulpPartitioner<decltype(A)> pA(A, 2);
-    A.spy("pulp_rand");
+    PulpPartitioner<decltype(A)> pA(A, procs, epsilon);
+    pA.initialize(A, HGModel::fine_grain);
 
-    ZeeLogVar(A.communicationVolume());
-    pA.refineWithIterations(100);
-    A.spy("pulp_first_refine");
+    std::vector<TIdx> communicationVolumes;
+        communicationVolumes.push_back(A.communicationVolume());
+    for (int i = 1; i <= 1000; ++i) {
+        pA.refineWithIterations(A.nonZeros());
+        auto comVol = A.communicationVolume();
+        ZeeLogVar(comVol);
+        communicationVolumes.push_back(comVol);
+        if (communicationVolumes[i] == communicationVolumes[i - 1])
+            break;
+    }
 
-    ZeeLogVar(A.communicationVolume());
-    pA.refineWithIterations(100);
-    A.spy("pulp_second_refine");
+    //A.spy("steam", true);
+    auto p = Zee::Plotter<TIdx>();
+    p["xlabel"] = "iterations";
+    p["ylabel"] = "$V$";
+    p["title"] = "Communication Volume PuLP ";
+    p.addLine(communicationVolumes, "communicationVolumes");
+    p.plot("comvol_pulp_" + matrix);
 
-    ZeeLogVar(A.communicationVolume());
-    pA.refineWithIterations(100);
-    A.spy();
+    ZeeLogVar(communicationVolumes);
+    ZeeLogVar(A.loadImbalance());
 
+    ZeeLogInfo << "Cyclic for comparison:" << endLog;
+    CyclicPartitioner<decltype(A)> cyclic(procs);
+    cyclic.partition(A);
     ZeeLogVar(A.communicationVolume());
     ZeeLogVar(A.loadImbalance());
 
-    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
-    pVecs.partition();
-    pVecs.localizeMatrix();
-
-    u = A * v;
+//    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
+//    pVecs.partition();
+//    pVecs.localizeMatrix();
+//
+//    u = A * v;
 
     return 0;
 }

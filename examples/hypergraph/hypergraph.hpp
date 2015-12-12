@@ -7,7 +7,39 @@ class DHypergraph {
         : vertexCount_(vertexCount), partCount_(partCount),
           partSize_(partCount), part_(vertexCount) {}
 
-    virtual std::vector<TIdx> getNeighbourDistribution(TIdx v) = 0;
+    virtual std::vector<double> partQuality(TIdx v, std::function<double(TIdx, TIdx)> w) {
+        std::vector<double> result(this->partCount_);
+
+        std::vector<TIdx> members(this->partCount_);
+        for (auto n : this->netsForVertex_[v]) {
+            for (TIdx i = 0; i < this->partCount_; ++i)
+                members[i] = 0;
+
+            for (auto u : this->nets_[n]) {
+                members[this->part_[u]]++;
+            }
+
+            for (TIdx i = 0; i < this->partCount_; ++i) {
+                result[i] += w(members[i], this->nets_[n].size());
+            }
+        }
+
+        return result;
+    }
+
+    TIdx partitioningLV() const {
+        // compute (l - 1)-metric
+        TIdx result = 0;
+        for (TIdx net = 0; net < netCount_; ++net) {
+            TIdx lambda = 0;
+            for (auto cnt : netDistribution_[net])
+                if (cnt > 0)
+                    lambda++;
+            result += lambda - 1;
+        }
+
+        return result;
+    }
 
     std::vector<std::vector<TIdx>>& getNets() const { return nets_; }
     virtual void reassign(TIdx vertex, TIdx part) = 0;
@@ -44,7 +76,8 @@ class DHypergraph {
     std::vector<TIdx> part_;
 };
 
-template <typename TIdx = Zee::default_index_type, class TMatrix = Zee::DSparseMatrix<>>
+template <typename TIdx = Zee::default_index_type,
+          class TMatrix = Zee::DSparseMatrix<>>
 class FineGrainHG : public DHypergraph<TIdx> {
   public:
     FineGrainHG(TMatrix& A)
@@ -105,24 +138,119 @@ class FineGrainHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-    std::vector<TIdx> getNeighbourDistribution(TIdx v) override {
-        std::vector<TIdx> result(this->partCount_);
-        for (auto n : this->netsForVertex_[v]) {
-            for (auto u : this->nets_[n]) {
-                result[this->part_[u]]++;
-            }
-        }
-        return result;
-    }
-
   private:
     TMatrix& A_;
     std::vector<TIdx> row;
     std::vector<TIdx> col;
 };
 
-template <typename TIdx = Zee::default_index_type>
-class RowNetHG : DHypergraph<TIdx> {};
+template <typename TIdx = Zee::default_index_type,
+          class TMatrix = Zee::DSparseMatrix<>>
+class RowNetHG : public DHypergraph<TIdx> {
+  public:
+    RowNetHG(TMatrix& A)
+        : DHypergraph<TIdx>(A.getCols(), A.getProcs()), A_(A) {
+        this->netCount_ = A.getRows();
 
-template <typename TIdx = Zee::default_index_type>
-class ColumnNetHG : DHypergraph<TIdx> {};
+        this->nets_.resize(this->netCount_);
+        this->netDistribution_.resize(this->netCount_);
+        for (auto& distribution : this->netDistribution_)
+            distribution.resize(this->partCount_);
+
+        this->netsForVertex_.resize(this->vertexCount_);
+
+        TIdx s = 0;
+        for (auto& image : A.getImages()) {
+            for (auto& trip : *image) {
+
+                this->part_[trip.col()] = s;
+                this->partSize_[s]++;
+
+                this->nets_[trip.row()].push_back(trip.col());
+                this->netDistribution_[trip.row()][s]++;
+
+                this->netsForVertex_[trip.col()].push_back(trip.row());
+            }
+
+            ++s;
+        }
+    }
+
+    void reassign(TIdx vertex, TIdx part) override {
+        if (this->part_[vertex] == part) {
+            ZeeLogError << "Reassigning to own part" << endLog;
+            return;
+        }
+
+        for (auto net : this->netsForVertex_[vertex]) {
+            this->netDistribution_[net][this->part_[vertex]]--;
+            this->partSize_[this->part_[vertex]]--;
+            this->netDistribution_[net][part]++;
+            this->partSize_[part]++;
+        }
+
+        for (TIdx row : this->netsForVertex_[vertex]) {
+            A_.moveNonZero(row, vertex, this->part_[vertex], part);
+        }
+        this->part_[vertex] = part;
+    }
+
+    private:
+      TMatrix& A_;
+};
+
+template <typename TIdx = Zee::default_index_type,
+          class TMatrix = Zee::DSparseMatrix<>>
+class ColumnNetHG : public DHypergraph<TIdx> {
+  public:
+    ColumnNetHG(TMatrix& A)
+        : DHypergraph<TIdx>(A.getRows(), A.getProcs()), A_(A) {
+        this->netCount_ = A.getCols();
+
+        this->nets_.resize(this->netCount_);
+        this->netDistribution_.resize(this->netCount_);
+        for (auto& distribution : this->netDistribution_)
+            distribution.resize(this->partCount_);
+
+        this->netsForVertex_.resize(this->vertexCount_);
+
+        TIdx s = 0;
+        // we want a fixed ordering of the nonzeros..
+        for (auto& image : A.getImages()) {
+            for (auto& trip : *image) {
+
+                this->part_[trip.row()] = s;
+                this->partSize_[s]++;
+
+                this->nets_[trip.col()].push_back(trip.row());
+                this->netDistribution_[trip.col()][s]++;
+
+                this->netsForVertex_[trip.row()].push_back(trip.col());
+            }
+
+            ++s;
+        }
+    }
+
+    void reassign(TIdx vertex, TIdx part) override {
+        if (this->part_[vertex] == part) {
+            ZeeLogError << "Reassigning to own part" << endLog;
+            return;
+        }
+
+        for (auto net : this->netsForVertex_[vertex]) {
+            this->netDistribution_[net][this->part_[vertex]]--;
+            this->partSize_[this->part_[vertex]]--;
+            this->netDistribution_[net][part]++;
+            this->partSize_[part]++;
+        }
+
+        for (TIdx col : this->netsForVertex_[vertex]) {
+            A_.moveNonZero(vertex, col, this->part_[vertex], part);
+        }
+        this->part_[vertex] = part;
+    }
+
+    private:
+      TMatrix& A_;
+};
