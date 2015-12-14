@@ -177,8 +177,7 @@ template <typename TIdx = Zee::default_index_type,
           class TMatrix = Zee::DSparseMatrix<>>
 class RowNetHG : public DHypergraph<TIdx> {
   public:
-    RowNetHG(TMatrix& A)
-        : DHypergraph<TIdx>(A.getCols(), A.getProcs()), A_(A) {
+    RowNetHG(TMatrix& A) : DHypergraph<TIdx>(A.getCols(), A.getProcs()), A_(A) {
         this->netCount_ = A.getRows();
 
         this->nets_.resize(this->netCount_);
@@ -224,8 +223,8 @@ class RowNetHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-    private:
-      TMatrix& A_;
+  private:
+    TMatrix& A_;
 };
 
 template <typename TIdx = Zee::default_index_type,
@@ -280,6 +279,6 @@ class ColumnNetHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-    private:
-      TMatrix& A_;
+  private:
+    TMatrix& A_;
 };

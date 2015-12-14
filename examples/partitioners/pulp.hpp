@@ -2,7 +2,6 @@
 // TODO:
 // [ ] Fix vertex weights for imbalance
 
-
 #include <zee.hpp>
 
 #include "../hypergraph/hypergraph.hpp"
@@ -11,11 +10,7 @@
 #include <vector>
 #include <memory>
 
-enum class HGModel {
-    fine_grain = 1,
-    row_net = 2,
-    column_net = 3
-};
+enum class HGModel { fine_grain = 1, row_net = 2, column_net = 3 };
 
 template <typename T>
 size_t argmax(std::vector<T>& list) {
@@ -40,19 +35,20 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     constexpr const static double default_load_imbalance = 0.1;
 
   public:
-    PulpPartitioner(TMatrix& A, TIdx procs, double epsilon = default_load_imbalance)
+    PulpPartitioner(TMatrix& A, TIdx procs,
+                    double epsilon = default_load_imbalance)
         : Zee::IterativePartitioner<TMatrix>(), A_(A) {
         this->setProcs(procs);
         // FIXME;
-        minPartSize_ = (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 - epsilon);
+        minPartSize_ =
+            (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 - epsilon);
         ZeeLogVar(minPartSize_);
-        maxPartSize_ = (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 + epsilon);
+        maxPartSize_ =
+            (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 + epsilon);
         ZeeLogVar(maxPartSize_);
     }
 
-    void initialize(TMatrix& A) override {
-        initialize(A, HGModel::fine_grain);
-    }
+    void initialize(TMatrix& A) override { initialize(A, HGModel::fine_grain); }
 
     void initialize(TMatrix& A, HGModel model) {
         if (initialized_)
@@ -88,7 +84,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                 // randomly distribute each column of A into k images
                 for (auto& image : A.getImages()) {
                     for (auto& trip : *image) {
-                        aNewImages[columnTargets[trip.col()]]->pushTriplet(trip);
+                        aNewImages[columnTargets[trip.col()]]->pushTriplet(
+                            trip);
                     }
                 }
 
