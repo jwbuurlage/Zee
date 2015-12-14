@@ -39,13 +39,10 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                     double epsilon = default_load_imbalance)
         : Zee::IterativePartitioner<TMatrix>(), A_(A) {
         this->setProcs(procs);
-        // FIXME;
         minPartSize_ =
             (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 - epsilon);
-        ZeeLogVar(minPartSize_);
         maxPartSize_ =
             (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 + epsilon);
-        ZeeLogVar(maxPartSize_);
     }
 
     void initialize(TMatrix& A) override { initialize(A, HGModel::fine_grain); }
@@ -136,9 +133,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         for (auto& image : A.getImages()) {
             partSize[i++] = image->nonZeros();
         }
-
-        ZeeLogVar(hyperGraph_->getPartSize(0));
-        ZeeLogVar(hyperGraph_->getPartSize(1));
     }
 
     virtual TMatrix& initialPartitioning(TIdx iters) {
@@ -151,8 +145,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             for (TIdx i = 0; i < iters; ++i) {
                 this->refineWithIterations(A_.nonZeros(), maxSize);
             }
-            ZeeLogVar(hyperGraph_->partitioningLV());
-            ZeeLogVar(maxSize);
             maxSize *= 2;
         }
         return A_;
