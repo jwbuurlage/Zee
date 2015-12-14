@@ -2,6 +2,7 @@
 #include "partitioners/pulp.hpp"
 
 #include "args/argparse.hpp"
+#include "report/report.hpp"
 
 using namespace Zee;
 
@@ -30,7 +31,7 @@ int main(int argc, char* argv[])
         ZeeLogInfo << "Using default hypergraph model (fine-grain)" << endLog;
     }
 
-    TIdx procs = args.as<int>("--procs");
+    TIdx procs = args.as<TIdx>("--procs");
     if (procs == 0) {
         procs = 2;
         ZeeLogInfo << "Using default number of processors (" << procs << ")"
@@ -46,11 +47,24 @@ int main(int argc, char* argv[])
     bool plot = args.wasPassed("--plot");
     bool benchmark = args.wasPassed("--benchmark");
 
+    TIdx runs = args.as<TIdx>("--runs");
+    if (runs == 0) {
+        runs = 1;
+        ZeeLogInfo << "Using default number of runs (" << runs << ")" << endLog;
+    }
+
     //----------------------------------------------------------------------------
 
+    auto report = Report("Hyper-PuLP", "matrix");
+    report.addColumn("m");
+    report.addColumn("n");
+    report.addColumn("N");
+    report.addColumn("V_HP");
+    report.addColumn("V_C");
 
     auto bench = Zee::Benchmark("PuLP");
     for (auto matrix : matrices) {
+        report.addRow(matrix);
         bench.phase(matrix);
 
         // Initialize the matrix from file
@@ -59,8 +73,9 @@ int main(int argc, char* argv[])
             1
         };
 
-        ZeeLogInfo << "Matrix of size (" << A.getRows() << " x " << A.getCols()
-                   << ") with " << A.nonZeros() << " nzs" << endLog;
+        report.addResult(matrix, "m", A.getRows());
+        report.addResult(matrix, "n", A.getCols());
+        report.addResult(matrix, "N", A.nonZeros());
 
         //ZeeAssert(A.getRows() == A.getCols());
 
@@ -81,6 +96,7 @@ int main(int argc, char* argv[])
                 break;
         }
         ZeeLogVar(communicationVolumes);
+        report.addResult(matrix, "V_HP", communicationVolumes.back());
 
         //A.spy("steam", true);
         if (plot) {
@@ -94,17 +110,18 @@ int main(int argc, char* argv[])
 
         ZeeLogVar(A.loadImbalance());
 
-        ZeeLogInfo << "Cyclic for comparison:" << endLog;
         CyclicPartitioner<decltype(A)> cyclic(procs);
         cyclic.partition(A);
-        ZeeLogVar(A.communicationVolume());
-        ZeeLogVar(A.loadImbalance());
+
+        report.addResult(matrix, "V_C", A.communicationVolume());
 
     }
     if (!benchmark) {
         bench.silence();
     }
     bench.finish();
+
+    report.print();
 
 //    for (auto matrix : matrices) {
 //        // Initialize the matrix from file

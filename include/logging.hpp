@@ -23,6 +23,7 @@ License, or (at your option) any later version.
 
 #include "color_output.hpp"
 
+#define ZeeLogResult (Zee::Logger() << Zee::LogType::result)
 #define ZeeLogBenchmark (Zee::Logger() << Zee::LogType::benchmark)
 #define ZeeLogDebug (Zee::Logger() << Zee::LogType::debug)
 #define ZeeLogError (Zee::Logger() << Zee::LogType::error)
@@ -58,7 +59,8 @@ enum LogType {
     warning,
     error,
     debug,
-    benchmark
+    benchmark,
+    result
 };
 
 class Logger {
@@ -176,6 +178,10 @@ class Logger {
 
                 case LogType::benchmark:
                     cout << Zee::colors::start["purple"] << "BENCHMARK: ";
+                    break;
+
+                case LogType::result:
+                    cout << Zee::colors::start["yellow"] << "RESULT: ";
                     break;
 
                 default:
