@@ -1,4 +1,7 @@
 // we ignore distributed memory for now
+// TODO:
+// [ ] Fix vertex weights for imbalance
+
 
 #include <zee.hpp>
 
@@ -14,11 +17,10 @@ enum class HGModel {
     column_net = 3
 };
 
-// positive number only
 template <typename T>
 size_t argmax(std::vector<T>& list) {
     unsigned int ans = 0;
-    T min = std::numeric_limits<int>::min();
+    T min = std::numeric_limits<T>::min();
     for (unsigned int i = 0; i < list.size(); ++i) {
         if (list[i] > min) {
             min = list[i];
@@ -142,7 +144,24 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         ZeeLogVar(hyperGraph_->getPartSize(1));
     }
 
-    virtual TMatrix& refineWithIterations(TIdx iters) {
+    virtual TMatrix& initialPartitioning(TIdx iters) {
+        // hyperGraph_->sortNetsBySize();
+
+        TIdx size = hyperGraph_->getMaximumNetSize() / 2;
+
+        TIdx maxSize = 2;
+        while (maxSize < size) {
+            for (TIdx i = 0; i < iters; ++i) {
+                this->refineWithIterations(A_.nonZeros(), maxSize);
+            }
+            ZeeLogVar(hyperGraph_->partitioningLV());
+            ZeeLogVar(maxSize);
+            maxSize *= 2;
+        }
+        return A_;
+    }
+
+    virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0) {
 
         // initial partitioning
         TIdx r = 1;
@@ -150,15 +169,15 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         while (r > 0 && i < iters) {
             r = 0;
             for (TIdx v = 0; v < hyperGraph_->getVertexCount(); ++v) {
-                auto w = [](TIdx peers, TIdx size) {
-                    static const auto control = 0.95;
+                auto w = [this](TIdx peers, TIdx size) {
+                    static const auto control = 0.99;
                     double z = (peers - 1.0) / (size - 1.0);
                     double x = control * (1 + z) / (1 - z);
-                    return exp(1.0 / size) * log(x);
+                    return log(x);
                 };
 
                 // get neighbour counts
-                auto N = hyperGraph_->partQuality(v, w);
+                auto N = hyperGraph_->partQuality(v, w, maximumNetSize);
                 auto p = argmax(N);
 
                 if (p != hyperGraph_->getPart(v) &&

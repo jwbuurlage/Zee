@@ -7,11 +7,20 @@ class DHypergraph {
         : vertexCount_(vertexCount), partCount_(partCount),
           partSize_(partCount), part_(vertexCount) {}
 
-    virtual std::vector<double> partQuality(TIdx v, std::function<double(TIdx, TIdx)> w) {
+    virtual std::vector<double> partQuality(TIdx v,
+                                            std::function<double(TIdx, TIdx)> w,
+                                            unsigned int maximumNetSize = 0) {
+        if (maximumNetSize == 0) {
+            maximumNetSize = getMaximumNetSize();
+        }
+
         std::vector<double> result(this->partCount_);
 
         std::vector<TIdx> members(this->partCount_);
         for (auto n : this->netsForVertex_[v]) {
+            if (this->nets_[n].size() > maximumNetSize)
+                continue;
+
             for (TIdx i = 0; i < this->partCount_; ++i)
                 members[i] = 0;
 
@@ -44,6 +53,24 @@ class DHypergraph {
     std::vector<std::vector<TIdx>>& getNets() const { return nets_; }
     virtual void reassign(TIdx vertex, TIdx part) = 0;
 
+    void sortNetsBySize() {
+        ZeeLogWarning << "Need to fix indices" << endLog;
+        std::sort(nets_.begin(), nets_.end(), [](const std::vector<TIdx>& lhs,
+                                                 const std::vector<TIdx>& rhs) {
+            return lhs.size() < rhs.size();
+        });
+    }
+
+    TIdx getMaximumNetSize() {
+        if (maximumNetSize_ == 0) {
+            for (auto& net : nets_) {
+                if (net.size() > maximumNetSize_)
+                    maximumNetSize_ = net.size();
+            }
+        }
+        return maximumNetSize_;
+    }
+
     TIdx getVertexCount() const { return vertexCount_; }
 
     TIdx getPart(TIdx v) const { return part_[v]; }
@@ -55,6 +82,8 @@ class DHypergraph {
 
     // number of nets in this hypergraph
     TIdx netCount_;
+    // maximum size of a net
+    TIdx maximumNetSize_ = 0;
 
     // number of parts for this hypergraph
     TIdx partCount_;

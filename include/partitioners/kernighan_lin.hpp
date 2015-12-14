@@ -95,7 +95,16 @@ class KernighanLin {
         }
 
         if (counts_[0] > allowedSize_ || counts_[1] > allowedSize_) {
-            ZeeLogDebug << "KL: Initial distribution imbalanced" << endLog;
+            for (TIdx j = 0; j < A_.getCols(); ++j) {
+                if (columnInA_[j] && counts_[0] > allowedSize_) {
+                    counts_[0] -= columnWeights_[j];
+                    counts_[1] += columnWeights_[j];
+                } else if (columnInA_[j] && counts_[0] > allowedSize_) {
+                    counts_[1] += columnWeights_[j];
+                }
+            }
+
+            ZeeLogWarning << "KL: Initial distribution imbalanced" << endLog;
             ZeeLogVar(allowedSize_);
             ZeeLogVar(counts_[0]);
             ZeeLogVar(counts_[1]);
