@@ -30,7 +30,7 @@ class Report {
             return;
         }
         std::stringstream ss;
-        ss << result;
+        ss << std::fixed << std::setprecision(2) << result;
         entries_[row][column] = ss.str();
 
         if (ss.str().size() > columnWidth_[column]) {
@@ -46,7 +46,7 @@ class Report {
 
         auto addElement = [](int width, std::stringstream& result,
                              std::string entry) {
-            result << std::left << std::setw(width) << std::setfill(' ')
+            result << std::left << std::setprecision(2) << std::setw(width) << std::setfill(' ')
                    << entry;
         };
 

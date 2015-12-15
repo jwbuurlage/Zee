@@ -30,6 +30,7 @@ template <class TMatrix = Zee::DSparseMatrix<>>
 class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     using TIdx = typename TMatrix::index_type;
     using TVal = typename TMatrix::value_type;
+    using TImage = typename TMatrix::image_type;
 
     constexpr const static TIdx default_number_iterations = 100;
     constexpr const static double default_load_imbalance = 0.1;
@@ -47,79 +48,57 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
     void initialize(TMatrix& A) override { initialize(A, HGModel::fine_grain); }
 
-    void initialize(TMatrix& A, HGModel model) {
-        if (initialized_)
-            return;
+    void randomReset(TMatrix& A, HGModel model) {
+        std::vector<std::unique_ptr<TImage>> aNewImages;
 
-        using TImage = typename TMatrix::image_type;
-
-        initialized_ = true;
-
-        if (A.getProcs() == 1) {
-            std::vector<std::unique_ptr<TImage>> aNewImages;
-            for (TIdx i = 0; i < this->procs_; ++i) {
-                aNewImages.push_back(std::make_unique<TImage>());
-            }
-
-            std::random_device rd;
-            std::mt19937 mt(rd());
-            std::uniform_int_distribution<TIdx> randproc(0, this->procs_ - 1);
-
-            if (model == HGModel::fine_grain) {
-                // randomly distribute A into k images
-                for (auto& image : A.getImages()) {
-                    for (auto& trip : *image) {
-                        aNewImages[randproc(mt)]->pushTriplet(trip);
-                    }
-                }
-            } else if (model == HGModel::row_net) {
-                std::vector<TIdx> columnTargets(A.getCols());
-                for (auto& target : columnTargets) {
-                    target = randproc(mt);
-                }
-
-                // randomly distribute each column of A into k images
-                for (auto& image : A.getImages()) {
-                    for (auto& trip : *image) {
-                        aNewImages[columnTargets[trip.col()]]->pushTriplet(
-                            trip);
-                    }
-                }
-
-            } else if (model == HGModel::column_net) {
-                std::vector<TIdx> rowTargets(A.getRows());
-                for (auto& target : rowTargets) {
-                    target = randproc(mt);
-                }
-
-                // randomly distribute each column of A into k images
-                for (auto& image : A.getImages()) {
-                    for (auto& trip : *image) {
-                        aNewImages[rowTargets[trip.row()]]->pushTriplet(trip);
-                    }
-                }
-            }
-
-            A.resetImages(aNewImages);
-        } else if (A.getProcs() != this->procs_) {
-            ZeeLogError << "(PuLP): Matrix is initialized with wrong number of "
-                           "processors."
-                        << endLog;
-            return;
+        for (TIdx i = 0; i < this->procs_; ++i) {
+            aNewImages.push_back(std::make_unique<TImage>());
         }
 
-        // FIXME should check if for row net model / column net model
-        // initial matrix is distributed properly if given by user
-        // make property of sparse matrix itself?
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        std::uniform_int_distribution<TIdx> randproc(0, this->procs_ - 1);
 
-        // initialize hypergraph model?
-        // yes. hypergraph model needs to be aware of Matrix
-        // act like its model, but not necessarily store explicitely
-        // operations we require:
-        // - reassigning vertices (cached?)
-        // - looping over nets
-        // - apply changes to matrix
+        if (model == HGModel::fine_grain) {
+            // randomly distribute A into k images
+            for (auto& image : A.getImages()) {
+                for (auto& trip : *image) {
+                    aNewImages[randproc(mt)]->pushTriplet(trip);
+                }
+            }
+        } else if (model == HGModel::row_net) {
+            std::vector<TIdx> columnTargets(A.getCols());
+            for (auto& target : columnTargets) {
+                target = randproc(mt);
+            }
 
+            // randomly distribute each column of A into k images
+            for (auto& image : A.getImages()) {
+                for (auto& trip : *image) {
+                    aNewImages[columnTargets[trip.col()]]->pushTriplet(trip);
+                }
+            }
+
+        } else if (model == HGModel::column_net) {
+            std::vector<TIdx> rowTargets(A.getRows());
+            for (auto& target : rowTargets) {
+                target = randproc(mt);
+            }
+
+            // randomly distribute each column of A into k images
+            for (auto& image : A.getImages()) {
+                for (auto& trip : *image) {
+                    aNewImages[rowTargets[trip.row()]]->pushTriplet(trip);
+                }
+            }
+        }
+
+        A.resetImages(aNewImages);
+
+        constructHypergraph(A, model);
+    }
+
+    void constructHypergraph(TMatrix& A, HGModel model) {
         if (model == HGModel::fine_grain)
             hyperGraph_ = std::make_unique<FineGrainHG<TIdx, TMatrix>>(A);
         else if (model == HGModel::row_net)
@@ -135,22 +114,40 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         }
     }
 
+    void initialize(TMatrix& A, HGModel model) {
+        if (initialized_)
+            return;
+        initialized_ = true;
+
+        // FIXME should check if for row net model / column net model
+        // initial matrix is distributed properly if given by user
+        // make property of sparse matrix itself?
+
+
+        if (A.getProcs() == 1) {
+            randomReset(A, model);
+        } else {
+            constructHypergraph(A, model);
+        }
+    }
+
     virtual TMatrix& initialPartitioning(TIdx iters) {
-        // hyperGraph_->sortNetsBySize();
+        hyperGraph_->sortNetsBySize();
 
-        TIdx size = hyperGraph_->getMaximumNetSize() / 2;
+        TIdx maximumNetCount = hyperGraph_->getNetCount() / 2;
 
-        TIdx maxSize = 2;
-        while (maxSize < size) {
+        TIdx netsToConsider = 1;
+        while (netsToConsider < maximumNetCount) {
             for (TIdx i = 0; i < iters; ++i) {
-                this->refineWithIterations(A_.nonZeros(), maxSize);
+                this->refineWithIterations(A_.nonZeros(), 0, netsToConsider);
             }
-            maxSize *= 2;
+            netsToConsider *= 2;
         }
         return A_;
     }
 
-    virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0) {
+    virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0,
+                                          TIdx netsToConsider = 0) {
 
         // initial partitioning
         TIdx r = 1;
@@ -158,15 +155,16 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         while (r > 0 && i < iters) {
             r = 0;
             for (TIdx v = 0; v < hyperGraph_->getVertexCount(); ++v) {
-                auto w = [this](TIdx peers, TIdx size) {
-                    static const auto control = 0.99;
+                auto w = [](TIdx peers, TIdx size) {
+                    static const auto control = 0.50;
                     double z = (peers - 1.0) / (size - 1.0);
                     double x = control * (1 + z) / (1 - z);
                     return log(x);
                 };
 
                 // get neighbour counts
-                auto N = hyperGraph_->partQuality(v, w, maximumNetSize);
+                auto N = hyperGraph_->partQuality(v, w, maximumNetSize,
+                                                  netsToConsider);
                 auto p = argmax(N);
 
                 if (p != hyperGraph_->getPart(v) &&

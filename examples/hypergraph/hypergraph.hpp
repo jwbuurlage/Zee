@@ -1,5 +1,8 @@
 #include <zee.hpp>
 
+#include <vector>
+#include <algorithm>
+
 template <typename TIdx = Zee::default_index_type>
 class DHypergraph {
   public:
@@ -9,9 +12,13 @@ class DHypergraph {
 
     virtual std::vector<double> partQuality(TIdx v,
                                             std::function<double(TIdx, TIdx)> w,
-                                            unsigned int maximumNetSize = 0) {
+                                            unsigned int maximumNetSize = 0,
+                                            unsigned int netsToConsider = 0) {
         if (maximumNetSize == 0) {
             maximumNetSize = getMaximumNetSize();
+        }
+        if (netsToConsider == 0) {
+            netsToConsider = nets_.size();
         }
 
         std::vector<double> result(this->partCount_);
@@ -19,6 +26,9 @@ class DHypergraph {
         std::vector<TIdx> members(this->partCount_);
         for (auto n : this->netsForVertex_[v]) {
             if (this->nets_[n].size() > maximumNetSize)
+                continue;
+
+            if (this->netsSizeRank_[n] > netsToConsider)
                 continue;
 
             for (TIdx i = 0; i < this->partCount_; ++i)
@@ -54,11 +64,20 @@ class DHypergraph {
     virtual void reassign(TIdx vertex, TIdx part) = 0;
 
     void sortNetsBySize() {
-        ZeeLogWarning << "Need to fix indices" << endLog;
-        std::sort(nets_.begin(), nets_.end(), [](const std::vector<TIdx>& lhs,
-                                                 const std::vector<TIdx>& rhs) {
-            return lhs.size() < rhs.size();
-        });
+        this->netsSizeRank_.resize(nets_.size());
+
+        std::vector<TIdx> netsBySize(nets_.size());
+        std::iota(netsBySize.begin(), netsBySize.end(), 0);
+
+        std::sort(netsBySize.begin(), netsBySize.end(),
+                  [this](TIdx lhs,
+                          TIdx rhs) {
+                      return this->nets_[lhs].size() < this->nets_[rhs].size();
+                  });
+
+        for (TIdx i = 0; i < nets_.size(); ++i) {
+            this->netsSizeRank_[netsBySize[i]] = i;
+        }
     }
 
     TIdx getMaximumNetSize() {
@@ -72,6 +91,7 @@ class DHypergraph {
     }
 
     TIdx getVertexCount() const { return vertexCount_; }
+    TIdx getNetCount() const { return netCount_; }
 
     TIdx getPart(TIdx v) const { return part_[v]; }
     TIdx getPartSize(TIdx p) const { return partSize_[p]; }
@@ -82,8 +102,12 @@ class DHypergraph {
 
     // number of nets in this hypergraph
     TIdx netCount_;
+
     // maximum size of a net
     TIdx maximumNetSize_ = 0;
+
+    // nets indices by size
+    std::vector<TIdx> netsSizeRank_;
 
     // number of parts for this hypergraph
     TIdx partCount_;
