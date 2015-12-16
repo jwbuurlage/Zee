@@ -41,8 +41,13 @@ class Report {
     void print() {
         ZeeLogResult << title_ << endLog;
 
-        auto hline =
-            "----------------------------------------------------------";
+        unsigned int lineSize = rowSize_ + 4;
+        for (auto col : columnWidth_) {
+            lineSize += col.second + 2;
+        }
+        std::string hline = "";
+        for (unsigned int i = 0; i < lineSize; ++i)
+            hline.push_back('-');
 
         auto addElement = [](int width, std::stringstream& result,
                              std::string entry) {

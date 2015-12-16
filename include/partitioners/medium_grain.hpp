@@ -351,6 +351,9 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
                 rowOptimal_ = true;
             }
             phaseRow_ = !phaseRow_;
+        } else if (A.communicationVolume() > priorVolume) {
+            ZeeLogError << "The MG-IR has increased volume" << endLog;
+            locallyOptimal_ = true;
         } else {
             if (!phaseRow_) {
                 rowOptimal_ = false;

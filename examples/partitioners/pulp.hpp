@@ -9,6 +9,7 @@
 #include <random>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 enum class HGModel { fine_grain = 1, row_net = 2, column_net = 3 };
 
@@ -147,24 +148,55 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     }
 
     virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0,
-                                          TIdx netsToConsider = 0) {
+                                          TIdx netsToConsider = 0, bool randomize = false) {
 
         // initial partitioning
         TIdx r = 1;
         TIdx i = 0;
         while (r > 0 && i < iters) {
             r = 0;
-            for (TIdx v = 0; v < hyperGraph_->getVertexCount(); ++v) {
-                auto w = [](TIdx peers, TIdx size) {
-                    static const auto control = 0.50;
-                    double z = (peers - 1.0) / (size - 1.0);
-                    double x = control * (1 + z) / (1 - z);
+
+            std::random_device rd;
+            std::mt19937 mt(rd());
+
+            std::vector<TIdx> X;
+            if (randomize) {
+                X.resize(hyperGraph_->getVertexCount());
+                std::iota(X.begin(), X.end(), 0);
+                std::shuffle(X.begin(), X.end(), mt);
+            }
+
+            for (TIdx j = 0; j < hyperGraph_->getVertexCount(); ++j) {
+                auto v = j;
+                if (randomize)
+                    v = X[j];
+
+                auto w = [](double peers, double size) {
+                    static const auto control = 0.99;
+                    double z = control * (((2.0 * peers) / size) - 1.0);
+                    double x = (1 + z) / (1 - z);
                     return log(x);
                 };
 
                 // get neighbour counts
                 auto N = hyperGraph_->partQuality(v, w, maximumNetSize,
                                                   netsToConsider);
+
+                //ZeeLogVar(N);
+                //// soft-max and roll
+                //std::transform(N.begin(), N.end(), N.begin(),
+                //               [](double x) { return exp(x); });
+                //double Z = std::accumulate(
+                //    N.begin(), N.end(), 0.0,
+                //    [](double lhs, double rhs) { return lhs + rhs; });
+                //if (Z == 0) {
+                //    continue;
+                //}
+                //auto p = argmax(N);
+                //auto prob = N[p] / Z;
+                //ZeeLogVar(N[p]);
+                //ZeeLogVar(prob);
+
                 auto p = argmax(N);
 
                 if (p != hyperGraph_->getPart(v) &&

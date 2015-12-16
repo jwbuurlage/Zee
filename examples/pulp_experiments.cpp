@@ -46,6 +46,8 @@ int main(int argc, char* argv[])
 
     bool plot = args.wasPassed("--plot");
     bool benchmark = args.wasPassed("--benchmark");
+    bool randomize = args.wasPassed("--randomize");
+    bool compareMg = args.wasPassed("--compare-mg");
 
     TIdx runs = args.as<TIdx>("--runs");
     if (runs == 0) {
@@ -59,8 +61,6 @@ int main(int argc, char* argv[])
         ZeeLogInfo << "Using default number of iters (" << iters << ")" << endLog;
     }
 
-
-
     //----------------------------------------------------------------------------
 
     auto report = Report("Hyper-PuLP", "matrix");
@@ -70,6 +70,8 @@ int main(int argc, char* argv[])
     report.addColumn("V_HP");
     report.addColumn("SD");
     report.addColumn("V_C");
+    if (procs == 2)
+        report.addColumn("V_MG");
 
     auto bench = Zee::Benchmark("PuLP");
 
@@ -106,7 +108,7 @@ int main(int argc, char* argv[])
                 communicationVolumes.push_back(A.communicationVolume());
 
             for (int i = 1; i <= 1000; ++i) {
-                pA.refineWithIterations(A.nonZeros());
+                pA.refineWithIterations(A.nonZeros(), 0, 0, randomize);
                 auto comVol = A.communicationVolume();
                 communicationVolumes.push_back(comVol);
                 if (communicationVolumes[i] == communicationVolumes[i - 1])
@@ -147,11 +149,21 @@ int main(int argc, char* argv[])
 
         CyclicPartitioner<decltype(A)> cyclic(procs);
         cyclic.partition(A);
-
         auto comVol = A.communicationVolume();
+        improvements.push_back((comVol - average) / comVol);
+
         report.addResult(matrix, "V_C", comVol);
 
-        improvements.push_back((comVol - average)/comVol);
+        if (compareMg && procs == 2) {
+            MGPartitioner<decltype(A)> mg;
+            mg.partition(A);
+            while (!mg.locallyOptimal()) {
+                ZeeLogVar(A.communicationVolume());
+                mg.refine(A);
+            }
+
+            report.addResult(matrix, "V_MG", A.communicationVolume());
+        }
     }
 
     if (!benchmark) {

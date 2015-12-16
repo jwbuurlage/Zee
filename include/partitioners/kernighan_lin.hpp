@@ -104,10 +104,10 @@ class KernighanLin {
                 }
             }
 
-            ZeeLogWarning << "KL: Initial distribution imbalanced" << endLog;
-            ZeeLogVar(allowedSize_);
-            ZeeLogVar(counts_[0]);
-            ZeeLogVar(counts_[1]);
+//            ZeeLogWarning << "KL: Initial distribution imbalanced" << endLog;
+//            ZeeLogVar(allowedSize_);
+//            ZeeLogVar(counts_[0]);
+//            ZeeLogVar(counts_[1]);
         }
 
         // Store the distribution for each net
