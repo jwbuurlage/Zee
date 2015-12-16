@@ -9,7 +9,7 @@
 #include <random>
 #include <vector>
 #include <memory>
-#include <algorithm>
+#include <limits>
 
 enum class HGModel { fine_grain = 1, row_net = 2, column_net = 3 };
 
@@ -106,13 +106,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             hyperGraph_ = std::make_unique<RowNetHG<TIdx, TMatrix>>(A);
         else if (model == HGModel::column_net)
             hyperGraph_ = std::make_unique<ColumnNetHG<TIdx, TMatrix>>(A);
-
-        // initalize counts
-        partSize.resize(A.getProcs());
-        TIdx i = 0;
-        for (auto& image : A.getImages()) {
-            partSize[i++] = image->nonZeros();
-        }
     }
 
     void initialize(TMatrix& A, HGModel model) {
@@ -123,7 +116,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         // FIXME should check if for row net model / column net model
         // initial matrix is distributed properly if given by user
         // make property of sparse matrix itself?
-
 
         if (A.getProcs() == 1) {
             randomReset(A, model);
@@ -183,6 +175,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                                                   netsToConsider);
 
                 //ZeeLogVar(N);
+
+                //ZeeLogVar(N);
                 //// soft-max and roll
                 //std::transform(N.begin(), N.end(), N.begin(),
                 //               [](double x) { return exp(x); });
@@ -228,9 +222,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     TIdx maxPartSize_;
 
     std::unique_ptr<DHypergraph<TIdx>> hyperGraph_;
-
-    // counts of parts (C)
-    std::vector<TIdx> partSize;
 
     // neighbour histogram (N_v)
     std::vector<std::vector<TIdx>> neighbourCount;

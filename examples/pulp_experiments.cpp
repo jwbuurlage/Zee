@@ -4,10 +4,11 @@
 #include "args/argparse.hpp"
 #include "report/report.hpp"
 
+#include <limits>
+
 using namespace Zee;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     using TVal = float;
     using TIdx = uint64_t;
 
@@ -17,18 +18,22 @@ int main(int argc, char* argv[])
     auto args = ArgParse();
     args.addOptionWithDefault("--hg", "hypergraph model to use, should be "
                                       "chosen in set { row_net, column_net, "
-                                      "fine_grain }",
-                              "fine_grain");
+                                      "fine_grain, auto }",
+                              "auto");
     args.addOptionWithDefault("--procs", "number of parts", 2);
-    args.addOptionWithDefault("--eps", "tolerance level for load imbalance", 0.03);
-    args.addOptionWithDefault("--iters", "number of iterations in initial phase", 1);
-    args.addOptionWithDefault("--runs", "number of partitioning runs to average over", 1);
+    args.addOptionWithDefault("--eps", "tolerance level for load imbalance",
+                              0.03);
+    args.addOptionWithDefault("--iters",
+                              "number of iterations in initial phase", 1);
+    args.addOptionWithDefault("--runs",
+                              "number of partitioning runs to average over", 1);
     args.addOption("--matrices", "list of matrices to partition", true);
     args.addOption("--plot", "show plot of convergence");
     args.addOption("--benchmark", "benchmark partitioning");
     args.addOption("--randomize", "visit vertices in random order");
     args.addOption("--compare-mg", "also apply medium-grain to matrices");
-    args.addOption("--save-to-tex-table", "file to write result as tex table to ");
+    args.addOption("--save-to-tex-table",
+                   "file to write result as tex table to ");
     if (!args.parse(argc, argv))
         return -1;
 
@@ -43,6 +48,12 @@ int main(int argc, char* argv[])
         model = HGModel::row_net;
     else if (modelName == "column_net")
         model = HGModel::column_net;
+    else if (modelName == "auto") {
+        // CHOOSE BEST DEPENDING ON MATRIX... how?
+        ZeeLogWarning << "Automatically choosing model not implemented yet"
+                      << endLog;
+        model = HGModel::row_net;
+    }
 
     TIdx procs = args.as<TIdx>("--procs");
     auto epsilon = args.as<double>("--eps");
@@ -60,6 +71,7 @@ int main(int argc, char* argv[])
     report.addColumn("n");
     report.addColumn("N");
     report.addColumn("V_HP");
+    report.addColumn("V_HP_m");
     report.addColumn("SD");
     report.addColumn("V_C");
     if (compareMg && procs == 2)
@@ -73,16 +85,13 @@ int main(int argc, char* argv[])
         bench.phase(matrix);
 
         // Initialize the matrix from file
-        DSparseMatrix<TVal, TIdx> A{
-            "data/matrices/" + matrix  + ".mtx",
-            1
-        };
+        DSparseMatrix<TVal, TIdx> A{"data/matrices/" + matrix + ".mtx", 1};
 
         report.addResult(matrix, "m", A.getRows());
         report.addResult(matrix, "n", A.getCols());
         report.addResult(matrix, "N", A.nonZeros());
 
-        //ZeeAssert(A.getRows() == A.getCols());
+        // ZeeAssert(A.getRows() == A.getCols());
 
         auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
         auto u = DVector<TVal, TIdx>{A.getRows()};
@@ -91,13 +100,15 @@ int main(int argc, char* argv[])
         pA.initialize(A, model);
 
         std::vector<double> Vs;
+        double bestV = std::numeric_limits<double>::max();
+
         for (TIdx run = 0; run < runs; ++run) {
             if (run != 0)
                 pA.randomReset(A, model);
             pA.initialPartitioning(iters);
 
             std::vector<TIdx> communicationVolumes;
-                communicationVolumes.push_back(A.communicationVolume());
+            communicationVolumes.push_back(A.communicationVolume());
 
             for (int i = 1; i <= 1000; ++i) {
                 pA.refineWithIterations(A.nonZeros(), 0, 0, randomize);
@@ -109,8 +120,10 @@ int main(int argc, char* argv[])
 
             ZeeLogVar(communicationVolumes);
             Vs.push_back((double)communicationVolumes.back());
+            if (Vs.back() < bestV)
+                bestV = Vs.back();
 
-            //A.spy("steam", true);
+            // A.spy("steam", true);
             if (plot) {
                 auto p = Zee::Plotter<TIdx>();
                 p["xlabel"] = "iterations";
@@ -119,10 +132,10 @@ int main(int argc, char* argv[])
                 p.addLine(communicationVolumes, "communicationVolumes");
                 p.plot("comvol_pulp_" + matrix, true);
             }
-
         }
 
-        double sum = std::accumulate(Vs.begin(), Vs.end(), 0.0, std::plus<double>());
+        double sum =
+            std::accumulate(Vs.begin(), Vs.end(), 0.0, std::plus<double>());
         double average = sum / Vs.size();
 
         if (Vs.size() > 1) {
@@ -136,6 +149,7 @@ int main(int argc, char* argv[])
         }
 
         report.addResult(matrix, "V_HP", average);
+        report.addResult(matrix, "V_HP_m", bestV);
 
         ZeeLogVar(A.loadImbalance());
 
@@ -174,29 +188,29 @@ int main(int argc, char* argv[])
                  << std::setprecision(2) << averageImprovement * 100.0 << "%"
                  << endLog;
 
-//    for (auto matrix : matrices) {
-//        // Initialize the matrix from file
-//        DSparseMatrix<TVal, TIdx> A{
-//            "data/matrices/" + matrix  + ".mtx",
-//            1
-//        };
-//
-//        MGPartitioner<decltype(A)> mgPartitioner;
-//        mgPartitioner.partition(A);
-//        A.spy(matrix + "_mg");
-//
-//        ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
-//        while (!mgPartitioner.locallyOptimal()) {
-//            mgPartitioner.refine(A);
-//        }
-//        ZeeLogVar(A.communicationVolume());
-//    }
+    //    for (auto matrix : matrices) {
+    //        // Initialize the matrix from file
+    //        DSparseMatrix<TVal, TIdx> A{
+    //            "data/matrices/" + matrix  + ".mtx",
+    //            1
+    //        };
+    //
+    //        MGPartitioner<decltype(A)> mgPartitioner;
+    //        mgPartitioner.partition(A);
+    //        A.spy(matrix + "_mg");
+    //
+    //        ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
+    //        while (!mgPartitioner.locallyOptimal()) {
+    //            mgPartitioner.refine(A);
+    //        }
+    //        ZeeLogVar(A.communicationVolume());
+    //    }
 
-//    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
-//    pVecs.partition();
-//    pVecs.localizeMatrix();
-//
-//    u = A * v;
+    //    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
+    //    pVecs.partition();
+    //    pVecs.localizeMatrix();
+    //
+    //    u = A * v;
 
     return 0;
 }

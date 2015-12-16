@@ -15,6 +15,12 @@ class ArgParse {
         for (int i = 1; i < argc; ++i) {
             if (argv[i][0] == '-') {
                 currentFlag = std::string(argv[i]);
+                if (currentFlag != "-h" &&
+                    defaults_.find(currentFlag) == defaults_.end()) {
+                    listHelp();
+                    ZeeLogError << "Unrecognized option: " << currentFlag << endLog;
+                    return false;
+                }
                 args_[std::string(argv[i])] = "";
             } else {
                 if (currentFlag.empty()) {
@@ -32,6 +38,11 @@ class ArgParse {
             }
         }
 
+        if (wasPassed("-h")) {
+            listHelp();
+            return false;
+        }
+
         // set defaults for non-passed values
         for (auto& option : defaults_) {
             if (args_.find(option.first) == args_.end()) {
@@ -46,11 +57,6 @@ class ArgParse {
                     args_[option.first] = option.second;
                 }
             }
-        }
-
-        if (wasPassed("-h")) {
-            listHelp();
-            return false;
         }
 
         return true;

@@ -28,7 +28,7 @@ class DHypergraph {
             if (this->nets_[n].size() > maximumNetSize)
                 continue;
 
-            if (this->netsSizeRank_[n] > netsToConsider)
+            if (this->netsSizeRank_[n] >= netsToConsider)
                 continue;
 
             for (TIdx i = 0; i < this->partCount_; ++i)
@@ -74,6 +74,11 @@ class DHypergraph {
                           TIdx rhs) {
                       return this->nets_[lhs].size() < this->nets_[rhs].size();
                   });
+
+        // for (auto net : netsBySize) {
+        //     ZeeLogVar(this->nets_[net].size());
+        // }
+        // ZeeAssert(0);
 
         for (TIdx i = 0; i < nets_.size(); ++i) {
             this->netsSizeRank_[netsBySize[i]] = i;
