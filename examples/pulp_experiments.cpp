@@ -14,7 +14,22 @@ int main(int argc, char* argv[])
     //----------------------------------------------------------------------------
     // parse CLI args
 
-    auto args = ArgParse(argc, argv);
+    auto args = ArgParse();
+    args.addOptionWithDefault("--hg", "hypergraph model to use, should be "
+                                      "chosen in set { row_net, column_net, "
+                                      "fine_grain }",
+                              "fine_grain");
+    args.addOptionWithDefault("--procs", "number of parts", 2);
+    args.addOptionWithDefault("--eps", "tolerance level for load imbalance", 0.03);
+    args.addOptionWithDefault("--iters", "number of iterations in initial phase", 1);
+    args.addOptionWithDefault("--runs", "number of partitioning runs to average over", 1);
+    args.addOption("--matrices", "list of matrices to partition", true);
+    args.addOption("--plot", "show plot of convergence");
+    args.addOption("--benchmark", "benchmark partitioning");
+    args.addOption("--randomize", "visit vertices in random order");
+    args.addOption("--compare-mg", "also apply medium-grain to matrices");
+    if (!args.parse(argc, argv))
+        return -1;
 
     auto matrices = args.asList("--matrices");
     ZeeLogVar(matrices);
@@ -27,39 +42,15 @@ int main(int argc, char* argv[])
         model = HGModel::row_net;
     else if (modelName == "column_net")
         model = HGModel::column_net;
-    else {
-        ZeeLogInfo << "Using default hypergraph model (fine-grain)" << endLog;
-    }
 
     TIdx procs = args.as<TIdx>("--procs");
-    if (procs == 0) {
-        procs = 2;
-        ZeeLogInfo << "Using default number of processors (" << procs << ")"
-                   << endLog;
-    }
-
     auto epsilon = args.as<double>("--eps");
-    if (epsilon == 0) {
-        epsilon = 0.03;
-        ZeeLogInfo << "Using default tolerance: " << epsilon << endLog;
-    }
-
     bool plot = args.wasPassed("--plot");
     bool benchmark = args.wasPassed("--benchmark");
     bool randomize = args.wasPassed("--randomize");
     bool compareMg = args.wasPassed("--compare-mg");
-
     TIdx runs = args.as<TIdx>("--runs");
-    if (runs == 0) {
-        runs = 1;
-        ZeeLogInfo << "Using default number of runs (" << runs << ")" << endLog;
-    }
-
     TIdx iters = args.as<TIdx>("--iters");
-    if (iters == 0) {
-        iters = 1;
-        ZeeLogInfo << "Using default number of iters (" << iters << ")" << endLog;
-    }
 
     //----------------------------------------------------------------------------
 

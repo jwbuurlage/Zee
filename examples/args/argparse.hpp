@@ -1,11 +1,16 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <iostream>
 #include <sstream>
 
 class ArgParse {
   public:
-    ArgParse(int argc, char* argv[]) {
+    ArgParse() { }
+
+    bool parse(int argc, char* argv[]) {
+        programName_ = std::string(argv[0]);
+
         std::string currentFlag;
         for (int i = 1; i < argc; ++i) {
             if (argv[i][0] == '-') {
@@ -13,8 +18,8 @@ class ArgParse {
                 args_[std::string(argv[i])] = "";
             } else {
                 if (currentFlag.empty()) {
-                    ZeeLogError << "ArgParse: argument before flag." << endLog;
-                    return;
+                    ZeeLogError << "ArgParse: argument given before initial flag." << endLog;
+                    return false;
                 }
 
                 auto val = std::string(argv[i]);
@@ -26,6 +31,65 @@ class ArgParse {
                 }
             }
         }
+
+        // set defaults for non-passed values
+        for (auto& option : defaults_) {
+            if (args_.find(option.first) == args_.end()) {
+                if (required_[option.first]) {
+                    listHelp();
+                    ZeeLogError << "Missing required argument: " << option.first
+                                << endLog;
+                    return false;
+                }
+
+                if (!option.second.empty()) {
+                    args_[option.first] = option.second;
+                }
+            }
+        }
+
+        if (wasPassed("-h")) {
+            listHelp();
+            return false;
+        }
+
+        return true;
+    }
+
+    void listHelp() {
+        std::cout << "USAGE: " << std::endl;
+        std::cout << "\t" << programName_ << " ";
+        for (auto& option : defaults_) {
+            if (required_[option.first])
+                std::cout << option.first << " ";
+            else
+                std::cout << "[" << option.first << "] ";
+        }
+
+        std::cout << std::endl << std::endl << "OPTIONS: " << std::endl;
+
+        for (auto& option : defaults_) {
+            std::cout << "\t" << option.first << ": " << descriptions_[option.first];
+            if (!defaults_[option.first].empty())
+                std::cout << ". (" << option.second << ")";
+            std::cout << std::endl;
+        }
+    }
+
+    void addOption(std::string option, std::string description,
+                   bool optionRequired = false) {
+        defaults_[option] = "";
+        descriptions_[option] = description;
+        required_[option] = optionRequired;
+    }
+
+    template <typename T>
+    void addOptionWithDefault(std::string option, std::string description,
+                              T defaultValue) {
+        std::stringstream ss;
+        ss << defaultValue;
+        defaults_[option] = ss.str();
+        descriptions_[option] = description;
     }
 
     bool wasPassed(std::string key) {
@@ -72,5 +136,9 @@ class ArgParse {
     }
 
   private:
+    std::string programName_;
     std::map<std::string, std::string> args_;
+    std::map<std::string, std::string> defaults_;
+    std::map<std::string, std::string> descriptions_;
+    std::map<std::string, bool> required_;
 };
