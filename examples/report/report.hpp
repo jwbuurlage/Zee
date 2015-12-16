@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 
 class Report {
   public:
@@ -81,7 +82,37 @@ class Report {
     void saveToCSV();
     void readFromCSV();
 
-    void saveToTex();
+    void saveToTex(std::string filename) {
+        std::ofstream fout(filename);
+        fout << "\\begin{table}" << std::endl;
+        fout << "\\begin{tabular}{|l|";
+        for (unsigned int i = 0; i < columns_.size(); ++i) {
+            fout << "c";
+            fout << ((i < (columns_.size() - 1)) ? " " : "|}");
+        }
+        fout << std::endl << "\\hline" << std::endl;
+        fout << rowTitle_ << " & ";
+        for (unsigned int i = 0; i < columns_.size();  ++i) {
+            fout << "\\verb|" << columns_[i] << "|";
+            fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
+        }
+        fout << std::endl;
+        fout << "\\hline" << std::endl;
+
+        for (auto& rowCols : entries_) {
+            fout << "\\verb|" << rowCols.first << "| & ";
+            for (unsigned int i = 0; i < columns_.size();  ++i) {
+                fout << rowCols.second[columns_[i]];
+                fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
+            }
+            fout << std::endl;
+        }
+        fout << "\\hline" << std::endl;
+        fout << "\\end{tabular}" << std::endl;;
+
+        fout << "\\caption{\\ldots}" << std::endl;
+        fout << "\\end{table}" << std::endl;
+    }
 
   private:
     std::string title_;

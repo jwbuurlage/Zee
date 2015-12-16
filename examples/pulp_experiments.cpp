@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
     args.addOption("--benchmark", "benchmark partitioning");
     args.addOption("--randomize", "visit vertices in random order");
     args.addOption("--compare-mg", "also apply medium-grain to matrices");
+    args.addOption("--save-to-tex-table", "file to write result as tex table to ");
     if (!args.parse(argc, argv))
         return -1;
 
@@ -61,7 +62,7 @@ int main(int argc, char* argv[])
     report.addColumn("V_HP");
     report.addColumn("SD");
     report.addColumn("V_C");
-    if (procs == 2)
+    if (compareMg && procs == 2)
         report.addColumn("V_MG");
 
     auto bench = Zee::Benchmark("PuLP");
@@ -163,6 +164,8 @@ int main(int argc, char* argv[])
     bench.finish();
 
     report.print();
+    if (args.wasPassed("--save-to-tex-table"))
+        report.saveToTex(args.asString("--save-to-tex-table"));
 
     double sumImprovements = std::accumulate(
         improvements.begin(), improvements.end(), 0.0, std::plus<double>());
