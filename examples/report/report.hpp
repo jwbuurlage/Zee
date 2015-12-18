@@ -84,7 +84,7 @@ class Report {
 
     void saveToTex(std::string filename) {
         std::ofstream fout(filename);
-        fout << "\\begin{table}" << std::endl;
+        fout << "\\begin{table}[H]" << std::endl;
         fout << "\\begin{tabular}{|l|";
         for (unsigned int i = 0; i < columns_.size(); ++i) {
             fout << "c";
