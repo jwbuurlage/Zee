@@ -21,7 +21,7 @@ class ArgParse {
                     ZeeLogError << "Unrecognized option: " << currentFlag << endLog;
                     return false;
                 }
-                args_[std::string(argv[i])] = "";
+                args_[currentFlag] = default_[currentFlag];
             } else {
                 if (currentFlag.empty()) {
                     ZeeLogError << "ArgParse: argument given before initial flag." << endLog;
