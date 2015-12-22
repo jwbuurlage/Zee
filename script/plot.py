@@ -16,6 +16,8 @@ import matplotlib.patches as patches
 import matplotlib.ticker as ticker
 import numpy as np
 
+from matplotlib2tikz import save as tikz_save
+
 from math import log, ceil
 
 parser = argparse.ArgumentParser(description=
@@ -35,17 +37,16 @@ parser.add_argument('--directory', type=str, default='',
         help="the directory in which the matrices are stored. Including"
         " the trailing /")
 
+parser.add_argument('--figsize', type=int, default=3,
+        help="size in inches of the figure")
+
 parser.add_argument('files', type=str, nargs='+',
         help="The file(s) to use as input")
 
 args = parser.parse_args()
 
-if args.filetype is 'pgf':
-    matplotlib.use('pgf')
-
 def get_color(proc):
     # ith element of has denumerator of 2^ceil(2log(p) + 1)
-    #                    numerator is n - whats above, 1 + that
     level = ceil(log(proc + 1, 2))
     denumerator = 2**level
     numerator = 1 + (proc - (denumerator / 2))*2
@@ -57,13 +58,17 @@ def get_color(proc):
 
 def finalize_plt(filename):
     extension_length = len(filename.split('.')[-1])
-    if args.save:
-        plt.savefig(filename[:-extension_length] + args.filetype)
-    elif args.showfile:
+    if args.filetype == "tikz":
+        print("INFO: Saved:", filename[:-extension_length] + args.filetype)
+        tikz_save(filename[:-extension_length] + args.filetype)
+    elif args.save:
+        print("INFO: Saved:", filename[:-extension_length] + args.filetype)
         outfilename = filename[:-extension_length] + args.filetype
-        plt.savefig(outfilename)
-        os.system("xdg-open " + outfilename)
+        plt.savefig(outfilename, bbox_inches='tight')
+        if args.showfile:
+            os.system("xdg-open " + outfilename)
     else:
+        print("INFO: Showing")
         plt.show()
 
 ###################################################
@@ -93,12 +98,15 @@ def spy(matrix_file):
 
             m, n, nz = map(int, fin.readline().split(' '))
 
-            fig = plt.figure()
+            fig = plt.figure(figsize=(args.figsize, args.figsize))
             ax = fig.add_subplot(1, 1, 1, aspect='equal')
 
             # force integer labels
             ax.get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
             ax.get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+            plt.xticks([]);
+            plt.yticks([]);
+            # plt.axis('off')
 
             # set the appropriate limits
             plt.xlim([0, n])

@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
                               "number of partitioning runs to average over", 1);
     args.addOption("--matrices", "list of matrices to partition", true);
     args.addOption("--plot", "show plot of convergence");
+    args.addOption("--spy", "save spy plots of best partitionings");
     args.addOption("--benchmark", "benchmark partitioning");
     args.addOption("--randomize", "visit vertices in random order");
     args.addOption("--compare-mg", "also apply medium-grain to matrices");
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
     bool benchmark = args.wasPassed("--benchmark");
     bool randomize = args.wasPassed("--randomize");
     bool compareMg = args.wasPassed("--compare-mg");
+    bool spyMatrix = args.wasPassed("--spy");
     TIdx runs = args.as<TIdx>("--runs");
     TIdx iters = args.as<TIdx>("--iters");
 
@@ -120,10 +122,13 @@ int main(int argc, char* argv[]) {
 
             ZeeLogVar(communicationVolumes);
             Vs.push_back((double)communicationVolumes.back());
-            if (Vs.back() < bestV)
+            if (Vs.back() < bestV) {
                 bestV = Vs.back();
+                if (spyMatrix) {
+                    A.spy(matrix + "_hyperpulp");
+                }
+            }
 
-            // A.spy("steam", true);
             if (plot) {
                 auto p = Zee::Plotter<TIdx>();
                 p["xlabel"] = "iterations";
