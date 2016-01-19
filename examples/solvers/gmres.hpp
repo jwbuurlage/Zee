@@ -6,7 +6,7 @@ namespace GMRES
 {
 
 template<typename TVal, typename TIdx>
-void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
+void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         const Zee::DVector<TVal, TIdx>& b,
         Zee::DVector<TVal, TIdx>& x,
         TIdx maxIterations,
@@ -75,6 +75,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             // We introduce a new basis vector which we will orthogonalize
             // using modified Gramm-Schmidt
             TVector w(A.getRows());
+
             w = A * V[i];
 
             for (TIdx k = 0; k <= i; ++k) {
@@ -109,6 +110,7 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             // update rho
             auto rho = std::abs(bHat[i + 1]);
             rhos.push_back(rho);
+            ZeeLogVar(rho);
 
             // check if we are within tolerance level
             if (rho < tol) {
@@ -124,13 +126,17 @@ void solve(const Zee::DSparseMatrix<TVal, TIdx>& A,
             y[nr] = bHat[nr] / R[nr][nr];
         }
 
-        // subtract sum ( i dont know what i did )
-        for (TIdx k = nr - 1; k >= 0; --k) {
+        // subtract sum
+        for (TIdx k = nr - 1;; --k) {
             TVal sum = 0;
             for (TIdx i = k + 1; i <= nr; ++i) {
                 sum += R[i][k] * y[i];
             }
+
             y[k] = (bHat[k] - sum) / R[k][k];
+
+            if (k == 0)
+                break;
         }
 
         for (TIdx i = 0; i < nr; ++i) {
