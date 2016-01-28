@@ -14,7 +14,7 @@ int main()
     ZeeLogInfo << "-- Starting GMRES example" << endLog;
 
     // We initialize the matrix with cyclic distribution
-    std::string matrix = "fpga_dcop_05";
+    std::string matrix = "Chebyshev3";
     auto A = DSparseMatrix<TVal, TIdx>("data/matrices/" + matrix + ".mtx", 4);
 
     auto b = DVector<TVal, TIdx>{A.getRows(), 1.0};
@@ -22,14 +22,10 @@ int main()
     pVecs.partition();
     pVecs.localizeMatrix();
 
-    ZeeLogVar(b);
     b = A * b;
-    ZeeLogVar(b);
 
     // initial x is the zero vector
     auto x = DVector<TVal, TIdx>{A.getCols()};
-
-    ZeeLogVar(x);
 
     // Start GMRES
     GMRES::solve<TVal, TIdx>(A, // Matrix
@@ -37,7 +33,7 @@ int main()
             x,                  // resulting guess for x
             1,                // outer iterations
             50,                // inner iterations
-            100,               // tolerance level
+            1e-6,               // tolerance level
             true);             // plot residuals
 
     DVector<TVal, TIdx> c{A.getRows()};

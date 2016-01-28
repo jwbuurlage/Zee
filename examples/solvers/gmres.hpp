@@ -99,6 +99,13 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 
             // update c and s
             auto delta = sqrt(R[i][i] * R[i][i] + H[i][i + 1] * H[i][i + 1]);
+
+            if (delta < 1e-6) {
+                nr = i;
+                finished = true;
+                break;
+            }
+
             c[i] = R[i][i] / delta;
             s[i] = H[i][i + 1] / delta;
 
@@ -155,6 +162,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         bench.finish();
 
     if (plotResiduals) {
+        ZeeLogVar(rhos);
         // We plot the residuals
         auto p = Zee::Plotter<>();
         p["xlabel"] = "iterations";

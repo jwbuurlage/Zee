@@ -72,10 +72,11 @@ int main(int argc, char* argv[]) {
     report.addColumn("m");
     report.addColumn("n");
     report.addColumn("N");
-    report.addColumn("V_HP");
-    report.addColumn("V_HP_m");
-    report.addColumn("SD");
+    report.addColumn("V_HP", "V_{\\text{HP}}");
+    report.addColumn("V_HP_m", "V_{\\text{HP}}^{\\text{min}}");
+    // report.addColumn("SD");
     report.addColumn("V_C");
+    report.addColumn("G");
     if (compareMg && procs == 2)
         report.addColumn("V_MG");
 
@@ -92,8 +93,6 @@ int main(int argc, char* argv[]) {
         report.addResult(matrix, "m", A.getRows());
         report.addResult(matrix, "n", A.getCols());
         report.addResult(matrix, "N", A.nonZeros());
-
-        // ZeeAssert(A.getRows() == A.getCols());
 
         auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
         auto u = DVector<TVal, TIdx>{A.getRows()};
@@ -150,10 +149,15 @@ int main(int argc, char* argv[]) {
                     return lhs + (rhs - average) * (rhs - average);
                 });
             sd = sqrt(squared_sum / (Vs.size() - 1));
-            report.addResult(matrix, "SD", sd);
-        }
 
-        report.addResult(matrix, "V_HP", average);
+            std::stringstream volumeResult;
+            volumeResult << std::fixed << std::setprecision(1) << average
+                         << " +- " << sd;
+
+            report.addResult(matrix, "V_HP", volumeResult.str());
+        } else {
+            report.addResult(matrix, "V_HP", average);
+        }
         report.addResult(matrix, "V_HP_m", bestV);
 
         ZeeLogVar(A.loadImbalance());
@@ -164,6 +168,12 @@ int main(int argc, char* argv[]) {
         improvements.push_back((comVol - average) / comVol);
 
         report.addResult(matrix, "V_C", comVol);
+
+        auto G = (1.0 - ((double)average / comVol)) * 100.0;
+        std::stringstream gainResult;
+        gainResult << std::fixed << std::setprecision(1) << G << "%";
+
+        report.addResult(matrix, "G", gainResult.str());
 
         if (compareMg && procs == 2) {
             MGPartitioner<decltype(A)> mg;
@@ -192,30 +202,6 @@ int main(int argc, char* argv[]) {
     ZeeLogResult << "Average improvement: " << std::fixed
                  << std::setprecision(2) << averageImprovement * 100.0 << "%"
                  << endLog;
-
-    //    for (auto matrix : matrices) {
-    //        // Initialize the matrix from file
-    //        DSparseMatrix<TVal, TIdx> A{
-    //            "data/matrices/" + matrix  + ".mtx",
-    //            1
-    //        };
-    //
-    //        MGPartitioner<decltype(A)> mgPartitioner;
-    //        mgPartitioner.partition(A);
-    //        A.spy(matrix + "_mg");
-    //
-    //        ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
-    //        while (!mgPartitioner.locallyOptimal()) {
-    //            mgPartitioner.refine(A);
-    //        }
-    //        ZeeLogVar(A.communicationVolume());
-    //    }
-
-    //    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
-    //    pVecs.partition();
-    //    pVecs.localizeMatrix();
-    //
-    //    u = A * v;
 
     return 0;
 }

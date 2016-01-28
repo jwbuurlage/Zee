@@ -99,7 +99,7 @@ class Plotter {
         }
 
         void showFile(std::string filename) const {
-            auto command = "./script/plot.py --showfile " + filename;
+            auto command = "./script/plot.py --save --showfile " + filename;
             std::system(command.c_str());
         }
 

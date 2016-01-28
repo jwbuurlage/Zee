@@ -11,9 +11,13 @@ class Report {
         rowSize_ = rowTitle_.size();
     }
 
-    void addColumn(std::string col) {
-        columns_.push_back(col);
-        columnWidth_[col] = col.size();
+    void addColumn(std::string colName, std::string texName = "") {
+        columns_.push_back(colName);
+        if (!texName.empty())
+            columnsTex_.push_back(texName);
+        else
+            columnsTex_.push_back(colName);
+        columnWidth_[colName] = colName.size();
     }
 
     void addRow(std::string row) {
@@ -31,7 +35,7 @@ class Report {
             return;
         }
         std::stringstream ss;
-        ss << std::fixed << std::setprecision(2) << result;
+        ss << std::fixed << std::setprecision(1) << result;
         entries_[row][column] = ss.str();
 
         if (ss.str().size() > columnWidth_[column]) {
@@ -52,7 +56,7 @@ class Report {
 
         auto addElement = [](int width, std::stringstream& result,
                              std::string entry) {
-            result << std::left << std::setprecision(2) << std::setw(width) << std::setfill(' ')
+            result << std::left << std::setprecision(1) << std::setw(width) << std::setfill(' ')
                    << entry;
         };
 
@@ -83,17 +87,34 @@ class Report {
     void readFromCSV();
 
     void saveToTex(std::string filename) {
+        auto replaceTex = [](std::string entry) {
+            std::string texEntry = entry;
+
+            auto pos = entry.find("+-");
+            if (pos != std::string::npos) {
+                texEntry = texEntry.substr(0, pos) + "\\pm" + texEntry.substr(pos + 2);
+            }
+
+            pos = entry.find("%");
+            if (pos != std::string::npos) {
+                texEntry = texEntry.substr(0, pos) + "\\%" + texEntry.substr(pos + 1);
+            }
+
+            return texEntry;
+        };
+
         std::ofstream fout(filename);
-        fout << "\\begin{table}[H]" << std::endl;
+        fout << "\\begin{table}" << std::endl;
+        fout << "\\centering" << std::endl;
         fout << "\\begin{tabular}{|l|";
         for (unsigned int i = 0; i < columns_.size(); ++i) {
             fout << "c";
             fout << ((i < (columns_.size() - 1)) ? " " : "|}");
         }
         fout << std::endl << "\\hline" << std::endl;
-        fout << rowTitle_ << " & ";
+        fout << "\\textbf{" << rowTitle_ << "} & ";
         for (unsigned int i = 0; i < columns_.size();  ++i) {
-            fout << "\\verb|" << columns_[i] << "|";
+            fout << "$" << columnsTex_[i] << "$";
             fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
         }
         fout << std::endl;
@@ -102,7 +123,8 @@ class Report {
         for (auto& rowCols : entries_) {
             fout << "\\verb|" << rowCols.first << "| & ";
             for (unsigned int i = 0; i < columns_.size();  ++i) {
-                fout << rowCols.second[columns_[i]];
+                fout << "$" << replaceTex(rowCols.second[columns_[i]])
+                     << "$";
                 fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
             }
             fout << std::endl;
@@ -119,6 +141,7 @@ class Report {
     std::string rowTitle_;
     std::map<std::string, std::map<std::string, std::string>> entries_;
     std::vector<std::string> columns_;
+    std::vector<std::string> columnsTex_;
     std::map<std::string, unsigned int> columnWidth_;
     unsigned int rowSize_;
 };
