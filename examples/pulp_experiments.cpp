@@ -5,12 +5,20 @@
 #include "report/report.hpp"
 
 #include <limits>
+#include <map>
+#include <string>
 
 using namespace Zee;
 
 int main(int argc, char* argv[]) {
     using TVal = float;
     using TIdx = uint64_t;
+
+    static std::map<HGModel, std::string> modelNames = {
+        { HGModel::row_net, "row-net" },
+        { HGModel::column_net, "column-net" },
+        { HGModel::fine_grain, "fine-grain" }
+    };
 
     //----------------------------------------------------------------------------
     // parse CLI args
@@ -35,6 +43,8 @@ int main(int argc, char* argv[]) {
     args.addOption("--compare-mg", "also apply medium-grain to matrices");
     args.addOption("--save-to-tex-table",
                    "file to write result as tex table to ");
+    args.addOption("--fraction-plot",
+                   "plot the fraction of matrices with a minimum gain");
     if (!args.parse(argc, argv))
         return -1;
 
@@ -43,17 +53,18 @@ int main(int argc, char* argv[]) {
 
     HGModel model = HGModel::fine_grain;
     auto modelName = args.asString("--hg");
-    if (modelName == "fine_grain")
+    bool autoModel = false;
+
+    ZeeLogVar(modelName);
+
+    if (modelName == "fine_grain") {
         model = HGModel::fine_grain;
-    else if (modelName == "row_net")
+    } else if (modelName == "row_net") {
         model = HGModel::row_net;
-    else if (modelName == "column_net")
+    } else if (modelName == "column_net") {
         model = HGModel::column_net;
-    else if (modelName == "auto") {
-        // CHOOSE BEST DEPENDING ON MATRIX... how?
-        ZeeLogWarning << "Automatically choosing model not implemented yet"
-                      << endLog;
-        model = HGModel::row_net;
+    } else if (modelName == "auto") {
+        autoModel = true;
     }
 
     TIdx procs = args.as<TIdx>("--procs");
@@ -63,6 +74,7 @@ int main(int argc, char* argv[]) {
     bool randomize = args.wasPassed("--randomize");
     bool compareMg = args.wasPassed("--compare-mg");
     bool spyMatrix = args.wasPassed("--spy");
+    bool fractionPlot = args.wasPassed("--fraction-plot");
     TIdx runs = args.as<TIdx>("--runs");
     TIdx iters = args.as<TIdx>("--iters");
 
@@ -79,15 +91,55 @@ int main(int argc, char* argv[]) {
     report.addColumn("G");
     if (compareMg && procs == 2)
         report.addColumn("V_MG");
+    if (autoModel)
+        report.addColumn("model", "\\text{model}");
+    report.addColumn("eps", "$\\epsilon$");
 
     auto bench = Zee::Benchmark("PuLP");
 
     std::vector<double> improvements;
+    std::vector<double> gains;
     for (auto matrix : matrices) {
         report.addRow(matrix);
         bench.phase(matrix);
 
         // Initialize the matrix from file
+        DSparseMatrix<TVal, TIdx> B{"data/matrices/" + matrix + ".mtx", 1};
+
+        auto cyclicComVol = 0;
+        if (autoModel) {
+            CyclicPartitioner<decltype(B)> cyclicRow(procs, CyclicType::row);
+            cyclicRow.partition(B);
+            auto comVolRow = B.communicationVolume();
+
+            CyclicPartitioner<decltype(B)> cyclicCol(procs, CyclicType::column);
+            cyclicCol.partition(B);
+            auto comVolColumn = B.communicationVolume();
+
+            if (comVolRow > comVolColumn) {
+                // Better to keep columns together
+                model = HGModel::row_net;
+                cyclicComVol = comVolColumn;
+            } else {
+                model = HGModel::column_net;
+                cyclicComVol = comVolRow;
+            }
+        } else {
+            if (model == HGModel::row_net) {
+                CyclicPartitioner<decltype(B)> cyclic(procs, CyclicType::column);
+                cyclic.partition(B);
+                cyclicComVol = B.communicationVolume();
+            } else {
+                // Also for fine_grain and others
+                CyclicPartitioner<decltype(B)> cyclic(procs, CyclicType::row);
+                cyclic.partition(B);
+                cyclicComVol = B.communicationVolume();
+            }
+        }
+
+        ZeeLogVar(modelNames[model]);
+
+
         DSparseMatrix<TVal, TIdx> A{"data/matrices/" + matrix + ".mtx", 1};
 
         report.addResult(matrix, "m", A.getRows());
@@ -102,6 +154,7 @@ int main(int argc, char* argv[]) {
 
         std::vector<double> Vs;
         double bestV = std::numeric_limits<double>::max();
+        double bestEps = -1.0;
 
         for (TIdx run = 0; run < runs; ++run) {
             if (run != 0)
@@ -123,6 +176,7 @@ int main(int argc, char* argv[]) {
             Vs.push_back((double)communicationVolumes.back());
             if (Vs.back() < bestV) {
                 bestV = Vs.back();
+                bestEps = A.loadImbalance();
                 if (spyMatrix) {
                     A.spy(matrix + "_hyperpulp");
                 }
@@ -160,20 +214,25 @@ int main(int argc, char* argv[]) {
         }
         report.addResult(matrix, "V_HP_m", bestV);
 
-        ZeeLogVar(A.loadImbalance());
+        std::stringstream epsResult;
+        epsResult << std::fixed << std::setprecision(4) << bestEps - 1.0;
+        report.addResult(matrix, "eps", epsResult.str());
 
-        CyclicPartitioner<decltype(A)> cyclic(procs);
-        cyclic.partition(A);
-        auto comVol = A.communicationVolume();
-        improvements.push_back((comVol - average) / comVol);
+        improvements.push_back((cyclicComVol - average) / cyclicComVol);
 
-        report.addResult(matrix, "V_C", comVol);
+        report.addResult(matrix, "V_C", cyclicComVol);
 
-        auto G = (1.0 - ((double)average / comVol)) * 100.0;
+        auto G = (1.0 - ((double)average / cyclicComVol)) * 100.0;
         std::stringstream gainResult;
         gainResult << std::fixed << std::setprecision(1) << G << "%";
 
+        gains.push_back(G);
         report.addResult(matrix, "G", gainResult.str());
+
+        if (autoModel) {
+            report.addResult(matrix, "model", modelNames[model],
+                             "\\text{" + modelNames[model] + "}");
+        }
 
         if (compareMg && procs == 2) {
             MGPartitioner<decltype(A)> mg;
@@ -202,6 +261,27 @@ int main(int argc, char* argv[]) {
     ZeeLogResult << "Average improvement: " << std::fixed
                  << std::setprecision(2) << averageImprovement * 100.0 << "%"
                  << endLog;
+
+    if (fractionPlot) {
+        TIdx totalMatrices = matrices.size();
+        std::sort(gains.begin(), gains.end());
+        std::vector<double> fractions;
+        TIdx k = 0;
+        for (double i = 0; i < 100.0; i += 1.0) {
+            while (k < gains.size() && gains[k] < i) {
+                ++k;
+            }
+            fractions.push_back(((double)totalMatrices - k) / (double)totalMatrices);
+        }
+
+        ZeeLogVar(fractions);
+
+        auto p = Zee::Plotter<double>();
+        p["xlabel"] = "$G$";
+        p["ylabel"] = "fraction";
+        p.addLine(fractions, "fractions");
+        p.plot("fractions", true);
+    }
 
     return 0;
 }

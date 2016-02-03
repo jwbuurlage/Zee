@@ -37,10 +37,17 @@ class Report {
         std::stringstream ss;
         ss << std::fixed << std::setprecision(1) << result;
         entries_[row][column] = ss.str();
+        entriesTex_[row][column] = ss.str();
 
         if (ss.str().size() > columnWidth_[column]) {
             columnWidth_[column] = ss.str().size();
         }
+    }
+
+    void addResult(std::string row, std::string column, std::string result,
+                   std::string texResult) {
+        addResult(row, column, result);
+        entriesTex_[row][column] = texResult;
     }
 
     void print() {
@@ -108,7 +115,7 @@ class Report {
         fout << "\\centering" << std::endl;
         fout << "\\begin{tabular}{|l|";
         for (unsigned int i = 0; i < columns_.size(); ++i) {
-            fout << "c";
+            fout << "l";
             fout << ((i < (columns_.size() - 1)) ? " " : "|}");
         }
         fout << std::endl << "\\hline" << std::endl;
@@ -120,7 +127,7 @@ class Report {
         fout << std::endl;
         fout << "\\hline" << std::endl;
 
-        for (auto& rowCols : entries_) {
+        for (auto& rowCols : entriesTex_) {
             fout << "\\verb|" << rowCols.first << "| & ";
             for (unsigned int i = 0; i < columns_.size();  ++i) {
                 fout << "$" << replaceTex(rowCols.second[columns_[i]])
@@ -140,6 +147,7 @@ class Report {
     std::string title_;
     std::string rowTitle_;
     std::map<std::string, std::map<std::string, std::string>> entries_;
+    std::map<std::string, std::map<std::string, std::string>> entriesTex_;
     std::vector<std::string> columns_;
     std::vector<std::string> columnsTex_;
     std::map<std::string, unsigned int> columnWidth_;

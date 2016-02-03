@@ -8,7 +8,7 @@ class DHypergraph {
   public:
     DHypergraph(TIdx vertexCount, TIdx partCount)
         : vertexCount_(vertexCount), partCount_(partCount),
-          partSize_(partCount), part_(vertexCount) {}
+          partSize_(partCount), part_(vertexCount), weights_(vertexCount) {}
 
     virtual std::vector<double> partQuality(TIdx v,
                                             std::function<double(TIdx, TIdx)> w,
@@ -45,6 +45,8 @@ class DHypergraph {
 
         return result;
     }
+
+    const std::vector<TIdx>& getWeights() const { return weights_; }
 
     TIdx partitioningLV() const {
         // compute (l - 1)-metric
@@ -132,6 +134,9 @@ class DHypergraph {
 
     // part of each vertex
     std::vector<TIdx> part_;
+
+    // weight of each vertex
+    std::vector<TIdx> weights_;
 };
 
 template <typename TIdx = Zee::default_index_type,
@@ -171,6 +176,8 @@ class FineGrainHG : public DHypergraph<TIdx> {
 
                 this->netsForVertex_[i].push_back(trip.col());
                 this->netsForVertex_[i].push_back(A.getCols() + trip.row());
+
+                this->weights_[i] = 1;
 
                 i++;
             }
@@ -219,8 +226,8 @@ class RowNetHG : public DHypergraph<TIdx> {
         TIdx s = 0;
         for (auto& image : A.getImages()) {
             for (auto& trip : *image) {
-
                 this->part_[trip.col()] = s;
+                this->weights_[trip.col()]++;
                 this->partSize_[s]++;
 
                 this->nets_[trip.row()].push_back(trip.col());
@@ -252,6 +259,7 @@ class RowNetHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
+
   private:
     TMatrix& A_;
 };
@@ -277,6 +285,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
             for (auto& trip : *image) {
 
                 this->part_[trip.row()] = s;
+                this->weights_[trip.row()]++;
                 this->partSize_[s]++;
 
                 this->nets_[trip.col()].push_back(trip.row());
@@ -307,6 +316,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
         }
         this->part_[vertex] = part;
     }
+
 
   private:
     TMatrix& A_;

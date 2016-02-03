@@ -117,7 +117,6 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
             // update rho
             auto rho = std::abs(bHat[i + 1]);
             rhos.push_back(rho);
-            ZeeLogVar(rho);
 
             // check if we are within tolerance level
             if (rho < tol) {
@@ -133,17 +132,19 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
             y[nr] = bHat[nr] / R[nr][nr];
         }
 
-        // subtract sum
-        for (TIdx k = nr - 1;; --k) {
-            TVal sum = 0;
-            for (TIdx i = k + 1; i <= nr; ++i) {
-                sum += R[i][k] * y[i];
+        if (nr > 0) {
+            // subtract sum
+            for (TIdx k = nr - 1;; --k) {
+                TVal sum = 0;
+                for (TIdx i = k + 1; i <= nr; ++i) {
+                    sum += R[i][k] * y[i];
+                }
+
+                y[k] = (bHat[k] - sum) / R[k][k];
+
+                if (k == 0)
+                    break;
             }
-
-            y[k] = (bHat[k] - sum) / R[k][k];
-
-            if (k == 0)
-                break;
         }
 
         for (TIdx i = 0; i < nr; ++i) {

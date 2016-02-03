@@ -14,8 +14,8 @@ int main()
     ZeeLogInfo << "-- Starting GMRES example" << endLog;
 
     // We initialize the matrix with cyclic distribution
-    std::string matrix = "Chebyshev3";
-    auto A = DSparseMatrix<TVal, TIdx>("data/matrices/" + matrix + ".mtx", 4);
+    std::string matrix = "GD95_c";
+    auto A = DSparseMatrix<TVal, TIdx>("data/matrices/" + matrix + ".mtx", 1);
 
     auto b = DVector<TVal, TIdx>{A.getRows(), 1.0};
     GreedyVectorPartitioner<decltype(A), decltype(b)> pVecs(A, b, b);

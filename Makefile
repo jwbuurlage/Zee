@@ -15,6 +15,7 @@ all: dirs \
 	$(OUTPUT_DIR)/vector_partitioner \
 	$(OUTPUT_DIR)/ir \
 	$(OUTPUT_DIR)/gmres \
+	$(OUTPUT_DIR)/gmres_experiments \
 	$(OUTPUT_DIR)/lial
 
 .phony: docs

@@ -14,6 +14,9 @@ class ArgParse {
         std::string currentFlag;
         for (int i = 1; i < argc; ++i) {
             if (argv[i][0] == '-') {
+                if (!currentFlag.empty() && args_[currentFlag].empty())
+                    args_[currentFlag] = defaults_[currentFlag];
+
                 currentFlag = std::string(argv[i]);
                 if (currentFlag != "-h" &&
                     defaults_.find(currentFlag) == defaults_.end()) {
@@ -21,7 +24,6 @@ class ArgParse {
                     ZeeLogError << "Unrecognized option: " << currentFlag << endLog;
                     return false;
                 }
-                args_[currentFlag] = defaults_[currentFlag];
             } else {
                 if (currentFlag.empty()) {
                     ZeeLogError << "ArgParse: argument given before initial flag." << endLog;
@@ -37,6 +39,9 @@ class ArgParse {
                 }
             }
         }
+
+        if (!currentFlag.empty() && args_[currentFlag].empty())
+            args_[currentFlag] = defaults_[currentFlag];
 
         if (wasPassed("-h")) {
             listHelp();

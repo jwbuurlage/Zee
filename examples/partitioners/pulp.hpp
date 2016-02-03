@@ -45,6 +45,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 - epsilon);
         maxPartSize_ =
             (TIdx)(((A.nonZeros() - 1) / procs) + 1) * (1.0 + epsilon);
+        epsilon_ = epsilon;
     }
 
     void initialize(TMatrix& A) override { initialize(A, HGModel::fine_grain); }
@@ -96,7 +97,43 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
         A.resetImages(aNewImages);
 
+
         constructHypergraph(A, model);
+
+
+        if (A.loadImbalance() > (1.0 + epsilon_)) {
+            if (this->procs_ > 2) {
+                ZeeLogError << "Invalid initial size for non-bipartitioning. "
+                               "No support for fixing the initialization for "
+                               "small matrices."
+                            << endLog;
+                exit(-1);
+            }
+            TIdx largePart = 0;
+            if (hyperGraph_->getPartSize(1) > hyperGraph_->getPartSize(0)) {
+                    largePart = 1;
+            }
+
+            auto weights = hyperGraph_->getWeights();
+            std::vector<TIdx> X(hyperGraph_->getVertexCount());
+            std::iota(X.begin(), X.end(), 0);
+            std::sort(X.begin(), X.end(), [weights](TIdx lhs, TIdx rhs) {
+                return weights[lhs] < weights[rhs];
+            });
+
+            for (TIdx i = 0; i < hyperGraph_->getVertexCount(); ++i) {
+                auto v = X[i];
+                if (hyperGraph_->getPart(v) == largePart)
+                    hyperGraph_->reassign(v, 1 - largePart);
+                if (A.loadImbalance() < (1.0 + epsilon_))
+                    break;
+            }
+            if (A.loadImbalance() > (1.0 + epsilon_)) {
+                ZeeLogError << "Cannot find valid initial distribution. eps = "
+                            << A.loadImbalance() << endLog;
+                exit(-1);
+            }
+        }
     }
 
     void constructHypergraph(TMatrix& A, HGModel model) {
@@ -173,29 +210,12 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                 // get neighbour counts
                 auto N = hyperGraph_->partQuality(v, w, maximumNetSize,
                                                   netsToConsider);
-
-                //ZeeLogVar(N);
-
-                //ZeeLogVar(N);
-                //// soft-max and roll
-                //std::transform(N.begin(), N.end(), N.begin(),
-                //               [](double x) { return exp(x); });
-                //double Z = std::accumulate(
-                //    N.begin(), N.end(), 0.0,
-                //    [](double lhs, double rhs) { return lhs + rhs; });
-                //if (Z == 0) {
-                //    continue;
-                //}
-                //auto p = argmax(N);
-                //auto prob = N[p] / Z;
-                //ZeeLogVar(N[p]);
-                //ZeeLogVar(prob);
-
                 auto p = argmax(N);
 
                 if (p != hyperGraph_->getPart(v) &&
-                    hyperGraph_->getPartSize(hyperGraph_->getPart(v)) >
-                        minPartSize_) {
+                    hyperGraph_->getPartSize(p) +
+                            hyperGraph_->getWeights()[v] <=
+                        maxPartSize_) {
                     hyperGraph_->reassign(v, p);
                     r += 1;
                 }
@@ -218,6 +238,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     bool initialized_ = false;
     TMatrix& A_;
 
+    double epsilon_;
     TIdx minPartSize_;
     TIdx maxPartSize_;
 
