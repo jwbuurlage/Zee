@@ -16,7 +16,7 @@ License, or (at your option) any later version.
 #include <cstdint>
 #include <memory>
 
-#include "../../default_types.hpp"
+#include "../../util/default_types.hpp"
 #include "../../operations/operation_types.hpp"
 
 namespace Zee {

@@ -27,8 +27,8 @@ License, or (at your option) any later version.
 
 #include "../base/base.hpp"
 #include "../storage.hpp"
-#include "../../common.hpp"
-#include "../../logging.hpp"
+#include "../../util/common.hpp"
+#include "../../util/logging.hpp"
 #include "../../operations/operations.hpp"
 
 namespace Zee {

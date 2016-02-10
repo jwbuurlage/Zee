@@ -2,8 +2,9 @@
 
 #include <vector>
 
-namespace GMRES
-{
+namespace Zee {
+
+namespace GMRES {
 
 template<typename TVal, typename TIdx>
 void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
@@ -176,3 +177,5 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 }
 
 } // namespace GMRES
+
+} // namespace Zee

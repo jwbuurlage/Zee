@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
     args.addOption("--spy", "save spy plots of best partitionings");
     args.addOption("--benchmark", "benchmark partitioning");
     args.addOption("--randomize", "visit vertices in random order");
+    args.addOption("--show-eps", "visit vertices in random order");
     args.addOption("--compare-mg", "also apply medium-grain to matrices");
     args.addOption("--save-to-tex-table",
                    "file to write result as tex table to ");
@@ -70,6 +71,7 @@ int main(int argc, char* argv[]) {
     TIdx procs = args.as<TIdx>("--procs");
     auto epsilon = args.as<double>("--eps");
     bool plot = args.wasPassed("--plot");
+    bool showEps = args.wasPassed("--show-eps");
     bool benchmark = args.wasPassed("--benchmark");
     bool randomize = args.wasPassed("--randomize");
     bool compareMg = args.wasPassed("--compare-mg");
@@ -93,7 +95,8 @@ int main(int argc, char* argv[]) {
         report.addColumn("V_MG");
     if (autoModel)
         report.addColumn("model", "\\text{model}");
-    report.addColumn("eps", "$\\epsilon$");
+    if (showEps)
+        report.addColumn("eps", "$\\epsilon$");
 
     auto bench = Zee::Benchmark("PuLP");
 
@@ -214,9 +217,11 @@ int main(int argc, char* argv[]) {
         }
         report.addResult(matrix, "V_HP_m", bestV);
 
-        std::stringstream epsResult;
-        epsResult << std::fixed << std::setprecision(4) << bestEps - 1.0;
-        report.addResult(matrix, "eps", epsResult.str());
+        if (showEps) {
+            std::stringstream epsResult;
+            epsResult << std::fixed << std::setprecision(4) << bestEps - 1.0;
+            report.addResult(matrix, "eps", epsResult.str());
+        }
 
         improvements.push_back((cyclicComVol - average) / cyclicComVol);
 

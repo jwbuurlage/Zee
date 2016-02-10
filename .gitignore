@@ -13,5 +13,4 @@
 *.a
 
 bin/*
-data/plots/*
-data/spies/*
+data/*

@@ -24,9 +24,9 @@ License, or (at your option) any later version.
 
 #include "../base/base.hpp"
 #include "../sparse/sparse.hpp"
-#include "../../common.hpp"
+#include "../../util/common.hpp"
 #include "../../operations/operations.hpp"
-#include "../../default_types.hpp"
+#include "../../util/default_types.hpp"
 
 namespace Zee {
 

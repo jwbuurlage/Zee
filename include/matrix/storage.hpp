@@ -18,7 +18,7 @@ License, or (at your option) any later version.
 #include <memory>
 #include <vector>
 
-#include "../logging.hpp"
+#include "../util/logging.hpp"
 
 namespace Zee {
 

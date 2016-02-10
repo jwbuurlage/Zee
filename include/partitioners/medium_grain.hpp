@@ -32,7 +32,6 @@ using std::unique_ptr;
 using std::make_unique;
 using std::vector;
 
-
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
   public:
@@ -259,8 +258,8 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         // We only support IR on bi-partitionings
         if (A.getProcs() != 2) {
             ZeeLogError << "For now MG-IR only supports bipartitionings, "
-                           "the matrix A has a " << A.getProcs()
-                        << "-way partitioning" << endLog;
+                           "the matrix A has a "
+                        << A.getProcs() << "-way partitioning" << endLog;
             return A;
         }
 

@@ -13,7 +13,7 @@ License, or (at your option) any later version.
 
 #pragma once
 
-// FIXME ?? dont want this just predeclarations
+// FIXME predeclare
 #include "matrix/sparse/sparse.hpp"
 #include "matrix/dense/dense.hpp"
 

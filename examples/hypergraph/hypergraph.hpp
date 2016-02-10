@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+namespace Zee {
+
 template <typename TIdx = Zee::default_index_type>
 class DHypergraph {
   public:
@@ -321,3 +323,5 @@ class ColumnNetHG : public DHypergraph<TIdx> {
   private:
     TMatrix& A_;
 };
+
+} // namespace Zee

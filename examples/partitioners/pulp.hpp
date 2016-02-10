@@ -11,6 +11,8 @@
 #include <memory>
 #include <limits>
 
+namespace Zee {
+
 enum class HGModel { fine_grain = 1, row_net = 2, column_net = 3 };
 
 template <typename T>
@@ -247,3 +249,5 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     // neighbour histogram (N_v)
     std::vector<std::vector<TIdx>> neighbourCount;
 };
+
+} // namespace Zee
