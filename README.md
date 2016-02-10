@@ -1,5 +1,9 @@
-Zee
-===
+Zee; A distributed matrix library and partitioning framework
+============================================================
+
+<p align="center">
+<img width="400px" alt="Zee is a matrix library and partitioning framework" src="https://raw.githubusercontent.com/jwbuurlage/zee/develop/docs/sphinx/img/zee.png" />
+</p>
 
 Sparse matrix partitioning and distributed numerical linear algebra.
 
@@ -20,6 +24,6 @@ Dependencies and requirements
 Zee has only been tested on Linux. Below is a list of (optional) dependencies:
 
 - `python` and the python package `matplotlib` are used for plotting.
-- [`Catch`][dummy] is used for unit tests and is bundled with Zee. (legal?)
+- [`Catch`][dummy] is used for unit tests and is bundled with Zee.
 
 [dummy]: #
