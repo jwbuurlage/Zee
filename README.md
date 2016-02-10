@@ -38,11 +38,16 @@ The `master` branch contains the latest release. An (unstable) snapshot of the c
 
 ## Dependencies and requirements
 
-The library has been tested on Linux using recent versions of `clang` and `gcc` which support `C++14`. For multithreading support the `pthreads` library is required.
+The library has been tested on Linux using recent versions of Clang and GCC with support for C++14. For multithreading support the *pthreads* library is required.
 
 Below is a list of optional dependencies:
 
-- Python and the Python library `matplotlib` are used for scripts, in particular for plotting.
-- [`Catch`][catch] is used for the unit tests.
+- *Python* and the Python library *matplotlib* are used for scripts, in particular for plotting.
+- [*Catch*][catch] is used for the unit tests.
 
 [catch]: https://github.com/philsquared/Catch
+[dummy]: #
+
+## Contributing
+
+See the file `contributing/CONTRIBUTING.md` for details on how to contribute.

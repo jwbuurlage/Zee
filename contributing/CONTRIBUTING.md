@@ -1,1 +1,1 @@
-FIXME
+We welcome pull requests, please pull request against the develop branch. Read [the GitHub flow guide](https://guides.github.com/introduction/flow/) for details. All code should be formatted using the *clang-format* from the Clang compiler tools, using the *clang-format* file in this directory.
