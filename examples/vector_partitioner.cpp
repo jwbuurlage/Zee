@@ -20,8 +20,6 @@ int main()
     auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
     auto u = DVector<TVal, TIdx>{A.getRows()};
 
-//    PulpPartitioner<decltype(A)> pA(A);
-//    pA.refineWithIterations(1000);
     MGPartitioner<decltype(A)> partitioner;
     partitioner.partition(A);
 

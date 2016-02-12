@@ -1,8 +1,4 @@
 #include <zee.hpp>
-#include "partitioners/pulp.hpp"
-
-#include "args/argparse.hpp"
-#include "report/report.hpp"
 
 #include <limits>
 #include <map>
@@ -14,15 +10,13 @@ int main(int argc, char* argv[]) {
     using TVal = float;
     using TIdx = uint64_t;
 
+    // available models
     static std::map<HGModel, std::string> modelNames = {
-        { HGModel::row_net, "row-net" },
-        { HGModel::column_net, "column-net" },
-        { HGModel::fine_grain, "fine-grain" }
-    };
+        {HGModel::row_net, "row-net"},
+        {HGModel::column_net, "column-net"},
+        {HGModel::fine_grain, "fine-grain"}};
 
-    //----------------------------------------------------------------------------
     // parse CLI args
-
     auto args = ArgParse();
     args.addOptionWithDefault("--hg", "hypergraph model to use, should be "
                                       "chosen in set { row_net, column_net, "
@@ -80,15 +74,13 @@ int main(int argc, char* argv[]) {
     TIdx runs = args.as<TIdx>("--runs");
     TIdx iters = args.as<TIdx>("--iters");
 
-    //----------------------------------------------------------------------------
-
+    // initialize report
     auto report = Report("Hyper-PuLP", "matrix");
     report.addColumn("m");
     report.addColumn("n");
     report.addColumn("N");
     report.addColumn("V_HP", "V_{\\text{HP}}");
     report.addColumn("V_HP_m", "V_{\\text{HP}}^{\\text{min}}");
-    // report.addColumn("SD");
     report.addColumn("V_C");
     report.addColumn("G");
     if (compareMg && procs == 2)
@@ -100,13 +92,14 @@ int main(int argc, char* argv[]) {
 
     auto bench = Zee::Benchmark("PuLP");
 
+    // perform experiments
     std::vector<double> improvements;
     std::vector<double> gains;
     for (auto matrix : matrices) {
         report.addRow(matrix);
         bench.phase(matrix);
 
-        // Initialize the matrix from file
+        // initialize the matrix from file
         DSparseMatrix<TVal, TIdx> B{"data/matrices/" + matrix + ".mtx", 1};
 
         auto cyclicComVol = 0;
@@ -129,7 +122,8 @@ int main(int argc, char* argv[]) {
             }
         } else {
             if (model == HGModel::row_net) {
-                CyclicPartitioner<decltype(B)> cyclic(procs, CyclicType::column);
+                CyclicPartitioner<decltype(B)> cyclic(procs,
+                                                      CyclicType::column);
                 cyclic.partition(B);
                 cyclicComVol = B.communicationVolume();
             } else {
@@ -141,7 +135,6 @@ int main(int argc, char* argv[]) {
         }
 
         ZeeLogVar(modelNames[model]);
-
 
         DSparseMatrix<TVal, TIdx> A{"data/matrices/" + matrix + ".mtx", 1};
 
@@ -267,6 +260,7 @@ int main(int argc, char* argv[]) {
                  << std::setprecision(2) << averageImprovement * 100.0 << "%"
                  << endLog;
 
+    // optionally plot fractions of matrices with a minimal gain
     if (fractionPlot) {
         TIdx totalMatrices = matrices.size();
         std::sort(gains.begin(), gains.end());
@@ -276,7 +270,8 @@ int main(int argc, char* argv[]) {
             while (k < gains.size() && gains[k] < i) {
                 ++k;
             }
-            fractions.push_back(((double)totalMatrices - k) / (double)totalMatrices);
+            fractions.push_back(((double)totalMatrices - k) /
+                                (double)totalMatrices);
         }
 
         ZeeLogVar(fractions);

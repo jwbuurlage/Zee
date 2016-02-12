@@ -2,10 +2,6 @@
 #include <cmath>
 
 #include <zee.hpp>
-#include "solvers/gmres.hpp"
-
-#include "args/argparse.hpp"
-#include "report/report.hpp"
 
 using namespace Zee;
 

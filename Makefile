@@ -10,13 +10,10 @@ LIB_DEPS = -lpthread
 
 all: dirs \
 	$(OUTPUT_DIR)/partitioner \
-	$(OUTPUT_DIR)/pulp_partitioner \
-	$(OUTPUT_DIR)/pulp_experiments \
 	$(OUTPUT_DIR)/vector_partitioner \
-	$(OUTPUT_DIR)/ir \
-	$(OUTPUT_DIR)/gmres \
+	$(OUTPUT_DIR)/pulp_experiments \
 	$(OUTPUT_DIR)/gmres_experiments \
-	$(OUTPUT_DIR)/lial
+	$(OUTPUT_DIR)/linear_algebra
 
 .phony: docs
 

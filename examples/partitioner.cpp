@@ -15,17 +15,14 @@ int main()
     using TVal = double;
     using TIdx = uint32_t;
 
-    std::string matrix = "karate";
+    std::string matrix = "sparse_example";
 
-    ZeeLogInfo << "-- Starting partitioning example" << endLog;
-
-    // Initialize the centralized base matrix from file
+    // initialize the centralized base matrix from file
     DSparseMatrix<TVal, TIdx> baseMatrix{"data/matrices/" + matrix  + ".mtx", 1};
-    baseMatrix.spy("karate");
+    baseMatrix.spy(matrix);
     auto& A = baseMatrix;
 
-    //-------------------------------------------------------------------------
-    // MEDIUM GRAIN
+    // medium grain
     MGPartitioner<decltype(baseMatrix)> mgPartitioner;
     mgPartitioner.partition(A);
     A.spy(matrix + "_mg");
@@ -36,8 +33,7 @@ int main()
         mgPartitioner.refine(A);
     }
 
-    //-------------------------------------------------------------------------
-    // 1D MULTILEVEL COLUMN
+    // 1d multi-level by column
     MultiLevelOneD<decltype(baseMatrix)> mlPart{};
     mlPart.initialize(A);
     auto& D = mlPart.partition(A);
@@ -45,8 +41,6 @@ int main()
 
     ZeeLogInfo << "ML: \t" << D.communicationVolume() << ", " <<
         D.loadImbalance() << endLog;
-
-    ZeeLogInfo << "-- Ending partitioning example" << endLog;
 
     return 0;
 }

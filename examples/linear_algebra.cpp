@@ -39,8 +39,7 @@ int main()
     ZeeLogVar(z);
 
     // Sparse Matrices
-    std::string matrix = "karate";
-    DSparseMatrix<TVal, TIdx> A("data/matrices/" + matrix + ".mtx", 4);
+    DSparseMatrix<TVal, TIdx> A("examples/data/sparse_example.mtx", 4);
     DVector<TVal, TIdx> v{A.getCols(), 1.0};
     DVector<TVal, TIdx> u{A.getRows(), 1.0};
 
@@ -51,7 +50,7 @@ int main()
     ZeeLogVar(u);
 
     // Dense matrices
-    DMatrix<TVal, TIdx> D("data/matrices/dense_example.mtx");
+    DMatrix<TVal, TIdx> D("examples/data/dense_example.mtx");
     DMatrix<TVal, TIdx> E("data/matrices/dense_example.mtx");
     E.transpose();
     DMatrix<TVal, TIdx> F(D.getRows(), D.getRows());

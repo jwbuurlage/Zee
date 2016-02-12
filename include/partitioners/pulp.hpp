@@ -1,6 +1,4 @@
-// we ignore distributed memory for now
-// TODO:
-// [ ] Fix vertex weights for imbalance
+#pragma once
 
 #include <zee.hpp>
 

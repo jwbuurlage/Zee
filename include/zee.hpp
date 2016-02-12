@@ -28,11 +28,15 @@ License, or (at your option) any later version.
 #include "partitioners/multi_level.hpp"
 #include "partitioners/vector_partitioner.hpp"
 #include "partitioners/greedy_vector.hpp"
+#include "partitioners/pulp.hpp"
 
 #include "util/matrix_market.hpp"
 #include "util/matrix_toolbox.hpp"
-
 #include "util/benchmarking.hpp"
 #include "util/logging.hpp"
 #include "util/plotter.hpp"
 #include "util/common.hpp"
+#include "util/argparse.hpp"
+#include "util/report.hpp"
+
+#include "solvers/gmres.hpp"

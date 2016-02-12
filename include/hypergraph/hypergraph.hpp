@@ -1,3 +1,5 @@
+#pragma once
+
 #include <zee.hpp>
 
 #include <vector>
