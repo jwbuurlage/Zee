@@ -579,6 +579,12 @@ class DSparseMatrixImage {
         localizedStorage_ = true;
     }
 
+    void localizeStorage(const std::map<TIdx, TIdx>& globalToLocalV,
+                         const std::map<TIdx, TIdx>& globalToLocalU) {
+        storage_->localize(globalToLocalV, globalToLocalU);
+        localizedStorage_ = true;
+    }
+
     const counted_set<TIdx>& getRowSet() const { return rowset_; }
 
     const counted_set<TIdx>& getColSet() const { return colset_; }
