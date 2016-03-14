@@ -31,7 +31,6 @@ DVector<TVal, TIdx> perform_operation(
         std::vector<TIdx> localU(submatrixPtr->getLocalIndicesU().size());
         auto& localIndicesV = submatrixPtr->getLocalIndicesV();
         for (const auto& triplet : *submatrixPtr) {
-            // FIXME V should be distributed too
             localU[triplet.row()] +=
                 triplet.value() * v[localIndicesV[triplet.col()]];
         }

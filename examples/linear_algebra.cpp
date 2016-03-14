@@ -39,9 +39,13 @@ int main()
     JWLogVar(z);
 
     // Sparse Matrices
-    DSparseMatrix<TVal, TIdx> A("examples/data/sparse_example.mtx", 4);
+    DSparseMatrix<TVal, TIdx> A("examples/data/sparse_example.mtx", 1);
     DVector<TVal, TIdx> v{A.getCols(), 1.0};
     DVector<TVal, TIdx> u{A.getRows(), 1.0};
+
+    GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
+    pVecs.partition();
+    pVecs.localizeMatrix();
 
     u = A * v;
     JWLogVar(u);
@@ -51,7 +55,7 @@ int main()
 
     // Dense matrices
     DMatrix<TVal, TIdx> D("examples/data/dense_example.mtx");
-    DMatrix<TVal, TIdx> E("data/matrices/dense_example.mtx");
+    DMatrix<TVal, TIdx> E("examples/data/dense_example.mtx");
     E.transpose();
     DMatrix<TVal, TIdx> F(D.getRows(), D.getRows());
 
