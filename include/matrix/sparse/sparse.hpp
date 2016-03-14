@@ -25,10 +25,11 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
+#include <ext/jwutil/include/jw.hpp>
+
 #include "../base/base.hpp"
 #include "../storage.hpp"
 #include "../../util/common.hpp"
-#include "../../util/logging.hpp"
 #include "../../operations/operations.hpp"
 
 namespace Zee {
@@ -121,11 +122,11 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
         nz_ = 0;
 
-        ZeeAssert(this->getProcs() > 0);
+        JWAssert(this->getProcs() > 0);
 
         if (partitioning_ == partitioning_scheme::custom) {
             if (!distributionLambda_) {
-                ZeeLogError
+                JWLogError
                     << "Trying to apply a custom partitioning, but"
                        " no distribution function was set. The matrix remains"
                        " uninitialized." << endLog;
@@ -427,7 +428,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
             ++s;
         }
 
-        ZeeLogInfo << "Spy saved to file: " << filename << Logger::end();
+        JWLogInfo << "Spy saved to file: " << filename << endLog;
 
         if (show) {
             auto command = "./script/plot.py --showfile " + filename;
@@ -523,7 +524,7 @@ class DSparseMatrixImage {
             }
             element++;
         }
-        ZeeAssert(element != storage_->size());
+        JWAssert(element != storage_->size());
 
         return popElement(element);
     }
@@ -531,7 +532,7 @@ class DSparseMatrixImage {
     // rename to push
     void pushTriplet(Triplet<TVal, TIdx> t) {
         if (!storage_) {
-            ZeeLogError << "Can not push triplet without storage." << endLog;
+            JWLogError << "Can not push triplet without storage." << endLog;
             return;
         }
         rowset_.raise(t.row());
@@ -659,7 +660,7 @@ class DSparseMatrixImage {
 // LOGGING
 
 template <typename TVal, typename TIdx>
-Logger& operator<<(Logger& lhs, const Triplet<TVal, TIdx>& rhs) {
+jw::Logger& operator<<(jw::Logger& lhs, const Triplet<TVal, TIdx>& rhs) {
     lhs << "{" << rhs.row() << ", " << rhs.col() << ", " << rhs.value() << "}";
     return lhs;
 }

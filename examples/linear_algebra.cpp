@@ -15,28 +15,28 @@ int main()
     auto z = DVector<TVal, TIdx>{size, 1.0};
 
     z = x + y;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = x + y + x;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = (x + y) - x;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = x + (y - x);
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = (x + y) + (x + y);
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = x * 4.5;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = 4.5 * x;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     z = x / 2.0;
-    ZeeLogVar(z);
+    JWLogVar(z);
 
     // Sparse Matrices
     DSparseMatrix<TVal, TIdx> A("examples/data/sparse_example.mtx", 4);
@@ -44,10 +44,10 @@ int main()
     DVector<TVal, TIdx> u{A.getRows(), 1.0};
 
     u = A * v;
-    ZeeLogVar(u);
+    JWLogVar(u);
 
     u = A * (v + v) + v;
-    ZeeLogVar(u);
+    JWLogVar(u);
 
     // Dense matrices
     DMatrix<TVal, TIdx> D("examples/data/dense_example.mtx");
@@ -56,7 +56,7 @@ int main()
     DMatrix<TVal, TIdx> F(D.getRows(), D.getRows());
 
     F = D * E;
-    ZeeLogVar(D);
-    ZeeLogVar(E);
-    ZeeLogVar(F);
+    JWLogVar(D);
+    JWLogVar(E);
+    JWLogVar(F);
 }

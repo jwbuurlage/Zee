@@ -16,7 +16,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         bool plotResiduals = false,
         bool benchmark = false)
 {
-    ZeeLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
+    JWLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
         " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
 
     // FIXME pointless to make bench if we dont benchmark
@@ -24,7 +24,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
     if (!benchmark)
         bench.silence();
 
-    ZeeAssert(A.getRows() == b.size());
+    JWAssert(A.getRows() == b.size());
 
     using TVector = Zee::DVector<TVal, TIdx>;
 
@@ -164,7 +164,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         bench.finish();
 
     if (plotResiduals) {
-        ZeeLogVar(rhos);
+        JWLogVar(rhos);
         // We plot the residuals
         auto p = Zee::Plotter<>();
         p["xlabel"] = "iterations";

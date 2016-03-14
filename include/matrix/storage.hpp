@@ -18,7 +18,7 @@ License, or (at your option) any later version.
 #include <memory>
 #include <vector>
 
-#include "../util/logging.hpp"
+#include <ext/jwutil/include/jw.hpp>
 
 namespace Zee {
 

@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
     using TVal = double;
     using TIdx = uint32_t;
 
-    auto args = ArgParse();
+    auto args = jw::ArgParse();
     args.addOption("--matrices", "list of matrices to partition", true);
     if (!args.parse(argc, argv))
         return -1;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
         DVector<TVal, TIdx> r{A.getRows()};
         c = A * x;
         r = b - c;
-        ZeeLogVar(r.norm() / b.norm());
+        JWLogVar(r.norm() / b.norm());
     }
 
     return 0;

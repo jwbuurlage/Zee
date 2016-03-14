@@ -22,7 +22,7 @@ DVector<TVal, TIdx> perform_operation(
     DVector<TVal, TIdx> u{A.getRows(), 0.0};
     const auto p = A.getProcs();
 
-    ZeeAssert(A.getCols() == v.size());
+    JWAssert(A.getCols() == v.size());
 
     std::mutex writeMutex;
     Barrier<TIdx> barrier(p);
@@ -65,7 +65,7 @@ perform_operation(BinaryOperation<operation::type::product, DMatrix<TVal, TIdx>,
     const auto& B = op.getRHS();
     DMatrix<TVal, TIdx> C(A.getRows(), B.getCols());
 
-    ZeeAssert(A.getCols() == B.getRows());
+    JWAssert(A.getCols() == B.getRows());
 
     for (TIdx i = 0; i < C.getRows(); ++i) {
         for (TIdx j = 0; j < C.getRows(); ++j) {

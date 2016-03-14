@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
         {HGModel::fine_grain, "fine-grain"}};
 
     // parse CLI args
-    auto args = ArgParse();
+    auto args = jw::ArgParse();
     args.addOptionWithDefault("--hg", "hypergraph model to use, should be "
                                       "chosen in set { row_net, column_net, "
                                       "fine_grain, auto }",
@@ -44,13 +44,13 @@ int main(int argc, char* argv[]) {
         return -1;
 
     auto matrices = args.asList("--matrices");
-    ZeeLogVar(matrices);
+    JWLogVar(matrices);
 
     HGModel model = HGModel::fine_grain;
     auto modelName = args.asString("--hg");
     bool autoModel = false;
 
-    ZeeLogVar(modelName);
+    JWLogVar(modelName);
 
     if (modelName == "fine_grain") {
         model = HGModel::fine_grain;
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        ZeeLogVar(modelNames[model]);
+        JWLogVar(modelNames[model]);
 
         DSparseMatrix<TVal, TIdx> A{"data/matrices/" + matrix + ".mtx", 1};
 
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
                     break;
             }
 
-            ZeeLogVar(communicationVolumes);
+            JWLogVar(communicationVolumes);
             Vs.push_back((double)communicationVolumes.back());
             if (Vs.back() < bestV) {
                 bestV = Vs.back();
@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
             MGPartitioner<decltype(A)> mg;
             mg.partition(A);
             while (!mg.locallyOptimal()) {
-                ZeeLogVar(A.communicationVolume());
+                JWLogVar(A.communicationVolume());
                 mg.refine(A);
             }
 
@@ -256,7 +256,7 @@ int main(int argc, char* argv[]) {
     double sumImprovements = std::accumulate(
         improvements.begin(), improvements.end(), 0.0, std::plus<double>());
     double averageImprovement = sumImprovements / improvements.size();
-    ZeeLogResult << "Average improvement: " << std::fixed
+    JWLogResult << "Average improvement: " << std::fixed
                  << std::setprecision(2) << averageImprovement * 100.0 << "%"
                  << endLog;
 
@@ -274,7 +274,7 @@ int main(int argc, char* argv[]) {
                                 (double)totalMatrices);
         }
 
-        ZeeLogVar(fractions);
+        JWLogVar(fractions);
 
         auto p = Zee::Plotter<double>();
         p["xlabel"] = "$G$";

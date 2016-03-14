@@ -192,7 +192,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
-            ZeeLogError << "Reassigning to own part" << endLog;
+            JWLogError << "Reassigning to own part" << endLog;
             return;
         }
 
@@ -246,7 +246,7 @@ class RowNetHG : public DHypergraph<TIdx> {
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
-            ZeeLogError << "Reassigning to own part" << endLog;
+            JWLogError << "Reassigning to own part" << endLog;
             return;
         }
 
@@ -304,7 +304,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
-            ZeeLogError << "Reassigning to own part" << endLog;
+            JWLogError << "Reassigning to own part" << endLog;
             return;
         }
 

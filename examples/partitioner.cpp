@@ -27,9 +27,9 @@ int main()
     mgPartitioner.partition(A);
     A.spy(matrix + "_mg");
 
-    ZeeLogInfo << "MG: \t" << A.communicationVolume() << endLog;
+    JWLogInfo << "MG: \t" << A.communicationVolume() << endLog;
     while (!mgPartitioner.locallyOptimal()) {
-        ZeeLogVar(A.communicationVolume());
+        JWLogVar(A.communicationVolume());
         mgPartitioner.refine(A);
     }
 
@@ -39,7 +39,7 @@ int main()
     auto& D = mlPart.partition(A);
     D.spy(matrix + "_ml");
 
-    ZeeLogInfo << "ML: \t" << D.communicationVolume() << ", " <<
+    JWLogInfo << "ML: \t" << D.communicationVolume() << ", " <<
         D.loadImbalance() << endLog;
 
     return 0;

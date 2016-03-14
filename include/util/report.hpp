@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <fstream>
 
+#include <ext/jwutil/include/jw.hpp>
+
 namespace Zee {
 
 class Report {
@@ -35,7 +37,7 @@ class Report {
     template <typename T>
     void addResult(std::string row, std::string column, T result) {
         if (entries_.find(row) == entries_.end()) {
-            ZeeLogError << "Trying to add result to non-existing row" << endLog;
+            JWLogError << "Trying to add result to non-existing row" << endLog;
             return;
         }
         std::stringstream ss;
@@ -55,7 +57,7 @@ class Report {
     }
 
     void print() {
-        ZeeLogResult << title_ << endLog;
+        JWLogResult << title_ << endLog;
 
         unsigned int lineSize = rowSize_ + 4;
         for (auto col : columnWidth_) {
@@ -78,9 +80,9 @@ class Report {
         for (auto& col : columns_)
             addElement(columnWidth_[col] + 2, ss, col);
 
-        ZeeLogInfo << hline << endLog;
-        ZeeLogInfo << ss.str() << endLog;
-        ZeeLogInfo << hline << endLog;
+        JWLogInfo << hline << endLog;
+        JWLogInfo << ss.str() << endLog;
+        JWLogInfo << hline << endLog;
 
         for (auto& rowCols : entries_) {
             std::stringstream rowSs;
@@ -89,9 +91,9 @@ class Report {
             for (auto& col : columns_) {
                 addElement(columnWidth_[col] + 2, rowSs, rowCols.second[col]);
             }
-            ZeeLogInfo << rowSs.str() << endLog;
+            JWLogInfo << rowSs.str() << endLog;
         }
-        ZeeLogInfo << hline << endLog;
+        JWLogInfo << hline << endLog;
     }
 
     void saveToCSV();

@@ -217,7 +217,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         // FIXME: many of these operations can be done in place
 
         if (initialized_) {
-            ZeeLogWarning << "Already applied an initial partitioning"
+            JWLogWarning << "Already applied an initial partitioning"
                              " instead refining the partitioning on A"
                           << endLog;
             this->refine(A);
@@ -225,7 +225,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         }
 
         if (!A.isInitialized()) {
-            ZeeLogError << "MG: Trying to partition uninitialized matrix."
+            JWLogError << "MG: Trying to partition uninitialized matrix."
                         << endLog;
             return A;
         }
@@ -257,14 +257,14 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
     TMatrix& refine(TMatrix& A) override {
         // We only support IR on bi-partitionings
         if (A.getProcs() != 2) {
-            ZeeLogError << "For now MG-IR only supports bipartitionings, "
+            JWLogError << "For now MG-IR only supports bipartitionings, "
                            "the matrix A has a "
                         << A.getProcs() << "-way partitioning" << endLog;
             return A;
         }
 
         if (!A.isInitialized()) {
-            ZeeLogError << "MG: Trying to refine uninitialized matrix."
+            JWLogError << "MG: Trying to refine uninitialized matrix."
                         << endLog;
             return A;
         }
@@ -339,7 +339,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
             // PHASE 3: retrieve partitioning for A
             inducePartitioning(A, B);
         } else {
-            ZeeLogError << "Could not construct the extended matrix B."
+            JWLogError << "Could not construct the extended matrix B."
                         << endLog;
         }
 
@@ -351,7 +351,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
             }
             phaseRow_ = !phaseRow_;
         } else if (A.communicationVolume() > priorVolume) {
-            ZeeLogError << "The MG-IR has increased volume" << endLog;
+            JWLogError << "The MG-IR has increased volume" << endLog;
             locallyOptimal_ = true;
         } else {
             if (!phaseRow_) {

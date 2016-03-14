@@ -13,13 +13,13 @@ License, or (at your option) any later version.
 
 #pragma once
 
-#include "logging.hpp"
-
 #include <chrono>
 #include <vector>
 #include <utility>
 #include <sstream>
 #include <iomanip>
+
+#include <ext/jwutil/include/jw.hpp>
 
 namespace Zee {
 
@@ -73,7 +73,7 @@ class Benchmark {
             splitOutput << hline;
         }
 
-        ZeeLogBenchmark << title_ << " total runtime: " << total_ms << " ms"
+        JWLogBenchmark << title_ << " total runtime: " << total_ms << " ms"
                         << splitOutput.str() << endLog;
     }
 

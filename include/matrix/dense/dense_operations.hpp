@@ -22,7 +22,7 @@ DVector<TVal, TIdx> perform_operation(
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
-    ZeeAssert(lhs.size() == rhs.size());
+    JWAssert(lhs.size() == rhs.size());
 
     auto returnVector = DVector<TVal, TIdx>(lhs.size());
     for (TIdx i = 0; i < lhs.size(); ++i) {
@@ -41,7 +41,7 @@ DVector<TVal, TIdx> perform_operation(
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
-    ZeeAssert(lhs.size() == rhs.size());
+    JWAssert(lhs.size() == rhs.size());
 
     auto returnVector = DVector<TVal, TIdx>(lhs.size());
     for (TIdx i = 0; i < lhs.size(); ++i) {

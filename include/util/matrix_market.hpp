@@ -20,7 +20,8 @@ License, or (at your option) any later version.
 #include <string>
 #include <sstream>
 
-#include "logging.hpp"
+#include <ext/jwutil/include/jw.hpp>
+
 #include "matrix/base/base.hpp"
 
 namespace Zee {
@@ -41,7 +42,7 @@ namespace matrix_market
     void loadMatrix(int info, std::ifstream& fs, DSparseMatrixBase<Derived, TVal, TIdx>& target)
     {
         if (info & matrix_market::info::array) {
-            ZeeLogError << "Trying to load dense matrix .mtx "
+            JWLogError << "Trying to load dense matrix .mtx "
                 "file format into a sparse matrix." << endLog;
         }
 
@@ -113,7 +114,7 @@ namespace matrix_market
     {
 
         if (info & matrix_market::info::coordinate) {
-            ZeeLogError << "Trying to load sparse matrix .mtx "
+            JWLogError << "Trying to load sparse matrix .mtx "
                 "file format into a dense matrix." << endLog;
         }
 
@@ -154,7 +155,7 @@ namespace matrix_market
     template <typename Derived, typename TVal, typename TIdx>
     void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target)
     {
-        ZeeLogInfo << "Loading matrix from file: " << file << endLog;
+        JWLogInfo << "Loading matrix from file: " << file << endLog;
 
         std::ifstream fs(file);
 
@@ -167,7 +168,7 @@ namespace matrix_market
         header_stream >> s >> t;
 
         if (s != "%%MatrixMarket" || t != "matrix") {
-            ZeeLogError << "Not a valid MM file: " << file << endLog;
+            JWLogError << "Not a valid MM file: " << file << endLog;
             return;
         }
 
@@ -180,7 +181,7 @@ namespace matrix_market
             if (s == "complex" ||
                     s == "Hermitian" ||
                     s == "integer") {
-                ZeeLogError << "Unsupported keyword encountered: " << s << Logger::end();
+                JWLogError << "Unsupported keyword encountered: " << s << endLog;
                 return;
             }
 

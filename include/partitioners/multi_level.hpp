@@ -66,7 +66,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
         void coarsen(TMatrix& A)
         {
-            ZeeLogWarning << "Multi-level coarsening not implemented yet." << endLog;
+            JWLogWarning << "Multi-level coarsening not implemented yet." << endLog;
             // coarsen graph A and store HG
             //
             // We need to recursively find columns that *match* and merge them
@@ -124,13 +124,13 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
         // therefore we call the matrix M
         virtual TMatrix& partition(TMatrix& M) override
         {
-            ZeeLogInfo << "Partitioning using FM heuristic" << endLog;
+            JWLogInfo << "Partitioning using FM heuristic" << endLog;
 
-            ZeeLogVar(M.getProcs());
+            JWLogVar(M.getProcs());
 
             // We check if everything has been initialized properly
             if (!initialized) {
-                ZeeLogError << "Trying to partition with uninitialized partitioner." << endLog;
+                JWLogError << "Trying to partition with uninitialized partitioner." << endLog;
                 return M;
             }
 
@@ -249,7 +249,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
                 verticesToUpdate.clear();
 
                 if (baseCell == -1) {
-                    ZeeLogError << "No viable base cell found." << endLog;
+                    JWLogError << "No viable base cell found." << endLog;
                     break;
                 }
 
@@ -340,7 +340,7 @@ class MultiLevelOneD : Zee::Partitioner<TMatrix>
 
             M.resetImages(new_images);
 
-            ZeeLogInfo << "FM partitioned into sizes: " << counts[0] << " " << counts[1] << endLog;
+            JWLogInfo << "FM partitioned into sizes: " << counts[0] << " " << counts[1] << endLog;
 
             return M;
         }

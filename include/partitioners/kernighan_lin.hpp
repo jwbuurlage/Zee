@@ -251,7 +251,7 @@ class KernighanLin {
             verticesToUpdate.clear();
 
             if (baseCell == -1) {
-                ZeeLogError << "No viable base cell found." << endLog;
+                JWLogError << "No viable base cell found." << endLog;
                 break;
             }
 

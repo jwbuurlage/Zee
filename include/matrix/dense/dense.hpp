@@ -110,7 +110,7 @@ class DVector
         /** The dot product */
         // FIXME parallellize
         TVal dot(const DVector<TVal, TIdx>& rhs) const {
-            ZeeAssert(rhs.size() == size());
+            JWAssert(rhs.size() == size());
 
             const auto& lhs = *this;
 
@@ -152,7 +152,7 @@ class DVector
 
 // We add an operator such that we can log vectors
 template <typename TVal, typename TIdx>
-Logger& operator <<(Logger& lhs, const DVector<TVal, TIdx>& rhs) {
+jw::Logger& operator <<(jw::Logger& lhs, const DVector<TVal, TIdx>& rhs) {
     auto sep = "";
     lhs << "[";
     for (TIdx i = 0; i < rhs.size(); ++i) {
@@ -214,7 +214,7 @@ class DDenseMatrixBase
                 }
             }
 
-            ZeeLogInfo << "Spy saved to file: " << filename << Logger::end();
+            JWLogInfo << "Spy saved to file: " << filename << endLog;
 
             if (show) {
                 auto command = "./script/plot.py --showfile " + filename;
@@ -270,15 +270,15 @@ class DMatrix :
 
         TVal& at(TIdx i, TIdx j)
         {
-            ZeeAssert(i < this->rows_);
-            ZeeAssert(j < this->cols_);
+            JWAssert(i < this->rows_);
+            JWAssert(j < this->cols_);
             return elements_[i][j];
         }
 
         const TVal& at(TIdx i, TIdx j) const
         {
-            ZeeAssert(i < this->rows_);
-            ZeeAssert(j < this->cols_);
+            JWAssert(i < this->rows_);
+            JWAssert(j < this->cols_);
             return elements_[i][j];
         }
 
@@ -294,7 +294,7 @@ class DMatrix :
                     elements_[i][j] = *(it++);
                 }
 
-            ZeeAssert(it == end);
+            JWAssert(it == end);
         }
 
         void resize(TIdx rows, TIdx cols) override
@@ -338,7 +338,7 @@ class DMatrix :
 
 // We add an operator such that we can log dense matrices
 template <typename TVal, typename TIdx>
-Logger& operator<<(Logger& lhs, const DMatrix<TVal, TIdx>& rhs) {
+jw::Logger& operator<<(jw::Logger& lhs, const DMatrix<TVal, TIdx>& rhs) {
     lhs << "\n";
     for (TIdx i = 0; i < rhs.getRows(); ++i) {
         lhs << "|";

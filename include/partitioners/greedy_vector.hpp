@@ -29,14 +29,14 @@ class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
         //    and P(*, k), greedily balancing the assignment load
 
         // We assume the matrix A_ is partitioned
-        ZeeAssert(A.isInitialized());
+        JWAssert(A.isInitialized());
 
         // need to assert matrix A_ is square for this particular solver
         // TODO figure out how does CGLS work, and how to generalize
         // dist(u) = dist(v) for those solvers
-        ZeeAssert(A.getRows() == A.getCols());
-        ZeeAssert(v.size() == A.getRows());
-        ZeeAssert(u.size() == v.size());
+        JWAssert(A.getRows() == A.getCols());
+        JWAssert(v.size() == A.getRows());
+        JWAssert(u.size() == v.size());
 
         TIdx n = v.size();
         TIdx p = A.getProcs();

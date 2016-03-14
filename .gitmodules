@@ -1,0 +1,3 @@
+[submodule "jwutil"]
+	path = include/ext/jwutil
+	url = git@github.com:jwbuurlage/JWUtil.git

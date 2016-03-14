@@ -33,10 +33,10 @@ License, or (at your option) any later version.
 #include "util/matrix_market.hpp"
 #include "util/matrix_toolbox.hpp"
 #include "util/benchmarking.hpp"
-#include "util/logging.hpp"
 #include "util/plotter.hpp"
 #include "util/common.hpp"
-#include "util/argparse.hpp"
 #include "util/report.hpp"
+
+#include "ext/jwutil/include/jw.hpp"
 
 #include "solvers/gmres.hpp"

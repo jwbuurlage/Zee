@@ -103,7 +103,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
         if (A.loadImbalance() > (1.0 + epsilon_)) {
             if (this->procs_ > 2) {
-                ZeeLogError << "Invalid initial size for non-bipartitioning. "
+                JWLogError << "Invalid initial size for non-bipartitioning. "
                                "No support for fixing the initialization for "
                                "small matrices."
                             << endLog;
@@ -129,7 +129,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                     break;
             }
             if (A.loadImbalance() > (1.0 + epsilon_)) {
-                ZeeLogError << "Cannot find valid initial distribution. eps = "
+                JWLogError << "Cannot find valid initial distribution. eps = "
                             << A.loadImbalance() << endLog;
                 exit(-1);
             }

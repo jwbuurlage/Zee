@@ -15,7 +15,7 @@ int main()
         procs
     };
 
-    ZeeAssert(A.getRows() == A.getCols());
+    JWAssert(A.getRows() == A.getCols());
 
     auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
     auto u = DVector<TVal, TIdx>{A.getRows()};
@@ -23,20 +23,20 @@ int main()
     MGPartitioner<decltype(A)> partitioner;
     partitioner.partition(A);
 
-    ZeeLogVar(A.communicationVolume());
-    ZeeLogVar(A.loadImbalance());
+    JWLogVar(A.communicationVolume());
+    JWLogVar(A.loadImbalance());
 
     GreedyVectorPartitioner<decltype(A), decltype(v)> pVecs(A, v, u);
     pVecs.partition();
 
-    ZeeLogVar(v.getOwners());
-    ZeeLogVar(u.getOwners());
+    JWLogVar(v.getOwners());
+    JWLogVar(u.getOwners());
 
     pVecs.localizeMatrix();
 
-    ZeeLogVar(u);
+    JWLogVar(u);
     u = A * v;
-    ZeeLogVar(u);
+    JWLogVar(u);
 
     return 0;
 }
