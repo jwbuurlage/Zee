@@ -55,6 +55,8 @@ void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target);
 template <typename TVal, typename TIdx = uint32_t>
 class Triplet {
   public:
+    Triplet() : i_(0), j_(0), value_(0) {}
+
     Triplet(TIdx i, TIdx j, TVal value) {
         i_ = i;
         j_ = j;
