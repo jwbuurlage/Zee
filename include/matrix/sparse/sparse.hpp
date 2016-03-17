@@ -468,6 +468,10 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
     /** Initialize from .mtx format */
     DSparseMatrix(std::string file, TIdx procs = 1) : Base(file, procs) {}
 
+    /** Initialize from .mtx format with given scheme */
+    DSparseMatrix(std::string file, TIdx procs, partitioning_scheme scheme)
+        : Base(file, procs, scheme) {}
+
     /** Initialize an (empty) sparse (rows x cols) matrix */
     DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) : Base(rows, cols) {
         this->setDistributionScheme(partitioning_scheme::cyclic, procs);
