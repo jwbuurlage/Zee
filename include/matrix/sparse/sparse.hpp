@@ -109,8 +109,10 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
     DSparseMatrixBase(TIdx rows, TIdx cols) : Base(rows, cols) {}
 
-    DSparseMatrixBase(std::string file, TIdx procs = 0) : Base(0, 0) {
-        setDistributionScheme(partitioning_scheme::cyclic, procs);
+    DSparseMatrixBase(std::string file, TIdx procs = 1,
+                      partitioning_scheme scheme = partitioning_scheme::cyclic)
+        : Base(0, 0) {
+        setDistributionScheme(scheme, procs);
         matrix_market::load(file, *(Derived*)this);
     }
 
