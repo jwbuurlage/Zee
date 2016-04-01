@@ -28,7 +28,7 @@ DVector<TVal, TIdx> perform_operation(
     Barrier<TIdx> barrier(p);
 
     A.compute([&](std::shared_ptr<TImage> submatrixPtr, TIdx s) {
-        std::vector<TIdx> localU(submatrixPtr->getLocalIndicesU().size());
+        std::vector<TVal> localU(submatrixPtr->getLocalIndicesU().size());
         auto& localIndicesV = submatrixPtr->getLocalIndicesV();
         for (const auto& triplet : *submatrixPtr) {
             localU[triplet.row()] +=
