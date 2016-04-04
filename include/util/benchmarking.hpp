@@ -77,6 +77,9 @@ class Benchmark {
                         << splitOutput.str() << endLog;
     }
 
+    auto getSplits() const { return splits_; }
+    auto getStart() const { return start_; }
+
   private:
     std::vector<std::pair<std::string, TTimePoint>> splits_;
     std::string title_;
