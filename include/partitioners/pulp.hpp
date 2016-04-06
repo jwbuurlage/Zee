@@ -1,5 +1,7 @@
 #pragma once
 
+#include "jw.hpp"
+
 #include "../util/benchmarking.hpp"
 #include "../matrix/sparse/sparse.hpp"
 #include "../hypergraph/hypergraph.hpp"
@@ -12,7 +14,12 @@
 
 namespace Zee {
 
-enum class HGModel { fine_grain = 1, row_net = 2, column_net = 3 };
+enum class HGModel {
+    fine_grain = 1,
+    row_net = 2,
+    column_net = 3,
+    medium_grain = 4
+};
 
 template <typename T>
 size_t argmax(std::vector<T>& list) {
@@ -112,11 +119,12 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             }
         }
 
-        A.resetImages(aNewImages);
-
+        // if model is medium grain, then we use the 1 procs
+        if (model != HGModel::medium_grain) {
+            A.resetImages(aNewImages);
+        }
 
         constructHypergraph(A, model);
-
 
         if (A.loadImbalance() > (1.0 + epsilon_)) {
             if (this->procs_ > 2) {
@@ -160,6 +168,13 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             hyperGraph_ = std::make_unique<RowNetHG<TIdx, TMatrix>>(A);
         else if (model == HGModel::column_net)
             hyperGraph_ = std::make_unique<ColumnNetHG<TIdx, TMatrix>>(A);
+        else if (model == HGModel::medium_grain)
+            hyperGraph_ =
+                std::make_unique<MediumGrainHG<TIdx, TMatrix>>(A, this->procs_);
+        else {
+            JWLogError << "Unrecognized hypergraph model" << endLog;
+            JWAssert(0);
+        }
     }
 
     virtual TMatrix& initialPartitioning(TIdx iters) {

@@ -524,6 +524,7 @@ class DSparseMatrixImage {
         return t;
     }
 
+    // FIXME this is ridiculous
     Triplet<TVal, TIdx> popElement(TIdx i, TIdx j) {
         TIdx element = 0;
         for (auto& trip : *storage_) {

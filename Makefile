@@ -2,7 +2,7 @@ CCPP = g++
 CCPP_FLAGS = -std=c++14 -Wfatal-errors -Wall -g -O3
 
 OUTPUT_DIR = bin
-INCLUDE_DIRS = -Iinclude
+INCLUDE_DIRS = -Iinclude -Iinclude/ext/jwutil/include
 
 LIB_DEPS = -lpthread
 

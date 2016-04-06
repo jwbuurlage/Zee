@@ -14,7 +14,9 @@ int main(int argc, char* argv[]) {
     static std::map<HGModel, std::string> modelNames = {
         {HGModel::row_net, "row-net"},
         {HGModel::column_net, "column-net"},
-        {HGModel::fine_grain, "fine-grain"}};
+        {HGModel::fine_grain, "fine-grain"},
+        {HGModel::medium_grain, "medium-grain"},
+    };
 
     // parse CLI args
     auto args = jw::ArgParse();
@@ -58,8 +60,12 @@ int main(int argc, char* argv[]) {
         model = HGModel::row_net;
     } else if (modelName == "column_net") {
         model = HGModel::column_net;
+    } else if (modelName == "medium_grain") {
+        model = HGModel::medium_grain;
     } else if (modelName == "auto") {
         autoModel = true;
+    } else {
+        JWLogError << "Model name not recognized" << endLog;
     }
 
     TIdx procs = args.as<TIdx>("--procs");
@@ -138,6 +144,15 @@ int main(int argc, char* argv[]) {
 
         DSparseMatrix<TVal, TIdx> A("data/matrices/" + matrix + ".mtx", procs,
                                     partitioning_scheme::cyclic);
+
+//        // for 1-D models we simply prepartition them cyclically
+//        if (model == HGModel::row_net) {
+//            CyclicPartitioner<decltype(A)> cyclicCol(procs, CyclicType::column);
+//            cyclicCol.partition(A);
+//        } else if (model == HGModel::column_net) {
+//            CyclicPartitioner<decltype(A)> cyclicRow(procs, CyclicType::row);
+//            cyclicRow.partition(A);
+//        }
 
         report.addResult(matrix, "m", A.getRows());
         report.addResult(matrix, "n", A.getCols());

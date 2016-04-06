@@ -320,4 +320,69 @@ class ColumnNetHG : public DHypergraph<TIdx> {
     TMatrix& A_;
 };
 
+
+/* A = A_r + A_c
+ *
+ * B = [ I_n | A_r^T ]
+ *     [-------------]
+ *     [ A_c | I_m   ]
+ *
+ * we apply row-net model to this matrix
+ * we have n + m vertices
+ * we have n + m nets
+ * every vertex consists of a number of non-zeros that we
+ * should add to it
+ */
+
+template <typename TIdx = Zee::default_index_type,
+          class TMatrix = Zee::DSparseMatrix<>>
+class MediumGrainHG : public DHypergraph<TIdx> {
+  public:
+    MediumGrainHG(TMatrix& matrix, TIdx procs)
+        : DHypergraph<TIdx>(matrix.getCols() + matrix.getRows(), procs),
+          matrix_(matrix) {
+        // we do the initial partitioning ourselves
+        JWAssert(matrix.getProcs() == 1);
+
+        // FIXME move this up
+        this->netCount_ = matrix.getCols() + matrix.getRows();
+        this->nets_.resize(this->netCount_);
+        this->netDistribution_.resize(this->netCount_);
+        for (auto& distribution : this->netDistribution_)
+            distribution.resize(this->partCount_);
+        this->netsForVertex_.resize(this->vertexCount_);
+
+        split();
+        JWAssert(0);
+
+        // first we want to initialize the nets and the vertices
+        // how to initially assign, need MG info for that
+    }
+
+    void split() {
+        std::vector<TIdx> row_count(matrix_.getRows());
+        std::vector<TIdx> col_count(matrix_.getCols());
+
+        for (auto triplet : *matrix_.getImages()[0]) {
+            row_count[triplet.row()]++;
+            col_count[triplet.col()]++;
+        }
+
+        // we should use storage index here, and for reassigning
+        // then reassigning should return the new index
+        // yes..
+        TIdx k = 0;
+        for (auto triplet : *matrix_.getImages()[0]) {
+
+        }
+    }
+
+    void reassign(TIdx vertex, TIdx part) override {
+        JWLogError << "MG::reassign(..) not implemented yet" << endLog;
+    }
+
+  private:
+    TMatrix& matrix_;
+};
+
 } // namespace Zee
