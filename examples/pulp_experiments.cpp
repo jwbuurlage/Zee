@@ -7,8 +7,8 @@
 using namespace Zee;
 
 int main(int argc, char* argv[]) {
-    using TVal = float;
-    using TIdx = uint64_t;
+    using TVal = default_scalar_type;
+    using TIdx = default_index_type;
 
     // available models
     static std::map<HGModel, std::string> modelNames = {
@@ -136,7 +136,8 @@ int main(int argc, char* argv[]) {
 
         JWLogVar(modelNames[model]);
 
-        DSparseMatrix<TVal, TIdx> A{"data/matrices/" + matrix + ".mtx", 1};
+        DSparseMatrix<TVal, TIdx> A("data/matrices/" + matrix + ".mtx", procs,
+                                    partitioning_scheme::cyclic);
 
         report.addResult(matrix, "m", A.getRows());
         report.addResult(matrix, "n", A.getCols());
@@ -145,23 +146,39 @@ int main(int argc, char* argv[]) {
         auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
         auto u = DVector<TVal, TIdx>{A.getRows()};
 
-        PulpPartitioner<decltype(A)> pA(A, procs, epsilon);
-        pA.initialize(A, model);
+        PulpPartitioner<decltype(A)> pulp(A, procs, epsilon);
+        pulp.initialize(A, model);
 
         std::vector<double> Vs;
         double bestV = std::numeric_limits<double>::max();
         double bestEps = -1.0;
 
+        TIdx refinement_iterations = 0;
+        switch (model) {
+        case HGModel::fine_grain:
+            refinement_iterations = A.nonZeros();
+            break;
+        case HGModel::row_net:
+            refinement_iterations = A.getCols();
+            break;
+        case HGModel::column_net:
+            refinement_iterations = A.getRows();
+            break;
+        default:
+            refinement_iterations = 0;
+            break;
+        }
+
         for (TIdx run = 0; run < runs; ++run) {
             if (run != 0)
-                pA.randomReset(A, model);
-            pA.initialPartitioning(iters);
-
+                pulp.randomReset(A, model);
+            pulp.initialPartitioning(iters);
             std::vector<TIdx> communicationVolumes;
             communicationVolumes.push_back(A.communicationVolume());
 
             for (int i = 1; i <= 1000; ++i) {
-                pA.refineWithIterations(A.nonZeros(), 0, 0, randomize);
+                pulp.refineWithIterations(refinement_iterations, 0, 0,
+                                          randomize);
                 auto comVol = A.communicationVolume();
                 communicationVolumes.push_back(comVol);
                 if (communicationVolumes[i] == communicationVolumes[i - 1])

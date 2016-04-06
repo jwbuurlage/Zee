@@ -1,8 +1,9 @@
 #pragma once
 
-#include <zee.hpp>
-
+#include "../util/benchmarking.hpp"
+#include "../matrix/sparse/sparse.hpp"
 #include "../hypergraph/hypergraph.hpp"
+#include "../partitioners/partitioner.hpp"
 
 #include <random>
 #include <vector>
@@ -48,7 +49,23 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         epsilon_ = epsilon;
     }
 
-    void initialize(TMatrix& A) override { initialize(A, HGModel::fine_grain); }
+    void initialize(TMatrix& A) override { initialize(A, HGModel::row_net); }
+
+    void initialize(TMatrix& A, HGModel model) {
+        if (initialized_)
+            return;
+        initialized_ = true;
+
+        // FIXME should check if for row net model / column net model
+        // initial matrix is distributed properly if given by user
+        // make property of sparse matrix itself?
+
+        if (A.getProcs() == 1) {
+            randomReset(A, model);
+        } else {
+            constructHypergraph(A, model);
+        }
+    }
 
     void randomReset(TMatrix& A, HGModel model) {
         std::vector<std::unique_ptr<TImage>> aNewImages;
@@ -145,22 +162,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             hyperGraph_ = std::make_unique<ColumnNetHG<TIdx, TMatrix>>(A);
     }
 
-    void initialize(TMatrix& A, HGModel model) {
-        if (initialized_)
-            return;
-        initialized_ = true;
-
-        // FIXME should check if for row net model / column net model
-        // initial matrix is distributed properly if given by user
-        // make property of sparse matrix itself?
-
-        if (A.getProcs() == 1) {
-            randomReset(A, model);
-        } else {
-            constructHypergraph(A, model);
-        }
-    }
-
     virtual TMatrix& initialPartitioning(TIdx iters) {
         hyperGraph_->sortNetsBySize();
 
@@ -169,7 +170,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         TIdx netsToConsider = 1;
         while (netsToConsider < maximumNetCount) {
             for (TIdx i = 0; i < iters; ++i) {
-                this->refineWithIterations(A_.nonZeros(), 0, netsToConsider);
+                this->refineWithIterations(hyperGraph_->getVertexCount(), 0, netsToConsider);
             }
             netsToConsider *= 2;
         }
@@ -178,7 +179,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
     virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0,
                                           TIdx netsToConsider = 0, bool randomize = false) {
-
         // initial partitioning
         TIdx r = 1;
         TIdx i = 0;

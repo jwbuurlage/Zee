@@ -18,6 +18,8 @@ class DHypergraph {
                                             std::function<double(TIdx, TIdx)> w,
                                             unsigned int maximumNetSize = 0,
                                             unsigned int netsToConsider = 0) {
+        std::vector<double> result(this->partCount_);
+
         if (maximumNetSize == 0) {
             maximumNetSize = getMaximumNetSize();
         }
@@ -25,9 +27,7 @@ class DHypergraph {
             netsToConsider = nets_.size();
         }
 
-        std::vector<double> result(this->partCount_);
 
-        std::vector<TIdx> members(this->partCount_);
         for (auto n : this->netsForVertex_[v]) {
             if (this->nets_[n].size() > maximumNetSize)
                 continue;
@@ -35,15 +35,9 @@ class DHypergraph {
             if (this->netsSizeRank_[n] >= netsToConsider)
                 continue;
 
-            for (TIdx i = 0; i < this->partCount_; ++i)
-                members[i] = 0;
-
-            for (auto u : this->nets_[n]) {
-                members[this->part_[u]]++;
-            }
-
             for (TIdx i = 0; i < this->partCount_; ++i) {
-                result[i] += w(members[i], this->nets_[n].size());
+                result[i] +=
+                    w(this->netDistribution_[n][i], this->nets_[n].size());
             }
         }
 
