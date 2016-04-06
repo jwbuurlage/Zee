@@ -1,7 +1,5 @@
 #pragma once
 
-#include "jw.hpp"
-
 #include "../util/benchmarking.hpp"
 #include "../matrix/sparse/sparse.hpp"
 #include "../hypergraph/hypergraph.hpp"
