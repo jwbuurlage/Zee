@@ -61,7 +61,9 @@ class DHypergraph {
     }
 
     std::vector<std::vector<TIdx>>& getNets() const { return nets_; }
+
     virtual void reassign(TIdx vertex, TIdx part) = 0;
+    virtual void clean() = 0;
 
     void sortNetsBySize() {
         this->netsSizeRank_.resize(nets_.size());
@@ -189,7 +191,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
         }
     }
 
-    ~FineGrainHG() {
+    void clean() {
         A_.clean();
     }
 
@@ -254,7 +256,7 @@ class RowNetHG : public DHypergraph<TIdx> {
         }
     }
 
-    ~RowNetHG() {
+    void clean() {
         A_.clean();
     }
 
@@ -321,7 +323,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
         }
     }
 
-    ~ColumnNetHG() {
+    void clean() {
         A_.clean();
     }
 
@@ -390,7 +392,7 @@ class MediumGrainHG : public DHypergraph<TIdx> {
         // how to initially assign, need MG info for that
     }
 
-    ~MediumGrainHG() {
+    void clean() {
         matrix_.clean();
     }
 

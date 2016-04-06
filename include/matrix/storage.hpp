@@ -204,9 +204,7 @@ class StorageTriplets :
         StorageTriplets() = default;
         ~StorageTriplets() = default;
 
-        Triplet<TVal, TIdx> popElement(TIdx element) override
-        {
-            // FIXME: does this get copied? want by ref, move?
+        Triplet<TVal, TIdx> popElement(TIdx element) override {
             Triplet<TVal, TIdx> trip = triplets_[element];
             this->invalidate(element);
             return trip;
@@ -227,7 +225,7 @@ class StorageTriplets :
         // call this after finished moving
         void clean() {
             std::vector<Triplet<TVal, TIdx>> purgedTriplets;
-            for (auto& trip : triplets_) {
+            for (auto trip : triplets_) {
                 if (trip.value() != 0)
                     purgedTriplets.push_back(trip);
             }
