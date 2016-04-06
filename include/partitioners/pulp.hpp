@@ -247,6 +247,10 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         return A_;
     }
 
+    void cleanMatrix() {
+        hyperGraph_->clean();
+    }
+
   private:
     bool initialized_ = false;
     TMatrix& A_;

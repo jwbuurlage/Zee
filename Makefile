@@ -13,7 +13,8 @@ all: dirs \
 	$(OUTPUT_DIR)/vector_partitioner \
 	$(OUTPUT_DIR)/pulp_experiments \
 	$(OUTPUT_DIR)/gmres_experiments \
-	$(OUTPUT_DIR)/linear_algebra
+	$(OUTPUT_DIR)/linear_algebra \
+	$(OUTPUT_DIR)/clean_test
 
 .phony: docs
 
