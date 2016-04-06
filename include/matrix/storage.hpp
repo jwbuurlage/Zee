@@ -150,9 +150,9 @@ class StorageIteratorTriplets:
             return *this;
         }
 
-       /* now the copy constructor can access _storage for 
+       /* now the copy constructor can access _storage for
         * conversion */
-       friend class StorageIteratorTriplets<TVal, TIdx, true>; 
+       friend class StorageIteratorTriplets<TVal, TIdx, true>;
 
     private:
         StoragePointer storage_;
@@ -208,13 +208,30 @@ class StorageTriplets :
         {
             // FIXME: does this get copied? want by ref, move?
             Triplet<TVal, TIdx> trip = triplets_[element];
-            triplets_.erase(triplets_.begin() + element);
+            this->invalidate(element);
             return trip;
         }
 
-        void pushTriplet(Triplet<TVal, TIdx> t) override
-        {
+        TIdx pushTriplet(Triplet<TVal, TIdx> t) override {
             triplets_.push_back(t);
+            return triplets_.size() - 1;
+        }
+
+        void invalidate(TIdx element) {
+            // FIXME afaik this does nothing when being looped override
+            // in any operation. But maybe we want to check this within iterator
+            // regardless clean should be called after moving nonzeros
+            triplets_[element] = {0, 0, 0};
+        }
+
+        // call this after finished moving
+        void clean() {
+            std::vector<Triplet<TVal, TIdx>> purgedTriplets;
+            for (auto& trip : triplets_) {
+                if (trip.value() != 0)
+                    purgedTriplets.push_back(trip);
+            }
+            triplets_ = purgedTriplets;
         }
 
         virtual Triplet<TVal, TIdx> getElement(TIdx i) const override {
@@ -263,7 +280,11 @@ class DSparseStorage
         virtual Triplet<TVal, TIdx> popElement(TIdx element) = 0;
 
         /** Adds the triplet t to the storage */
-        virtual void pushTriplet(Triplet<TVal, TIdx> t) = 0;
+        virtual TIdx pushTriplet(Triplet<TVal, TIdx> t) = 0;
+
+        /** Clean invalidated tripelts that were moved.
+          * This invalidates any element index references */
+        virtual void clean() = 0;
 
         /** The number of matrix elements stored. */
         virtual TIdx size() const = 0;
