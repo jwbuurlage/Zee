@@ -357,6 +357,11 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         this->images_[to]->pushTriplet(t);
     }
 
+    TIdx moveNonZero(TIdx storageIndex, TIdx from, TIdx to) {
+        auto t = this->images_[from]->popElement(storageIndex);
+        return this->images_[to]->pushTriplet(t);
+    }
+
     void resetImages(std::vector<std::unique_ptr<Image>>& new_images) {
         // update the number of processors
         this->procs_ = new_images.size();
@@ -487,6 +492,11 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
     /** Move constructor */
     DSparseMatrix(DSparseMatrix&& o) = default;
 
+    void clean() {
+        for (auto& image : this->images_) {
+            image->clean();
+        }
+    }
 };
 
 // Owned by a processor. It is a submatrix, which holds the actual
@@ -539,14 +549,18 @@ class DSparseMatrixImage {
     }
 
     // rename to push
-    void pushTriplet(Triplet<TVal, TIdx> t) {
+    TIdx pushTriplet(Triplet<TVal, TIdx> t) {
         if (!storage_) {
             JWLogError << "Can not push triplet without storage." << endLog;
-            return;
+            return 0;
         }
         rowset_.raise(t.row());
         colset_.raise(t.col());
-        storage_->pushTriplet(t);
+        return storage_->pushTriplet(t);
+    }
+
+    void clean() {
+        storage_->clean();
     }
 
     void setLocalIndices(std::vector<TIdx>&& localIndicesV,

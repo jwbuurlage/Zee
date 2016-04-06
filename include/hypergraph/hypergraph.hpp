@@ -154,17 +154,21 @@ class FineGrainHG : public DHypergraph<TIdx> {
 
         row.resize(this->vertexCount_);
         col.resize(this->vertexCount_);
+        storageIndex_.resize(this->vertexCount_);
 
         TIdx s = 0;
         // we want a fixed ordering of the nonzeros..
         TIdx i = 0;
         for (auto& image : A.getImages()) {
+            TIdx k = 0;
             for (auto& trip : *image) {
                 row[i] = trip.row();
                 col[i] = trip.col();
 
                 this->part_[i] = s;
                 this->partSize_[s]++;
+
+                this->storageIndex_[i] = k;
 
                 this->nets_[trip.col()].push_back(i);
                 this->netDistribution_[trip.col()][s]++;
@@ -177,11 +181,16 @@ class FineGrainHG : public DHypergraph<TIdx> {
 
                 this->weights_[i] = 1;
 
-                i++;
+                ++i;
+                ++k;
             }
 
             ++s;
         }
+    }
+
+    ~FineGrainHG() {
+        A_.clean();
     }
 
     void reassign(TIdx vertex, TIdx part) override {
@@ -197,7 +206,8 @@ class FineGrainHG : public DHypergraph<TIdx> {
             this->partSize_[part]++;
         }
 
-        A_.moveNonZero(row[vertex], col[vertex], this->part_[vertex], part);
+        storageIndex_[vertex] =
+            A_.moveNonZero(storageIndex_[vertex], this->part_[vertex], part);
         this->part_[vertex] = part;
     }
 
@@ -205,6 +215,8 @@ class FineGrainHG : public DHypergraph<TIdx> {
     TMatrix& A_;
     std::vector<TIdx> row;
     std::vector<TIdx> col;
+    // storage index for vertex
+    std::vector<TIdx> storageIndex_;
 };
 
 template <typename TIdx = Zee::default_index_type,
@@ -220,9 +232,11 @@ class RowNetHG : public DHypergraph<TIdx> {
             distribution.resize(this->partCount_);
 
         this->netsForVertex_.resize(this->vertexCount_);
+        this->storageIndices_.resize(this->vertexCount_);
 
         TIdx s = 0;
         for (auto& image : A.getImages()) {
+            TIdx k = 0;
             for (auto& trip : *image) {
                 this->part_[trip.col()] = s;
                 this->weights_[trip.col()]++;
@@ -232,10 +246,16 @@ class RowNetHG : public DHypergraph<TIdx> {
                 this->netDistribution_[trip.row()][s]++;
 
                 this->netsForVertex_[trip.col()].push_back(trip.row());
-            }
+                this->storageIndices_[trip.col()].push_back(k);
 
+                ++k;
+            }
             ++s;
         }
+    }
+
+    ~RowNetHG() {
+        A_.clean();
     }
 
     void reassign(TIdx vertex, TIdx part) override {
@@ -251,8 +271,8 @@ class RowNetHG : public DHypergraph<TIdx> {
             this->partSize_[part]++;
         }
 
-        for (TIdx row : this->netsForVertex_[vertex]) {
-            A_.moveNonZero(row, vertex, this->part_[vertex], part);
+        for (auto& idx : this->storageIndices_[vertex]) {
+            idx = A_.moveNonZero(idx, this->part_[vertex], part);
         }
         this->part_[vertex] = part;
     }
@@ -260,6 +280,8 @@ class RowNetHG : public DHypergraph<TIdx> {
 
   private:
     TMatrix& A_;
+    // storage index for vertex
+    std::vector<std::vector<TIdx>> storageIndices_;
 };
 
 template <typename TIdx = Zee::default_index_type,
@@ -276,12 +298,13 @@ class ColumnNetHG : public DHypergraph<TIdx> {
             distribution.resize(this->partCount_);
 
         this->netsForVertex_.resize(this->vertexCount_);
+        this->storageIndices_.resize(this->vertexCount_);
 
         TIdx s = 0;
         // we want a fixed ordering of the nonzeros..
         for (auto& image : A.getImages()) {
+            TIdx k = 0;
             for (auto& trip : *image) {
-
                 this->part_[trip.row()] = s;
                 this->weights_[trip.row()]++;
                 this->partSize_[s]++;
@@ -290,10 +313,16 @@ class ColumnNetHG : public DHypergraph<TIdx> {
                 this->netDistribution_[trip.col()][s]++;
 
                 this->netsForVertex_[trip.row()].push_back(trip.col());
-            }
+                this->storageIndices_[trip.row()].push_back(k);
 
+                ++k;
+            }
             ++s;
         }
+    }
+
+    ~ColumnNetHG() {
+        A_.clean();
     }
 
     void reassign(TIdx vertex, TIdx part) override {
@@ -309,8 +338,8 @@ class ColumnNetHG : public DHypergraph<TIdx> {
             this->partSize_[part]++;
         }
 
-        for (TIdx col : this->netsForVertex_[vertex]) {
-            A_.moveNonZero(vertex, col, this->part_[vertex], part);
+        for (auto& idx : this->storageIndices_[vertex]) {
+            idx = A_.moveNonZero(idx, this->part_[vertex], part);
         }
         this->part_[vertex] = part;
     }
@@ -318,6 +347,8 @@ class ColumnNetHG : public DHypergraph<TIdx> {
 
   private:
     TMatrix& A_;
+    // label for every nonzero -- large!
+    std::vector<std::vector<TIdx>> storageIndices_;
 };
 
 
@@ -359,6 +390,10 @@ class MediumGrainHG : public DHypergraph<TIdx> {
         // how to initially assign, need MG info for that
     }
 
+    ~MediumGrainHG() {
+        matrix__.clean();
+    }
+
     void split() {
         std::vector<TIdx> row_count(matrix_.getRows());
         std::vector<TIdx> col_count(matrix_.getCols());
@@ -368,7 +403,7 @@ class MediumGrainHG : public DHypergraph<TIdx> {
             col_count[triplet.col()]++;
         }
 
-        // we should use storage index here, and for reassigning
+        // we should use torage index here, and for reassigning
         // then reassigning should return the new index
         // yes..
         TIdx k = 0;
