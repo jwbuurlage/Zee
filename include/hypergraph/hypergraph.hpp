@@ -467,10 +467,9 @@ class MediumGrainHG : public DHypergraph<TIdx> {
         std::uniform_int_distribution<TIdx> randpart(0, this->partCount_ - 1);
 
         for (TIdx k = matrix_.getCols(); k < this->vertexCount_; ++k) {
-//            TIdx target_part = randpart(mt);
-//            if (target_part != this->part_[k])
-//                this->reassign(k, target_part);
-            this->reassign(k, 1);
+            TIdx target_part = randpart(mt);
+            if (target_part != this->part_[k])
+                this->reassign(k, target_part);
         }
     }
 
