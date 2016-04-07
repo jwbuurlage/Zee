@@ -61,12 +61,12 @@ def finalize_plt(filename):
     if args.filetype == "tikz":
         print("INFO: Saved:", filename[:-extension_length] + args.filetype)
         tikz_save(filename[:-extension_length] + args.filetype)
-    elif args.save:
+    elif args.save or args.showfile:
         print("INFO: Saved:", filename[:-extension_length] + args.filetype)
         outfilename = filename[:-extension_length] + args.filetype
         plt.savefig(outfilename, bbox_inches='tight')
         if args.showfile:
-            os.system("xdg-open " + outfilename)
+            os.system("rifle " + outfilename)
     else:
         print("INFO: Showing")
         plt.show()
@@ -113,7 +113,8 @@ def spy(matrix_file):
             plt.ylim([m, 0])
 
             for _ in range(0, nz):
-                i, j, p = map(int, fin.readline().split(' '))
+                stats = fin.readline().split(' ')
+                i, j, p = map(int, stats)
                 ax.add_patch(patches.Rectangle((j + marker_offset,
                     i + marker_offset),
                     marker_size, marker_size, color=get_color(p)))

@@ -169,7 +169,7 @@ namespace matrix_market
 
         if (s != "%%MatrixMarket" || t != "matrix") {
             JWLogError << "Not a valid MM file: " << file << endLog;
-            return;
+            exit(1);
         }
 
         // now follow a sequence of keywords

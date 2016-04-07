@@ -122,21 +122,25 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         // if model is medium grain, then we use the 1 procs
         if (model != HGModel::medium_grain) {
             A.resetImages(aNewImages);
+        } else {
+            // FIXME forward to MG
         }
 
         constructHypergraph(A, model);
 
+        JWLogVar(A.communicationVolume());
+
         if (A.loadImbalance() > (1.0 + epsilon_)) {
             if (this->procs_ > 2) {
                 JWLogError << "Invalid initial size for non-bipartitioning. "
-                               "No support for fixing the initialization for "
-                               "small matrices."
-                            << endLog;
+                              "No support for fixing the initialization for "
+                              "small matrices."
+                           << endLog;
                 exit(-1);
             }
             TIdx largePart = 0;
             if (hyperGraph_->getPartSize(1) > hyperGraph_->getPartSize(0)) {
-                    largePart = 1;
+                largePart = 1;
             }
 
             auto weights = hyperGraph_->getWeights();
@@ -155,7 +159,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
             }
             if (A.loadImbalance() > (1.0 + epsilon_)) {
                 JWLogError << "Cannot find valid initial distribution. eps = "
-                            << A.loadImbalance() << endLog;
+                           << A.loadImbalance() << endLog;
                 exit(-1);
             }
         }

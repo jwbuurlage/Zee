@@ -10,6 +10,19 @@ int main(int argc, char* argv[]) {
     using TVal = default_scalar_type;
     using TIdx = default_index_type;
 
+    static auto extractName = [](std::string filename) {
+        auto root_position = filename.rfind('/');
+        auto ext_position = filename.rfind('.');
+        if (root_position == std::string::npos) {
+            return filename.substr(0, filename.size() -
+                                          ext_position);
+        } else {
+            return filename.substr(root_position + 1,
+                                   ext_position -
+                                       root_position - 1);
+        }
+    };
+
     // available models
     static std::map<HGModel, std::string> modelNames = {
         {HGModel::row_net, "row-net"},
@@ -43,7 +56,7 @@ int main(int argc, char* argv[]) {
     args.addOption("--fraction-plot",
                    "plot the fraction of matrices with a minimum gain");
     if (!args.parse(argc, argv))
-        return -1;
+        return 1;
 
     auto matrices = args.asList("--matrices");
     JWLogVar(matrices);
@@ -102,11 +115,10 @@ int main(int argc, char* argv[]) {
     std::vector<double> improvements;
     std::vector<double> gains;
     for (auto matrix : matrices) {
-        report.addRow(matrix);
-        bench.phase(matrix);
+        auto matrix_name = extractName(matrix);
 
         // initialize the matrix from file
-        DSparseMatrix<TVal, TIdx> B{"data/matrices/" + matrix + ".mtx", 1};
+        DSparseMatrix<TVal, TIdx> B{matrix, 1};
 
         auto cyclicComVol = 0;
         if (autoModel) {
@@ -118,7 +130,7 @@ int main(int argc, char* argv[]) {
             cyclicCol.partition(B);
             auto comVolColumn = B.communicationVolume();
 
-            if (comVolRow > comVolColumn) {
+            if (comVolRow >= comVolColumn) {
                 // Better to keep columns together
                 model = HGModel::row_net;
                 cyclicComVol = comVolColumn;
@@ -139,11 +151,19 @@ int main(int argc, char* argv[]) {
                 cyclicComVol = B.communicationVolume();
             }
         }
+        if (cyclicComVol == 0) {
+            JWLogInfo << "Skipping: " << matrix_name << ", which has V_C = 0" << endLog;
+            continue;
+        }
+
+        report.addRow(matrix_name);
+        bench.phase(matrix_name);
+
+
 
         JWLogVar(modelNames[model]);
 
-        DSparseMatrix<TVal, TIdx> A("data/matrices/" + matrix + ".mtx", procs,
-                                    partitioning_scheme::cyclic);
+        DSparseMatrix<TVal, TIdx> A(matrix, 1);
 
 //        // for 1-D models we simply prepartition them cyclically
 //        if (model == HGModel::row_net) {
@@ -154,15 +174,21 @@ int main(int argc, char* argv[]) {
 //            cyclicRow.partition(A);
 //        }
 
-        report.addResult(matrix, "m", A.getRows());
-        report.addResult(matrix, "n", A.getCols());
-        report.addResult(matrix, "N", A.nonZeros());
+        report.addResult(matrix_name, "m", A.getRows());
+        report.addResult(matrix_name, "n", A.getCols());
+        report.addResult(matrix_name, "N", A.nonZeros());
 
         auto v = DVector<TVal, TIdx>{A.getCols(), 1.0};
         auto u = DVector<TVal, TIdx>{A.getRows()};
 
+        if (spyMatrix)
+            A.spy(matrix_name + "_pre", true);
+
         PulpPartitioner<decltype(A)> pulp(A, procs, epsilon);
         pulp.initialize(A, model);
+
+        if (spyMatrix)
+            A.spy(matrix_name + "_prehyper", true);
 
         std::vector<double> Vs;
         double bestV = std::numeric_limits<double>::max();
@@ -178,6 +204,9 @@ int main(int argc, char* argv[]) {
             break;
         case HGModel::column_net:
             refinement_iterations = A.getRows();
+            break;
+        case HGModel::medium_grain:
+            refinement_iterations = A.getRows() + A.getCols();
             break;
         default:
             refinement_iterations = 0;
@@ -200,13 +229,16 @@ int main(int argc, char* argv[]) {
                     break;
             }
 
+            pulp.cleanMatrix();
+
+            JWLogVar(A.loadImbalance());
             JWLogVar(communicationVolumes);
             Vs.push_back((double)communicationVolumes.back());
             if (Vs.back() < bestV) {
                 bestV = Vs.back();
                 bestEps = A.loadImbalance();
                 if (spyMatrix) {
-                    A.spy(matrix + "_hyperpulp");
+                    A.spy(extractName(matrix) + "_hyperpulp");
                 }
             }
 
@@ -236,31 +268,31 @@ int main(int argc, char* argv[]) {
             volumeResult << std::fixed << std::setprecision(1) << average
                          << " +- " << sd;
 
-            report.addResult(matrix, "V_HP", volumeResult.str());
+            report.addResult(matrix_name, "V_HP", volumeResult.str());
         } else {
-            report.addResult(matrix, "V_HP", average);
+            report.addResult(matrix_name, "V_HP", average);
         }
-        report.addResult(matrix, "V_HP_m", bestV);
+        report.addResult(matrix_name, "V_HP_m", bestV);
 
         if (showEps) {
             std::stringstream epsResult;
             epsResult << std::fixed << std::setprecision(4) << bestEps - 1.0;
-            report.addResult(matrix, "eps", epsResult.str());
+            report.addResult(matrix_name, "eps", epsResult.str());
         }
 
         improvements.push_back((cyclicComVol - average) / cyclicComVol);
 
-        report.addResult(matrix, "V_C", cyclicComVol);
+        report.addResult(matrix_name, "V_C", cyclicComVol);
 
         auto G = (1.0 - ((double)average / cyclicComVol)) * 100.0;
         std::stringstream gainResult;
         gainResult << std::fixed << std::setprecision(1) << G << "%";
 
         gains.push_back(G);
-        report.addResult(matrix, "G", gainResult.str());
+        report.addResult(matrix_name, "G", gainResult.str());
 
         if (autoModel) {
-            report.addResult(matrix, "model", modelNames[model],
+            report.addResult(matrix_name, "model", modelNames[model],
                              "\\text{" + modelNames[model] + "}");
         }
 
@@ -272,7 +304,7 @@ int main(int argc, char* argv[]) {
                 mg.refine(A);
             }
 
-            report.addResult(matrix, "V_MG", A.communicationVolume());
+            report.addResult(matrix_name, "V_MG", A.communicationVolume());
         }
     }
 

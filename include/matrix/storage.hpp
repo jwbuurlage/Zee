@@ -17,6 +17,7 @@ License, or (at your option) any later version.
 #include <type_traits>
 #include <memory>
 #include <vector>
+#include <set>
 
 #include <ext/jwutil/include/jw.hpp>
 
@@ -86,6 +87,8 @@ class StorageIteratorTriplets:
     public StorageIterator<TVal, TIdx, const_iter>
 {
     public:
+        using set_iterator = typename std::set<TIdx>::iterator;
+
         // Define whether our data type is constant
         using StoragePointer = typename std::conditional<const_iter,
                 const StorageTriplets<TVal, TIdx>*,
@@ -96,15 +99,21 @@ class StorageIteratorTriplets:
                 Triplet<TVal, TIdx>&>::type;
 
         /** Default constructor */
-        StorageIteratorTriplets(StoragePointer storage, TIdx i) :
-            storage_(storage),
-            i_(i) { }
+        StorageIteratorTriplets(StoragePointer storage, TIdx i)
+            : storage_(storage), i_(i),
+              next_inactive_(storage_->inactives_.begin()) {
+
+            while (next_inactive_ != storage_->inactives_.end() &&
+                   *next_inactive_ < i_) {
+                ++next_inactive_;
+            }
+        }
 
         /** Copy constructor (const <-> regular conversion) */
         StorageIteratorTriplets(
-                const StorageIteratorTriplets<TVal, TIdx, false>& other) :
-            storage_(other.storage_),
-            i_(other.i_)  { }
+            const StorageIteratorTriplets<TVal, TIdx, false>& other)
+            : storage_(other.storage_), i_(other.i_),
+              next_inactive_(other.next_inactive_) {}
 
         StorageIteratorTriplets& operator--(int)
         {
@@ -147,7 +156,13 @@ class StorageIteratorTriplets:
         StorageIteratorTriplets& operator++()
         {
             i_++;
-            return *this;
+
+            if (next_inactive_ == storage_->inactives_.end() ||
+                i_ < *next_inactive_)
+                return *this;
+
+            ++next_inactive_;
+            return ++(*this);
         }
 
        /* now the copy constructor can access _storage for
@@ -157,6 +172,7 @@ class StorageIteratorTriplets:
     private:
         StoragePointer storage_;
         TIdx i_;
+        set_iterator next_inactive_;
 };
 
 
@@ -219,17 +235,22 @@ class StorageTriplets :
             // FIXME afaik this does nothing when being looped override
             // in any operation. But maybe we want to check this within iterator
             // regardless clean should be called after moving nonzeros
-            triplets_[element] = {0, 0, 0};
+            inactives_.insert(element);
         }
 
         // call this after finished moving
         void clean() {
             std::vector<Triplet<TVal, TIdx>> purgedTriplets;
-            for (auto trip : triplets_) {
-                if (trip.value() != 0)
-                    purgedTriplets.push_back(trip);
+            auto next_inactive = inactives_.begin();
+            for (TIdx j = 0; j < triplets_.size(); ++j) {
+                if (next_inactive != inactives_.end() && j == *next_inactive) {
+                    ++next_inactive;
+                    continue;
+                }
+                purgedTriplets.push_back(triplets_[j]);
             }
             triplets_ = purgedTriplets;
+            inactives_.clear();
         }
 
         virtual Triplet<TVal, TIdx> getElement(TIdx i) const override {
@@ -237,7 +258,7 @@ class StorageTriplets :
         }
 
         virtual TIdx size() const override {
-            return triplets_.size();
+            return triplets_.size() - inactives_.size();
         }
 
         // FIXME: move to getter?! although iterators truly are 'friends'
@@ -246,7 +267,8 @@ class StorageTriplets :
 
     private:
         // FIXME: proper wasy to store this (reference?)
-        vector<Triplet<TVal, TIdx>> triplets_;
+        std::vector<Triplet<TVal, TIdx>> triplets_;
+        std::set<TIdx> inactives_;
 };
 
 //-----------------------------------------------------------------------------

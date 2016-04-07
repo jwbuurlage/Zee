@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <random>
 
 namespace Zee {
 
@@ -26,7 +27,6 @@ class DHypergraph {
         if (netsToConsider == 0) {
             netsToConsider = nets_.size();
         }
-
 
         for (auto n : this->netsForVertex_[v]) {
             if (this->nets_[n].size() > maximumNetSize)
@@ -76,11 +76,6 @@ class DHypergraph {
                           TIdx rhs) {
                       return this->nets_[lhs].size() < this->nets_[rhs].size();
                   });
-
-        // for (auto net : netsBySize) {
-        //     ZeeLogVar(this->nets_[net].size());
-        // }
-        // ZeeAssert(0);
 
         for (TIdx i = 0; i < nets_.size(); ++i) {
             this->netsSizeRank_[netsBySize[i]] = i;
@@ -210,6 +205,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
 
         storageIndex_[vertex] =
             A_.moveNonZero(storageIndex_[vertex], this->part_[vertex], part);
+
         this->part_[vertex] = part;
     }
 
@@ -385,18 +381,40 @@ class MediumGrainHG : public DHypergraph<TIdx> {
             distribution.resize(this->partCount_);
         this->netsForVertex_.resize(this->vertexCount_);
 
-        split();
-        JWAssert(0);
+        this->storageIndices_.resize(this->vertexCount_);
 
-        // first we want to initialize the nets and the vertices
-        // how to initially assign, need MG info for that
+        this->split_();
+
+        this->initial_distribution_();
     }
 
     void clean() {
         matrix_.clean();
     }
 
-    void split() {
+    void reassign(TIdx vertex, TIdx part) override {
+        if (this->part_[vertex] == part) {
+            JWLogError << "Reassigning to own part" << endLog;
+            return;
+        }
+
+        for (auto net : this->netsForVertex_[vertex]) {
+            this->netDistribution_[net][this->part_[vertex]]--;
+            this->netDistribution_[net][part]++;
+        }
+
+        this->partSize_[this->part_[vertex]] -= this->weights_[vertex];
+        this->partSize_[part] += this->weights_[vertex];
+
+        for (auto& idx : this->storageIndices_[vertex]) {
+            idx = matrix_.moveNonZero(idx, this->part_[vertex], part);
+        }
+
+        this->part_[vertex] = part;
+    }
+
+  private:
+    void split_() {
         std::vector<TIdx> row_count(matrix_.getRows());
         std::vector<TIdx> col_count(matrix_.getCols());
 
@@ -405,21 +423,62 @@ class MediumGrainHG : public DHypergraph<TIdx> {
             col_count[triplet.col()]++;
         }
 
-        // we should use torage index here, and for reassigning
-        // then reassigning should return the new index
-        // yes..
+        for (TIdx i = 0; i < this->vertexCount_; ++i) {
+            this->nets_[i].push_back(i);
+            this->part_[i] = 0;
+            this->netDistribution_[i][0]++;
+        }
+
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        std::uniform_int_distribution<TIdx> randbool(0, 1);
+
         TIdx k = 0;
         for (auto triplet : *matrix_.getImages()[0]) {
+            TIdx target_vertex = 0;
+            TIdx target_net = 0;
+            if (row_count[triplet.row()] < col_count[triplet.col()]) {
+                target_vertex = matrix_.getCols() + triplet.row();
+                target_net = triplet.col();
+            } else {
+                target_vertex = triplet.col();
+                target_net = matrix_.getCols() + triplet.row();
+            }
+            this->weights_[target_vertex] += 1;
+            this->storageIndices_[target_vertex].push_back(k);
+            this->nets_[target_net].push_back(target_vertex);
+            this->netDistribution_[target_net][0]++;
+            this->netsForVertex_[target_vertex].push_back(target_net);
+            ++k;
+        }
 
+        for (TIdx i = 0; i < this->vertexCount_; ++i) {
+            this->partSize_[0] += this->weights_[i];
         }
     }
 
-    void reassign(TIdx vertex, TIdx part) override {
-        JWLogError << "MG::reassign(..) not implemented yet" << endLog;
+    void initial_distribution_() {
+        using TImage = typename TMatrix::image_type;
+        matrix_.getMutableImages().push_back(std::make_shared<TImage>());
+        matrix_.setProcs(2);
+
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        std::uniform_int_distribution<TIdx> randpart(0, this->partCount_ - 1);
+
+        for (TIdx k = matrix_.getCols(); k < this->vertexCount_; ++k) {
+//            TIdx target_part = randpart(mt);
+//            if (target_part != this->part_[k])
+//                this->reassign(k, target_part);
+            this->reassign(k, 1);
+        }
     }
 
-  private:
     TMatrix& matrix_;
+
+    // nets_
+    // part_
+    std::vector<std::vector<TIdx>> storageIndices_;
 };
 
 } // namespace Zee
