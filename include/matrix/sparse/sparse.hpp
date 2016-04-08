@@ -109,7 +109,11 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     using Base = DMatrixBase<Derived, TVal, TIdx>;
     using Base::operator=;
 
-    DSparseMatrixBase(TIdx rows, TIdx cols) : Base(rows, cols) {}
+    DSparseMatrixBase(TIdx rows, TIdx cols, TIdx procs) : Base(rows, cols) {
+        setDistributionScheme(partitioning_scheme::cyclic, procs);
+        for (TIdx i = 0; i < this->getProcs(); ++i)
+            images_.push_back(std::make_shared<Image>());
+    }
 
     DSparseMatrixBase(std::string file, TIdx procs = 1,
                       partitioning_scheme scheme = partitioning_scheme::cyclic)
@@ -447,8 +451,17 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
     bool isInitialized() const { return this->initialized_; }
 
+    // FIXME: do we want to make the pushTriplet of the image itself private?
+    TIdx pushTriplet(TIdx proc, Triplet<TVal, TIdx> t) {
+        (*this)[proc].pushTriplet(t);
+        nz_++;
+    }
+
+    Image& operator[](size_t i) { return *(images_[i]); }
+    const Image& operator[](size_t i) const { return *(images_[i]); }
+
   protected:
-    TIdx nz_;
+    TIdx nz_ = 0;
     partitioning_scheme partitioning_;
     std::vector<std::shared_ptr<Image>> images_;
     std::function<TIdx(TIdx, TIdx)> distributionLambda_;
@@ -480,9 +493,8 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
         : Base(file, procs, scheme) {}
 
     /** Initialize an (empty) sparse (rows x cols) matrix */
-    DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 0) : Base(rows, cols) {
-        this->setDistributionScheme(partitioning_scheme::cyclic, procs);
-    }
+    DSparseMatrix(TIdx rows, TIdx cols, TIdx procs = 1)
+        : Base(rows, cols, procs) {}
 
     DSparseMatrix() : DSparseMatrix<TVal, TIdx>(0, 0) {}
 
@@ -491,6 +503,15 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
 
     /** Move constructor */
     DSparseMatrix(DSparseMatrix&& o) = default;
+
+    /** Has the storage been localized */
+    bool localizedStorage() const {
+        for (auto& image : this->images_) {
+            if (!image->localizedStorage())
+                return false;
+        }
+        return true;
+    }
 
     void clean() {
         for (auto& image : this->images_) {

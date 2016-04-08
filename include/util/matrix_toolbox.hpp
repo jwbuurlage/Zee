@@ -20,14 +20,14 @@ namespace Zee {
 
 /** Create identity matrix as sparse matrix */
 template <typename TIdx>
-DSparseMatrix<double> eye(TIdx n, TIdx procs) {
-    std::vector<Triplet<double, TIdx>> coefficients;
+DSparseMatrix<default_scalar_type, TIdx> eye(TIdx n, TIdx procs) {
+    std::vector<Triplet<default_scalar_type, TIdx>> coefficients;
     coefficients.reserve(n);
 
     for (TIdx i = 0; i < n; ++i)
-        coefficients.push_back(Triplet<double, TIdx>(i, i, 1.0));
+        coefficients.push_back(Triplet<default_scalar_type, TIdx>(i, i, 1));
 
-    DSparseMatrix<double, TIdx> A(n, n);
+    DSparseMatrix<default_scalar_type, TIdx> A(n, n);
     A.setDistributionScheme(partitioning_scheme::cyclic, procs);
 
     A.setFromTriplets(coefficients.begin(), coefficients.end());

@@ -143,7 +143,16 @@ class DVector
 
         const std::vector<TIdx>& getOwners() const { return owners_; }
 
-        // Operator overloads and algorithm implementations
+        bool operator==(const DVector<TVal, TIdx>& rhs) const {
+            auto& lhs = (*this);
+            if (lhs.size() != rhs.size())
+                return false;
+            for (size_t i = 0; i < lhs.size(); ++i) {
+                if (lhs[i] != rhs[i])
+                    return false;
+            }
+            return true;
+        }
 
     private:
         std::vector<TVal> elements_;

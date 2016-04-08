@@ -23,6 +23,7 @@ DVector<TVal, TIdx> perform_operation(
     const auto p = A.getProcs();
 
     JWAssert(A.getCols() == v.size());
+    JWAssert(A.localizedStorage());
 
     std::mutex writeMutex;
     Barrier<TIdx> barrier(p);
