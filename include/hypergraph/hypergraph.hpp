@@ -1,10 +1,10 @@
 #pragma once
 
-#include <zee.hpp>
-
 #include <vector>
 #include <algorithm>
 #include <random>
+
+#include "zee.hpp"
 
 namespace Zee {
 

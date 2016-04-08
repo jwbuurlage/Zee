@@ -155,8 +155,6 @@ namespace matrix_market
     template <typename Derived, typename TVal, typename TIdx>
     void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target)
     {
-        JWLogInfo << "Loading matrix from file: " << file << endLog;
-
         std::ifstream fs(file);
 
         std::string header;
