@@ -131,7 +131,7 @@ Zee is released under the LGPLv3. See the file `COPYING` for details.
 Zee is a header-only C++ library, and can be used by including `<zee.hpp>`
 in your program. For detailed instructions we refer to the [documentation](#).
 
-The `master` branch contains the latest release. An (unstable) snapshot of the current development can be found in the `develop` branch.
+The `master` branch contains the latest release. A (unstable) snapshot of the current development can be found in the `develop` branch.
 
 ## Dependencies and requirements
 
@@ -140,7 +140,8 @@ The library has been tested on Linux using recent versions of Clang and GCC with
 Below is a list of optional dependencies:
 
 - *Python* and the Python library *matplotlib* are used for scripts, in particular for plotting.
-- [*Catch*](https://github.com/philsquared/Catch) is used for the unit tests.
+- [*Catch*](https://github.com/philsquared/Catch) is included as a submodule.
+- A [small utility library](https://github.com/jwbuurlage/JWUtil) is included as a submodule.
 
 ## Contributing
 

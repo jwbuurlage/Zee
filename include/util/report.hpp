@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <fstream>
 
-#include <ext/jwutil/include/jw.hpp>
+#include "jw.hpp"
 
 namespace Zee {
 

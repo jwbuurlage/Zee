@@ -94,7 +94,7 @@ class Factory
         }
 };
 
-bool fileExists(std::string path)
+inline bool fileExists(std::string path)
 {
     struct stat fileInfo;
     return stat(path.c_str(), &fileInfo) == 0;

@@ -37,6 +37,6 @@ License, or (at your option) any later version.
 #include "util/common.hpp"
 #include "util/report.hpp"
 
-#include "ext/jwutil/include/jw.hpp"
+#include "jw.hpp"
 
 #include "solvers/gmres.hpp"

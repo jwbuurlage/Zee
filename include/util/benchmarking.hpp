@@ -19,7 +19,7 @@ License, or (at your option) any later version.
 #include <sstream>
 #include <iomanip>
 
-#include <ext/jwutil/include/jw.hpp>
+#include "jw.hpp"
 
 namespace Zee {
 
