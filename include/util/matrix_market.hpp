@@ -20,7 +20,7 @@ License, or (at your option) any later version.
 #include <string>
 #include <sstream>
 
-#include <ext/jwutil/include/jw.hpp>
+#include "jw.hpp"
 
 #include "matrix/base/base.hpp"
 
