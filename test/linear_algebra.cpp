@@ -55,8 +55,8 @@ TEST_CASE("vector operations", "[linear algebra]") {
     }
 }
 
-Zee::DSparseMatrix<TVal, TIdx> A{"mtx/sparse_example.mtx", 1};
-Zee::DMatrix<TVal, TIdx> B{"mtx/dense_example.mtx"};
+Zee::DSparseMatrix<TVal, TIdx> A{"test/mtx/sparse_example.mtx", 1};
+Zee::DMatrix<TVal, TIdx> B{"test/mtx/dense_example.mtx"};
 Zee::DMatrix<TVal, TIdx> C = B;
 Zee::DMatrix<TVal, TIdx> D{4, 4};
 

@@ -25,7 +25,7 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include <ext/jwutil/include/jw.hpp>
+#include <jw.hpp>
 
 #include "../base/base.hpp"
 #include "../storage.hpp"

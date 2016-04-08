@@ -21,7 +21,7 @@ This file has been adapted from the Arya game engine.
 #include <vector>
 #include <map>
 
-#include <ext/jwutil/include/jw.hpp>
+#include "jw.hpp"
 
 namespace Zee {
 
