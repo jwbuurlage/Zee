@@ -97,8 +97,9 @@ namespace matrix_market
         } else if (info & matrix_market::info::skew_symmetric) {
             for (auto& trip : coefficients) {
                 // we do not want to duplicate the diagonal
-                if (trip.col() == trip.row())
+                if (trip.col() == trip.row()) {
                     continue;
+                }
 
                 coefficients.push_back(Triplet<TVal, TIdx>(
                     trip.col(), trip.row(), -trip.value()));
@@ -134,17 +135,19 @@ namespace matrix_market
         // read M, N
         line_stream >> M >> N;
 
-        std::vector<TVal> values;
+        std::vector<TVal> values(M * N);
 
         // read matrix coordinates
-        for (TIdx i = 0; i < M * N; ++i) {
-            TVal value = (TVal)1;
+        for (TIdx j = 0; j < N; ++j) {
+            for (TIdx i = 0; i < M; ++i) {
+                TVal value = (TVal)1;
 
-            std::getline(fs, line);
-            std::stringstream line_stream(line);
-            line_stream >> value;
+                std::getline(fs, line);
+                std::stringstream line_stream(line);
+                line_stream >> value;
 
-            values.push_back(value);
+                values[i * N + j] = value;
+            }
         }
 
         target.resize(M, N);
@@ -195,7 +198,7 @@ namespace matrix_market
                 info |= matrix_market::info::general;
             } else if (keyword == "symmetric") {
                 info |= matrix_market::info::symmetric;
-            } else if (keyword == "skew_symmetric") {
+            } else if (keyword == "skew-symmetric") {
                 info |= matrix_market::info::skew_symmetric;
             }
         }

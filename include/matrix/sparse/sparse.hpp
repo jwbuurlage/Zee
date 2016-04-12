@@ -52,7 +52,8 @@ void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target);
  * in a
   * matrix. It is particularly useful in the representation of sparse matrices.
   */
-template <typename TVal, typename TIdx = uint32_t>
+template <typename TVal = default_scalar_type,
+          typename TIdx = default_index_type>
 class Triplet {
   public:
     Triplet() : i_(0), j_(0), value_(0) {}

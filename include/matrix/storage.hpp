@@ -203,6 +203,8 @@ class StorageTriplets :
 
         iterator begin() override
         {
+            // maybe clean here, instead of checking inactives_
+            // in storage iterator
             return iterator(this, 0);
         }
 
