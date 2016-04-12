@@ -143,7 +143,16 @@ class DVector
 
         const std::vector<TIdx>& getOwners() const { return owners_; }
 
-        // Operator overloads and algorithm implementations
+        bool operator==(const DVector<TVal, TIdx>& rhs) const {
+            auto& lhs = (*this);
+            if (lhs.size() != rhs.size())
+                return false;
+            for (size_t i = 0; i < lhs.size(); ++i) {
+                if (lhs[i] != rhs[i])
+                    return false;
+            }
+            return true;
+        }
 
     private:
         std::vector<TVal> elements_;
@@ -282,17 +291,16 @@ class DMatrix :
             return elements_[i][j];
         }
 
-        // column major order
+        // row major order
         template<typename TInputIterator>
         void setFromValues(
             const TInputIterator& begin,
             const TInputIterator& end)
         {
             TInputIterator it = begin;
-            for (TIdx j = 0; j < this->cols_; ++j) {
-                for (TIdx i = 0; i < this->rows_; ++i)
+            for (TIdx i = 0; i < this->rows_; ++i)
+                for (TIdx j = 0; j < this->cols_; ++j)
                     elements_[i][j] = *(it++);
-                }
 
             JWAssert(it == end);
         }

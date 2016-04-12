@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#include <zee.hpp>
+#include "zee.hpp"
 
 using TIdx = uint32_t;
 using TVal = float;
@@ -56,6 +56,8 @@ TEST_CASE("vector operations", "[linear algebra]") {
 }
 
 Zee::DSparseMatrix<TVal, TIdx> A{"test/mtx/sparse_example.mtx", 1};
+Zee::DSparseMatrix<TVal, TIdx> S{"test/mtx/square_sparse_example.mtx", 1};
+
 Zee::DMatrix<TVal, TIdx> B{"test/mtx/dense_example.mtx"};
 Zee::DMatrix<TVal, TIdx> C = B;
 Zee::DMatrix<TVal, TIdx> D{4, 4};
@@ -72,15 +74,18 @@ TEST_CASE("matrix operations", "[linear algebra]") {
     }
 
     SECTION("we can perform a spmv") {
-        z = A * x;
+        Zee::GreedyVectorPartitioner<decltype(A), decltype(x)> part_vector(S, x,
+                                                                           z);
+        part_vector.partition();
+        part_vector.localizeMatrix();
+
+        z = S * x;
         REQUIRE(z[1] == 2.0f);
-        REQUIRE(z.size() == 3);
     }
 
-    SECTION("we can mix spmv and vectors") {
-        z = A * (x + x) * 2.0f;
+    SECTION("we can mix spmv and vector operations") {
+        z = S * (x + x) * 2.0f;
         REQUIRE(z[1] == 8.0f);
-        REQUIRE(z.size() == 3);
     }
 
     SECTION("dense operations") {
