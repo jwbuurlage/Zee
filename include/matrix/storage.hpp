@@ -149,12 +149,16 @@ class StorageIteratorTriplets:
         }
 
         StorageIteratorTriplets& operator--() {
+            // FIXME: this does not take inactives into account
             i_--;
             return *this;
         }
 
         StorageIteratorTriplets& operator++()
         {
+            // FIXME this makes it slower,
+            // maybe specialize this and return a different iterator
+            // depending on inactives_.size() == 0
             i_++;
 
             if (next_inactive_ == storage_->inactives_.end() ||
@@ -199,6 +203,8 @@ class StorageTriplets :
 
         iterator begin() override
         {
+            // maybe clean here, instead of checking inactives_
+            // in storage iterator
             return iterator(this, 0);
         }
 

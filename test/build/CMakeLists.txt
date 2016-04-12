@@ -13,8 +13,12 @@ set(TEST_NAME "zee_test")
 set(
     TEST_SOURCES
     "../catch.cpp"
+    "../hypergraphs.cpp"
+    "../iterative_solvers.cpp"
     "../linear_algebra.cpp"
     "../loading_matrices.cpp"
+    "../partitioners.cpp"
+    "../sparse_storage.cpp"
 )
 
 set(
