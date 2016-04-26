@@ -31,13 +31,13 @@ int main(int argc, char* argv[]) {
         auto x = DVector<TVal, TIdx>{A.getCols()};
 
         // Start GMRES
-        GMRES::solve<TVal, TIdx>(A, // Matrix
-                b,                  // RHS vector
-                x,                  // resulting guess for x
-                1,                // outer iterations
-                50,                // inner iterations
-                1e-6,               // tolerance level
-                true);             // plot residuals
+        GMRES::solve<TVal, TIdx>(A,     // Matrix
+                                 b,     // RHS vector
+                                 x,     // resulting guess for x
+                                 1,     // outer iterations
+                                 50,    // inner iterations
+                                 1e-6,  // tolerance level
+                                 true); // plot residuals
 
         DVector<TVal, TIdx> c{A.getRows()};
         DVector<TVal, TIdx> r{A.getRows()};
