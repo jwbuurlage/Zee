@@ -10,14 +10,16 @@ template<typename TVal, typename TIdx>
 void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         const Zee::DVector<TVal, TIdx>& b,
         Zee::DVector<TVal, TIdx>& x,
-        TIdx maxIterations,
-        TIdx m,
+        TIdx outer_iterations,
+        TIdx inner_iterations,
         TVal tol,
         bool plotResiduals = false,
         bool benchmark = false)
 {
     JWLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
         " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
+
+    auto& m = inner_iterations;
 
     // FIXME pointless to make bench if we dont benchmark
     auto bench = Zee::Benchmark("GMRES");
@@ -62,7 +64,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 
     auto finished = false;
     TIdx nr = 0;
-    for (TIdx run = 0; run < maxIterations; ++run) {
+    for (TIdx run = 0; run < outer_iterations; ++run) {
         // We construct the initial basis vector from the residual
         auto beta = r.norm();
         V[0] = r / beta;
@@ -166,7 +168,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
     if (plotResiduals) {
         JWLogVar(rhos);
         // We plot the residuals
-        auto p = Zee::Plotter<>();
+        auto p = Zee::Plotter<TVal>();
         p["xlabel"] = "iterations";
         p["ylabel"] = "$\\rho$";
         p["yscale"] = "log";
