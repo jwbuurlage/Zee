@@ -126,8 +126,6 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
         constructHypergraph(A, model);
 
-        JWLogVar(A.communicationVolume());
-
         if (A.loadImbalance() > (1.0 + epsilon_)) {
             if (this->procs_ > 2) {
                 JWLogError << "Invalid initial size for non-bipartitioning. "
