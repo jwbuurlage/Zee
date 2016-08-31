@@ -14,6 +14,7 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <cstdint>
+#include <ostream>
 
 #include <vector>
 #include <random>
@@ -346,7 +347,7 @@ class DMatrix :
 
 // We add an operator such that we can log dense matrices
 template <typename TVal, typename TIdx>
-jw::Logger& operator<<(jw::Logger& lhs, const DMatrix<TVal, TIdx>& rhs) {
+std::ostream& operator<<(std::ostream& lhs, const DMatrix<TVal, TIdx>& rhs) {
     lhs << "\n";
     for (TIdx i = 0; i < rhs.getRows(); ++i) {
         lhs << "|";

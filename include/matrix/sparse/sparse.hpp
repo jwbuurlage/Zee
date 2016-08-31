@@ -25,7 +25,7 @@ License, or (at your option) any later version.
 #include <memory>
 #include <thread>
 
-#include <jw.hpp>
+#include <ostream>
 
 #include "../base/base.hpp"
 #include "../storage.hpp"
@@ -711,7 +711,7 @@ class DSparseMatrixImage {
 // LOGGING
 
 template <typename TVal, typename TIdx>
-jw::Logger& operator<<(jw::Logger& lhs, const Triplet<TVal, TIdx>& rhs) {
+std::ostream& operator<<(std::ostream& lhs, const Triplet<TVal, TIdx>& rhs) {
     lhs << "{" << rhs.row() << ", " << rhs.col() << ", " << rhs.value() << "}";
     return lhs;
 }
