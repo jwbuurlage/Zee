@@ -348,7 +348,6 @@ class DMatrix :
 // We add an operator such that we can log dense matrices
 template <typename TVal, typename TIdx>
 std::ostream& operator<<(std::ostream& lhs, const DMatrix<TVal, TIdx>& rhs) {
-    lhs << "\n";
     for (TIdx i = 0; i < rhs.getRows(); ++i) {
         lhs << "|";
         auto sep = "";
@@ -360,6 +359,20 @@ std::ostream& operator<<(std::ostream& lhs, const DMatrix<TVal, TIdx>& rhs) {
         if (i != rhs.getRows() - 1)
             lhs << "\n";
     }
+    return lhs;
+}
+
+
+// We add an operator such that we can log dense matrices
+template <typename TVal, typename TIdx>
+std::ostream& operator<<(std::ostream& lhs, const DVector<TVal, TIdx>& rhs) {
+    lhs << "|";
+    auto sep = "";
+    for (TIdx j = 0; j < rhs.size(); ++j) {
+        lhs << std::fixed << std::setprecision(2) << sep << rhs[j];
+        sep = ", ";
+    }
+    lhs << "|";
     return lhs;
 }
 
