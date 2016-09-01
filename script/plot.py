@@ -16,7 +16,7 @@ import matplotlib.patches as patches
 import matplotlib.ticker as ticker
 import numpy as np
 
-from matplotlib2tikz import save as tikz_save
+#from matplotlib2tikz import save as tikz_save
 
 from math import log, ceil
 
@@ -39,6 +39,9 @@ parser.add_argument('--directory', type=str, default='',
 
 parser.add_argument('--figsize', type=int, default=3,
         help="size in inches of the figure")
+
+parser.add_argument('--viewer', type=str, default='xdg-open',
+        help="the viewer for the image")
 
 parser.add_argument('files', type=str, nargs='+',
         help="The file(s) to use as input")
@@ -66,7 +69,7 @@ def finalize_plt(filename):
         outfilename = filename[:-extension_length] + args.filetype
         plt.savefig(outfilename, bbox_inches='tight')
         if args.showfile:
-            os.system("rifle " + outfilename)
+            os.system(args.viewer + " " + outfilename)
     else:
         print("INFO: Showing")
         plt.show()
