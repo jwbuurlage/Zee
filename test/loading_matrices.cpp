@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "catch.hpp"
 
 #include "zee.hpp"
@@ -88,6 +90,21 @@ TEST_CASE("matrix market", "[loading matrices]") {
             Zee::DSparseMatrix<> skew_symmetric_matrix{
                 "test/mtx/skew_symmetric_sparse_example.mtx", 1};
             REQUIRE(skew_symmetric_matrix.nonZeros() == 5);
+        }
+
+        SECTION("save-and-load") {
+            // FIXME: require that saving and loading matrix market gives the
+            // same matrix (up to sparsity)
+
+            // FIXME dont want this to depend on file system, add spy-as-string
+            Zee::DSparseMatrix<> matrix{"test/mtx/sparse_example.mtx"};
+            std::stringstream ss;
+            matrix.spyToStream(ss);
+
+            Zee::DSparseMatrix<> matrixSaveLoad;
+            Zee::matrix_market::loadFromStream(ss, matrixSaveLoad);
+
+            REQUIRE(matrix == matrixSaveLoad);
         }
     }
     SECTION("dense") {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <algorithm>
 #include <random>
+#include <vector>
 
 #include "zee.hpp"
 
@@ -10,10 +10,13 @@ namespace Zee {
 
 template <typename TIdx = Zee::default_index_type>
 class DHypergraph {
-  public:
+   public:
     DHypergraph(TIdx vertexCount, TIdx partCount)
-        : vertexCount_(vertexCount), partCount_(partCount),
-          partSize_(partCount), part_(vertexCount), weights_(vertexCount) {}
+        : vertexCount_(vertexCount),
+          partCount_(partCount),
+          partSize_(partCount),
+          part_(vertexCount),
+          weights_(vertexCount) {}
 
     virtual std::vector<double> partQuality(TIdx v,
                                             std::function<double(TIdx, TIdx)> w,
@@ -29,11 +32,9 @@ class DHypergraph {
         }
 
         for (auto n : this->netsForVertex_[v]) {
-            if (this->nets_[n].size() > maximumNetSize)
-                continue;
+            if (this->nets_[n].size() > maximumNetSize) continue;
 
-            if (this->netsSizeRank_[n] >= netsToConsider)
-                continue;
+            if (this->netsSizeRank_[n] >= netsToConsider) continue;
 
             for (TIdx i = 0; i < this->partCount_; ++i) {
                 result[i] +=
@@ -52,8 +53,7 @@ class DHypergraph {
         for (TIdx net = 0; net < netCount_; ++net) {
             TIdx lambda = 0;
             for (auto cnt : netDistribution_[net])
-                if (cnt > 0)
-                    lambda++;
+                if (cnt > 0) lambda++;
             result += lambda - 1;
         }
 
@@ -72,8 +72,7 @@ class DHypergraph {
         std::iota(netsBySize.begin(), netsBySize.end(), 0);
 
         std::sort(netsBySize.begin(), netsBySize.end(),
-                  [this](TIdx lhs,
-                          TIdx rhs) {
+                  [this](TIdx lhs, TIdx rhs) {
                       return this->nets_[lhs].size() < this->nets_[rhs].size();
                   });
 
@@ -85,8 +84,7 @@ class DHypergraph {
     TIdx getMaximumNetSize() {
         if (maximumNetSize_ == 0) {
             for (auto& net : nets_) {
-                if (net.size() > maximumNetSize_)
-                    maximumNetSize_ = net.size();
+                if (net.size() > maximumNetSize_) maximumNetSize_ = net.size();
             }
         }
         return maximumNetSize_;
@@ -98,7 +96,7 @@ class DHypergraph {
     TIdx getPart(TIdx v) const { return part_[v]; }
     TIdx getPartSize(TIdx p) const { return partSize_[p]; }
 
-  protected:
+   protected:
     // number of vertices in this hypergraph
     TIdx vertexCount_;
 
@@ -137,7 +135,7 @@ class DHypergraph {
 template <typename TIdx = Zee::default_index_type,
           class TMatrix = Zee::DSparseMatrix<>>
 class FineGrainHG : public DHypergraph<TIdx> {
-  public:
+   public:
     FineGrainHG(TMatrix& A)
         : DHypergraph<TIdx>(A.nonZeros(), A.getProcs()), A_(A) {
         this->netCount_ = A.getCols() + A.getRows();
@@ -186,9 +184,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
         }
     }
 
-    void clean() {
-        A_.clean();
-    }
+    void clean() { A_.clean(); }
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
@@ -209,7 +205,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-  private:
+   private:
     TMatrix& A_;
     std::vector<TIdx> row;
     std::vector<TIdx> col;
@@ -220,7 +216,7 @@ class FineGrainHG : public DHypergraph<TIdx> {
 template <typename TIdx = Zee::default_index_type,
           class TMatrix = Zee::DSparseMatrix<>>
 class RowNetHG : public DHypergraph<TIdx> {
-  public:
+   public:
     RowNetHG(TMatrix& A) : DHypergraph<TIdx>(A.getCols(), A.getProcs()), A_(A) {
         this->netCount_ = A.getRows();
 
@@ -252,9 +248,7 @@ class RowNetHG : public DHypergraph<TIdx> {
         }
     }
 
-    void clean() {
-        A_.clean();
-    }
+    void clean() { A_.clean(); }
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
@@ -275,8 +269,7 @@ class RowNetHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-
-  private:
+   private:
     TMatrix& A_;
     // storage index for vertex
     std::vector<std::vector<TIdx>> storageIndices_;
@@ -285,7 +278,7 @@ class RowNetHG : public DHypergraph<TIdx> {
 template <typename TIdx = Zee::default_index_type,
           class TMatrix = Zee::DSparseMatrix<>>
 class ColumnNetHG : public DHypergraph<TIdx> {
-  public:
+   public:
     ColumnNetHG(TMatrix& A)
         : DHypergraph<TIdx>(A.getRows(), A.getProcs()), A_(A) {
         this->netCount_ = A.getCols();
@@ -319,9 +312,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
         }
     }
 
-    void clean() {
-        A_.clean();
-    }
+    void clean() { A_.clean(); }
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
@@ -342,13 +333,11 @@ class ColumnNetHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-
-  private:
+   private:
     TMatrix& A_;
     // label for every nonzero -- large!
     std::vector<std::vector<TIdx>> storageIndices_;
 };
-
 
 /* A = A_r + A_c
  *
@@ -366,7 +355,7 @@ class ColumnNetHG : public DHypergraph<TIdx> {
 template <typename TIdx = Zee::default_index_type,
           class TMatrix = Zee::DSparseMatrix<>>
 class MediumGrainHG : public DHypergraph<TIdx> {
-  public:
+   public:
     MediumGrainHG(TMatrix& matrix, TIdx procs)
         : DHypergraph<TIdx>(matrix.getCols() + matrix.getRows(), procs),
           matrix_(matrix) {
@@ -388,9 +377,7 @@ class MediumGrainHG : public DHypergraph<TIdx> {
         this->initial_distribution_();
     }
 
-    void clean() {
-        matrix_.clean();
-    }
+    void clean() { matrix_.clean(); }
 
     void reassign(TIdx vertex, TIdx part) override {
         if (this->part_[vertex] == part) {
@@ -413,7 +400,7 @@ class MediumGrainHG : public DHypergraph<TIdx> {
         this->part_[vertex] = part;
     }
 
-  private:
+   private:
     void split_() {
         std::vector<TIdx> row_count(matrix_.getRows());
         std::vector<TIdx> col_count(matrix_.getCols());
@@ -468,8 +455,7 @@ class MediumGrainHG : public DHypergraph<TIdx> {
 
         for (TIdx k = matrix_.getCols(); k < this->vertexCount_; ++k) {
             TIdx target_part = randpart(mt);
-            if (target_part != this->part_[k])
-                this->reassign(k, target_part);
+            if (target_part != this->part_[k]) this->reassign(k, target_part);
         }
     }
 
@@ -480,4 +466,4 @@ class MediumGrainHG : public DHypergraph<TIdx> {
     std::vector<std::vector<TIdx>> storageIndices_;
 };
 
-} // namespace Zee
+}  // namespace Zee

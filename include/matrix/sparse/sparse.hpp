@@ -15,22 +15,22 @@ License, or (at your option) any later version.
 #include <cstdint>
 #include <cstdlib>
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <iomanip>
 #include <algorithm>
-#include <vector>
-#include <random>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <memory>
+#include <random>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include <ostream>
 
+#include "../../operations/operations.hpp"
+#include "../../util/common.hpp"
 #include "../base/base.hpp"
 #include "../storage.hpp"
-#include "../../util/common.hpp"
-#include "../../operations/operations.hpp"
 
 namespace Zee {
 
@@ -55,7 +55,7 @@ void load(std::string file, DMatrixBase<Derived, TVal, TIdx>& target);
 template <typename TVal = default_scalar_type,
           typename TIdx = default_index_type>
 class Triplet {
-  public:
+   public:
     Triplet() : i_(0), j_(0), value_(0) {}
 
     Triplet(TIdx i, TIdx j, TVal value) {
@@ -75,19 +75,21 @@ class Triplet {
     /** @return the column position inside the matrix */
     TIdx col() const { return j_; }
 
-    void setRow(TIdx row)  {
-        i_ = row;
+    void setRow(TIdx row) { i_ = row; }
+
+    void setCol(TIdx col) { j_ = col; }
+
+    void setValue(TVal val) { value_ = val; }
+
+    bool operator<(const Triplet& rhs) const {
+        return (row() == rhs.row()) ? col() < rhs.col() : row() < rhs.row();
     }
 
-    void setCol(TIdx col)  {
-        j_ = col;
+    bool operator==(const Triplet& rhs) const {
+        return row() == rhs.row() && col() == rhs.col();
     }
 
-    void setValue(TVal val)  {
-        value_ = val;
-    }
-
-  private:
+   private:
     TIdx i_;
     TIdx j_;
     TVal value_;
@@ -102,7 +104,7 @@ template <typename Derived, typename TVal, typename TIdx,
           class Image =
               DSparseMatrixImage<TVal, TIdx, StorageTriplets<TVal, TIdx>>>
 class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
-  public:
+   public:
     using index_type = TIdx;
     using value_type = TVal;
     using image_type = Image;
@@ -138,7 +140,8 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
                 JWLogError
                     << "Trying to apply a custom partitioning, but"
                        " no distribution function was set. The matrix remains"
-                       " uninitialized." << endLog;
+                       " uninitialized."
+                    << endLog;
                 return;
             }
         }
@@ -155,27 +158,27 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         for (TInputIterator it = begin; it != end; it++) {
             TIdx target_proc = 0;
             switch (partitioning_) {
-            case partitioning_scheme::cyclic:
-                target_proc = (*it).row() % this->getProcs();
-                break;
+                case partitioning_scheme::cyclic:
+                    target_proc = (*it).row() % this->getProcs();
+                    break;
 
-            case partitioning_scheme::block:
-                target_proc =
-                    (this->getProcs() * (*it).row()) / this->getRows();
-                break;
+                case partitioning_scheme::block:
+                    target_proc =
+                        (this->getProcs() * (*it).row()) / this->getRows();
+                    break;
 
-            case partitioning_scheme::random:
-                target_proc = randproc(mt);
-                break;
+                case partitioning_scheme::random:
+                    target_proc = randproc(mt);
+                    break;
 
-            case partitioning_scheme::custom:
-                target_proc = distributionLambda_((*it).row(), (*it).col());
-                break;
+                case partitioning_scheme::custom:
+                    target_proc = distributionLambda_((*it).row(), (*it).col());
+                    break;
 
-            default:
-                // Fall back to 1D cyclic
-                target_proc = (*it).row() % this->getProcs();
-                break;
+                default:
+                    // Fall back to 1D cyclic
+                    target_proc = (*it).row() % this->getProcs();
+                    break;
             }
 
             images_[target_proc]->pushTriplet(*it);
@@ -222,8 +225,8 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     // overhead
     // of using std::function.
     template <typename TReturn>
-    std::vector<TReturn>
-    compute(std::function<TReturn(std::shared_ptr<image_type>)> func) const {
+    std::vector<TReturn> compute(
+        std::function<TReturn(std::shared_ptr<image_type>)> func) const {
         auto result = std::vector<TReturn>(this->getProcs());
 
         // capture function and result by-reference
@@ -391,8 +394,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         auto columnCount = [j](std::shared_ptr<image_type> image) -> TIdx {
             TIdx count = 0;
             for (auto& trip : *image)
-                if (trip.col() == j)
-                    count++;
+                if (trip.col() == j) count++;
             return count;
         };
 
@@ -402,10 +404,9 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         return count;
     }
 
+    // FIXME this should be part of `Zee::matrix_market` namespace
     /** Obtain a spy image of the sparse matrix */
     void spy(std::string title = "anonymous", bool show = false) {
-        using std::endl;
-
         std::stringstream ss;
         ss << "data/spies/" << title << ".mtx";
         auto filename = ss.str();
@@ -418,6 +419,18 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
         }
         std::ofstream fout(filename);
 
+        this->spyToStream(fout);
+
+        if (show) {
+            auto command = "./script/plot.py --showfile " + filename;
+            std::system(command.c_str());
+        }
+    }
+
+    // ditto
+    void spyToStream(std::ostream& fout) {
+        using std::endl;
+
         fout << "%%MatrixMarket matrix coordinate integer general" << endl;
 
         fout << "% Matrix sparsity:      " << std::fixed << std::setprecision(4)
@@ -428,25 +441,18 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
 
         fout << "% Communication Volume: " << this->communicationVolume()
              << endl;
-        fout << title << endl;
 
         fout << this->getRows() << " " << this->getCols() << " "
              << this->nonZeros() << endl;
 
+        // MatrixMarket uses 1-based indices
         TIdx s = 0;
         for (auto& image : this->images_) {
             for (auto& triplet : *image) {
-                fout << triplet.row() << " " << triplet.col() << " " << s
-                     << endl;
+                fout << triplet.row() + 1 << " " << triplet.col() + 1 << " "
+                     << s << endl;
             }
             ++s;
-        }
-
-        JWLogInfo << "Spy saved to file: " << filename << endLog;
-
-        if (show) {
-            auto command = "./script/plot.py --showfile " + filename;
-            std::system(command.c_str());
         }
     }
 
@@ -461,7 +467,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     Image& operator[](size_t i) { return *(images_[i]); }
     const Image& operator[](size_t i) const { return *(images_[i]); }
 
-  protected:
+   protected:
     TIdx nz_ = 0;
     partitioning_scheme partitioning_;
     std::vector<std::shared_ptr<Image>> images_;
@@ -481,7 +487,7 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
         DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>, TVal, TIdx, Image>;
     using Base::operator=;
 
-  public:
+   public:
     using index_type = typename Base::index_type;
     using value_type = typename Base::value_type;
     using image_type = typename Base::image_type;
@@ -508,8 +514,7 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
     /** Has the storage been localized */
     bool localizedStorage() const {
         for (auto& image : this->images_) {
-            if (!image->localizedStorage())
-                return false;
+            if (!image->localizedStorage()) return false;
         }
         return true;
     }
@@ -518,6 +523,21 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
         for (auto& image : this->images_) {
             image->clean();
         }
+    }
+
+    bool operator==(const DSparseMatrix& other) const {
+        auto copy_non_zeros = [](auto& sp_mat) {
+            std::vector<Zee::Triplet<TVal, TIdx>> nzs;
+            for (auto image : sp_mat.getImages())
+                for (auto nz : *image) {
+                    nzs.push_back(nz);
+                }
+
+            std::sort(nzs.begin(), nzs.end());
+            return nzs;
+        };
+
+        return (copy_non_zeros(*this) == copy_non_zeros(other));
     }
 };
 
@@ -535,7 +555,7 @@ class DSparseMatrix : public DSparseMatrixBase<DSparseMatrix<TVal, TIdx, Image>,
 
 template <typename TVal, typename TIdx, class CStorage>
 class DSparseMatrixImage {
-  public:
+   public:
     /** Default constructor */
     DSparseMatrixImage() : storage_(new CStorage()) {
         // FIXME: Switch cases between different storage types
@@ -581,9 +601,7 @@ class DSparseMatrixImage {
         return storage_->pushTriplet(t);
     }
 
-    void clean() {
-        storage_->clean();
-    }
+    void clean() { storage_->clean(); }
 
     void setLocalIndices(std::vector<TIdx>&& localIndicesV,
                          std::vector<TIdx>&& localIndicesU) {
@@ -651,9 +669,9 @@ class DSparseMatrixImage {
 
     bool localizedStorage() const { return localizedStorage_; }
 
-  private:
+   private:
     void computeLocalIndices_(std::vector<TIdx>& partialLocalIndices,
-            const counted_set<TIdx>& countedSetOfIndices) {
+                              const counted_set<TIdx>& countedSetOfIndices) {
         TIdx numLocal = partialLocalIndices.size();
         TIdx localIdx = 0;
         for (auto& idx : countedSetOfIndices) {
@@ -670,8 +688,7 @@ class DSparseMatrixImage {
                 idx.first != partialLocalIndices[localIdx]) {
                 // we dont own it
                 partialLocalIndices.push_back(idx.first);
-            }
-            else {
+            } else {
                 // we own it
                 localIdx++;
             }
@@ -706,7 +723,6 @@ class DSparseMatrixImage {
         images_;
 };
 
-
 //-----------------------------------------------------------------------------
 // LOGGING
 
@@ -716,4 +732,4 @@ std::ostream& operator<<(std::ostream& lhs, const Triplet<TVal, TIdx>& rhs) {
     return lhs;
 }
 
-} // namespace Zee
+}  // namespace Zee

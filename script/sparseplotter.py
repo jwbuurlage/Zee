@@ -56,9 +56,8 @@ def spy(matrix_file, size=3):
         elif line.startswith("%%MatrixMarket matrix coordinate"):
             while (len(line) == 0 or line[0] == '%'):
                 line = fin.readline()
-            title = line
-
-            m, n, nz = map(int, fin.readline().split(' '))
+            m, n, nz = map(int, line.split(' '))
+            print(m, n, nz);
 
             fig = plt.figure(figsize=(size, size))
             ax = fig.add_subplot(1, 1, 1, aspect='equal')
@@ -77,8 +76,9 @@ def spy(matrix_file, size=3):
             for _ in range(0, nz):
                 stats = fin.readline().split(' ')
                 i, j, p = map(int, stats)
-                ax.add_patch(patches.Rectangle((j + marker_offset,
-                                                i + marker_offset),
+                # MatrixMarket uses 1-based indices
+                ax.add_patch(patches.Rectangle((j - 1 + marker_offset,
+                                                i - 1 + marker_offset),
                                                marker_size, marker_size,
                                                color=get_color(p)))
         else:

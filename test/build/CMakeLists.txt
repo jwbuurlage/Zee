@@ -8,6 +8,8 @@ include_directories(
     "../../ext/catch/include"
 )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+
 set(TEST_NAME "zee_test")
 
 set(
