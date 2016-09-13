@@ -18,6 +18,8 @@ class DHypergraph {
           part_(vertexCount),
           weights_(vertexCount) {}
 
+    virtual ~DHypergraph() = default;
+
     virtual std::vector<double> partQuality(TIdx v,
                                             std::function<double(TIdx, TIdx)> w,
                                             unsigned int maximumNetSize = 0,

@@ -461,7 +461,7 @@ class DSparseMatrixBase : public DMatrixBase<Derived, TVal, TIdx> {
     // FIXME: do we want to make the pushTriplet of the image itself private?
     TIdx pushTriplet(TIdx proc, Triplet<TVal, TIdx> t) {
         (*this)[proc].pushTriplet(t);
-        nz_++;
+        return nz_++;
     }
 
     Image& operator[](size_t i) { return *(images_[i]); }

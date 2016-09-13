@@ -6,25 +6,20 @@ namespace Zee {
 
 namespace GMRES {
 
-template<typename TVal, typename TIdx>
-void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
-        const Zee::DVector<TVal, TIdx>& b,
-        Zee::DVector<TVal, TIdx>& x,
-        TIdx outer_iterations,
-        TIdx inner_iterations,
-        TVal tol,
-        bool plotResiduals = false,
-        bool benchmark = false)
-{
-    JWLogInfo << "Solving Ax = b for system of size " << A.getRows() <<
-        " x " << A.getCols() << " with " << A.nonZeros() << " non-zeros" << endLog;
+template <typename TVal, typename TIdx>
+void solve(Zee::DSparseMatrix<TVal, TIdx>& A, const Zee::DVector<TVal, TIdx>& b,
+           Zee::DVector<TVal, TIdx>& x, TIdx outer_iterations,
+           TIdx inner_iterations, TVal tol, bool plotResiduals = false,
+           bool benchmark = false) {
+    JWLogInfo << "Solving Ax = b for system of size " << A.getRows() << " x "
+              << A.getCols() << " with " << A.nonZeros() << " non-zeros"
+              << endLog;
 
     auto& m = inner_iterations;
 
     // FIXME pointless to make bench if we dont benchmark
     auto bench = Zee::Benchmark("GMRES");
-    if (!benchmark)
-        bench.silence();
+    if (!benchmark) bench.silence();
 
     JWAssert(A.getRows() == b.size());
 
@@ -72,9 +67,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
         bHat[0] = beta;
 
         // We run for i [0, m)
-        for (TIdx i = 0; i < m; ++i)
-        {
-
+        for (TIdx i = 0; i < m; ++i) {
             // We introduce a new basis vector which we will orthogonalize
             // using modified Gramm-Schmidt
             TVector w(A.getRows());
@@ -88,8 +81,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 
             H[i][i + 1] = w.norm();
 
-            if (i != m - 1)
-                V[i + 1] = w / H[i][i + 1];
+            if (i != m - 1) V[i + 1] = w / H[i][i + 1];
 
             R[i][0] = H[i][0];
 
@@ -114,7 +106,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 
             // update r_i and bHat
             R[i][i] = c[i] * R[i][i] + s[i] * H[i][i + 1];
-            bHat[i + 1] = - s[i] * bHat[i];
+            bHat[i + 1] = -s[i] * bHat[i];
             bHat[i] = c[i] * bHat[i];
 
             // update rho
@@ -145,8 +137,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
 
                 y[k] = (bHat[k] - sum) / R[k][k];
 
-                if (k == 0)
-                    break;
+                if (k == 0) break;
             }
         }
 
@@ -162,8 +153,7 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
     }
 
     // we finalize the benchmark
-    if (benchmark)
-        bench.finish();
+    if (benchmark) bench.finish();
 
     if (plotResiduals) {
         JWLogVar(rhos);
@@ -178,6 +168,6 @@ void solve(Zee::DSparseMatrix<TVal, TIdx>& A,
     }
 }
 
-} // namespace GMRES
+}  // namespace GMRES
 
-} // namespace Zee
+}  // namespace Zee

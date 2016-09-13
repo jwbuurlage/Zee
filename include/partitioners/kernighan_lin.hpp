@@ -1,11 +1,11 @@
 #pragma once
 
-#include <random>
 #include <algorithm>
-#include <vector>
 #include <list>
-#include <set>
 #include <memory>
+#include <random>
+#include <set>
+#include <vector>
 
 namespace Zee {
 using std::vector;
@@ -15,7 +15,7 @@ using std::unique_ptr;
 
 template <typename TMatrix>
 class Hypergraph {
-  public:
+   public:
     using TIdx = typename TMatrix::index_type;
 
     void initialize(const TMatrix& A) {
@@ -33,14 +33,14 @@ class Hypergraph {
 
     const vector<vector<TIdx>>& rowNets() const { return _rowNets; }
 
-  private:
+   private:
     vector<vector<TIdx>> _colNets;
     vector<vector<TIdx>> _rowNets;
 };
 
 template <typename TMatrix>
 class KernighanLin {
-  public:
+   public:
     using TIdx = typename TMatrix::index_type;
     using TImage = typename TMatrix::image_type;
 
@@ -104,10 +104,11 @@ class KernighanLin {
                 }
             }
 
-//            ZeeLogWarning << "KL: Initial distribution imbalanced" << endLog;
-//            ZeeLogVar(allowedSize_);
-//            ZeeLogVar(counts_[0]);
-//            ZeeLogVar(counts_[1]);
+            //            ZeeLogWarning << "KL: Initial distribution imbalanced"
+            //            << endLog;
+            //            ZeeLogVar(allowedSize_);
+            //            ZeeLogVar(counts_[0]);
+            //            ZeeLogVar(counts_[1]);
         }
 
         // Store the distribution for each net
@@ -240,8 +241,7 @@ class KernighanLin {
                     break;
                 }
 
-                if (baseCell != -1)
-                    break;
+                if (baseCell != -1) break;
             }
 
             // We found the baseCell
@@ -332,7 +332,7 @@ class KernighanLin {
         A_.resetImages(newImages);
     };
 
-  private:
+   private:
     // Bi-partitioned matrix
     TMatrix& A_;
 
@@ -356,4 +356,4 @@ class KernighanLin {
     vector<typename std::list<TIdx>::iterator> listElements_;
 };
 
-} // namespace Zee
+}  // namespace Zee

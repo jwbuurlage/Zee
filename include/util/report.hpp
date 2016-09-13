@@ -1,17 +1,17 @@
 #pragma once
 
-#include <map>
-#include <string>
-#include <sstream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
+#include <map>
+#include <sstream>
+#include <string>
 
 #include "jw.hpp"
 
 namespace Zee {
 
 class Report {
-  public:
+   public:
     Report(std::string title, std::string rowTitle)
         : title_(title), rowTitle_(rowTitle) {
         rowSize_ = rowTitle_.size();
@@ -64,21 +64,19 @@ class Report {
             lineSize += col.second + 2;
         }
         std::string hline = "";
-        for (unsigned int i = 0; i < lineSize; ++i)
-            hline.push_back('-');
+        for (unsigned int i = 0; i < lineSize; ++i) hline.push_back('-');
 
         auto addElement = [](int width, std::stringstream& result,
                              std::string entry) {
-            result << std::left << std::setprecision(1) << std::setw(width) << std::setfill(' ')
-                   << entry;
+            result << std::left << std::setprecision(1) << std::setw(width)
+                   << std::setfill(' ') << entry;
         };
 
         std::stringstream ss;
         addElement(rowSize_ + 2, ss, rowTitle_);
         ss << "| ";
 
-        for (auto& col : columns_)
-            addElement(columnWidth_[col] + 2, ss, col);
+        for (auto& col : columns_) addElement(columnWidth_[col] + 2, ss, col);
 
         JWLogInfo << hline << endLog;
         JWLogInfo << ss.str() << endLog;
@@ -105,12 +103,14 @@ class Report {
 
             auto pos = entry.find("+-");
             if (pos != std::string::npos) {
-                texEntry = texEntry.substr(0, pos) + "\\pm" + texEntry.substr(pos + 2);
+                texEntry =
+                    texEntry.substr(0, pos) + "\\pm" + texEntry.substr(pos + 2);
             }
 
             pos = entry.find("%");
             if (pos != std::string::npos) {
-                texEntry = texEntry.substr(0, pos) + "\\%" + texEntry.substr(pos + 1);
+                texEntry =
+                    texEntry.substr(0, pos) + "\\%" + texEntry.substr(pos + 1);
             }
 
             return texEntry;
@@ -126,7 +126,7 @@ class Report {
         }
         fout << std::endl << "\\hline" << std::endl;
         fout << "\\textbf{" << rowTitle_ << "} & ";
-        for (unsigned int i = 0; i < columns_.size();  ++i) {
+        for (unsigned int i = 0; i < columns_.size(); ++i) {
             fout << "$" << columnsTex_[i] << "$";
             fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
         }
@@ -135,21 +135,21 @@ class Report {
 
         for (auto& rowCols : entriesTex_) {
             fout << "\\verb|" << rowCols.first << "| & ";
-            for (unsigned int i = 0; i < columns_.size();  ++i) {
-                fout << "$" << replaceTex(rowCols.second[columns_[i]])
-                     << "$";
+            for (unsigned int i = 0; i < columns_.size(); ++i) {
+                fout << "$" << replaceTex(rowCols.second[columns_[i]]) << "$";
                 fout << ((i < (columns_.size() - 1)) ? " & " : "\\\\");
             }
             fout << std::endl;
         }
         fout << "\\hline" << std::endl;
-        fout << "\\end{tabular}" << std::endl;;
+        fout << "\\end{tabular}" << std::endl;
+        ;
 
         fout << "\\caption{\\ldots}" << std::endl;
         fout << "\\end{table}" << std::endl;
     }
 
-  private:
+   private:
     std::string title_;
     std::string rowTitle_;
     std::map<std::string, std::map<std::string, std::string>> entries_;
@@ -160,4 +160,4 @@ class Report {
     unsigned int rowSize_;
 };
 
-} // namespace Zee
+}  // namespace Zee

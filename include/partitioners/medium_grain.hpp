@@ -17,13 +17,13 @@
 #pragma once
 
 // FIXME -- only what we need
-#include <zee.hpp>
 #include "kernighan_lin.hpp"
+#include "partitioner.hpp"
 
+#include <atomic>
+#include <memory>
 #include <random>
 #include <vector>
-#include <memory>
-#include <atomic>
 
 namespace Zee {
 
@@ -34,7 +34,7 @@ using std::vector;
 
 template <class TMatrix = Zee::DSparseMatrix<double>>
 class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
-  public:
+   public:
     using TIdx = typename TMatrix::index_type;
     using TVal = typename TMatrix::value_type;
     using TImage = typename TMatrix::image_type;
@@ -218,15 +218,15 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
 
         if (initialized_) {
             JWLogWarning << "Already applied an initial partitioning"
-                             " instead refining the partitioning on A"
-                          << endLog;
+                            " instead refining the partitioning on A"
+                         << endLog;
             this->refine(A);
             return A;
         }
 
         if (!A.isInitialized()) {
             JWLogError << "MG: Trying to partition uninitialized matrix."
-                        << endLog;
+                       << endLog;
             return A;
         }
 
@@ -258,14 +258,14 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         // We only support IR on bi-partitionings
         if (A.getProcs() != 2) {
             JWLogError << "For now MG-IR only supports bipartitionings, "
-                           "the matrix A has a "
-                        << A.getProcs() << "-way partitioning" << endLog;
+                          "the matrix A has a "
+                       << A.getProcs() << "-way partitioning" << endLog;
             return A;
         }
 
         if (!A.isInitialized()) {
             JWLogError << "MG: Trying to refine uninitialized matrix."
-                        << endLog;
+                       << endLog;
             return A;
         }
 
@@ -321,7 +321,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
 
         // We want B to be bipartitioned.
         B.setDistributionScheme(Zee::partitioning_scheme::custom, 2);
-        B.setDistributionFunction([&A](TIdx row, TIdx col) {
+        B.setDistributionFunction([&A](TIdx, TIdx col) {
             if (col < A.getRows()) {
                 return 0;
             }
@@ -340,7 +340,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
             inducePartitioning(A, B);
         } else {
             JWLogError << "Could not construct the extended matrix B."
-                        << endLog;
+                       << endLog;
         }
 
         if (A.communicationVolume() == priorVolume) {
@@ -362,7 +362,7 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
         return A;
     }
 
-  private:
+   private:
     vector<bool> tripletInRow_;
     bool initialized_ = false;
     bool locallyOptimal_ = false;
@@ -370,4 +370,4 @@ class MGPartitioner : Zee::IterativePartitioner<TMatrix> {
     bool phaseRow_ = true;
 };
 
-} // namespace Zee
+}  // namespace Zee

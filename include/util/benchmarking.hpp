@@ -14,17 +14,17 @@ License, or (at your option) any later version.
 #pragma once
 
 #include <chrono>
-#include <vector>
-#include <utility>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+#include <utility>
+#include <vector>
 
 #include "jw.hpp"
 
 namespace Zee {
 
 class Benchmark {
-  public:
+   public:
     using TTimePoint =
         std::chrono::time_point<std::chrono::high_resolution_clock>;
 
@@ -47,8 +47,7 @@ class Benchmark {
     void silence() { silent_ = true; }
 
     void finish() {
-        if (silent_)
-            return;
+        if (silent_) return;
 
         finished_ = true;
 
@@ -74,13 +73,13 @@ class Benchmark {
         }
 
         JWLogBenchmark << title_ << " total runtime: " << total_ms << " ms"
-                        << splitOutput.str() << endLog;
+                       << splitOutput.str() << endLog;
     }
 
     auto getSplits() const { return splits_; }
     auto getStart() const { return start_; }
 
-  private:
+   private:
     std::vector<std::pair<std::string, TTimePoint>> splits_;
     std::string title_;
     bool silent_ = false;
@@ -88,4 +87,4 @@ class Benchmark {
     TTimePoint start_;
 };
 
-} // namespace Zee
+}  // namespace Zee

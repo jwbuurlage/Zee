@@ -14,16 +14,18 @@ License, or (at your option) any later version.
 #pragma once
 
 // FIXME predeclare
-#include "matrix/sparse/sparse.hpp"
 #include "matrix/dense/dense.hpp"
+#include "matrix/sparse/sparse.hpp"
 
 namespace Zee {
 
 template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
 class VectorPartitioner {
-  public:
+   public:
     VectorPartitioner(TMatrix& A, TVector& v, TVector& u)
         : A_(A), v_(v), u_(u) {}
+
+    virtual ~VectorPartitioner() = default;
 
     virtual void partition() {}
 
@@ -33,7 +35,8 @@ class VectorPartitioner {
         /* Use the vector distribution to compute local indices and
          * propagate this to storage */
         // MAKE THIS GENERAL, do not assume dist(u) = dist(v)
-        // 1. image should receive a list of its vector indices I_s { j | P(v_j) = s }
+        // 1. image should receive a list of its vector indices I_s { j | P(v_j)
+        // = s }
         // 2. image then constructs a map i = {1, 2, 3, ..} -> j -> I_s
         // 3. storage updates using the inverse of this map
         TIdx p = A_.getProcs();
@@ -80,10 +83,10 @@ class VectorPartitioner {
         }
     }
 
-  protected:
+   protected:
     TMatrix& A_;
     TVector& v_;
     TVector& u_;
 };
 
-} // namespace Zee
+}  // namespace Zee

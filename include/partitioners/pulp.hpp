@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../util/benchmarking.hpp"
-#include "../matrix/sparse/sparse.hpp"
 #include "../hypergraph/hypergraph.hpp"
+#include "../matrix/sparse/sparse.hpp"
 #include "../partitioners/partitioner.hpp"
+#include "../util/benchmarking.hpp"
 
+#include <limits>
+#include <memory>
 #include <random>
 #include <vector>
-#include <memory>
-#include <limits>
 
 namespace Zee {
 
@@ -42,7 +42,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     constexpr const static TIdx default_number_iterations = 100;
     constexpr const static double default_load_imbalance = 0.1;
 
-  public:
+   public:
     PulpPartitioner(TMatrix& A, TIdx procs,
                     double epsilon = default_load_imbalance)
         : Zee::IterativePartitioner<TMatrix>(), A_(A) {
@@ -57,8 +57,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     void initialize(TMatrix& A) override { initialize(A, HGModel::row_net); }
 
     void initialize(TMatrix& A, HGModel model) {
-        if (initialized_)
-            return;
+        if (initialized_) return;
         initialized_ = true;
 
         // FIXME should check if for row net model / column net model
@@ -150,8 +149,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                 auto v = X[i];
                 if (hyperGraph_->getPart(v) == largePart)
                     hyperGraph_->reassign(v, 1 - largePart);
-                if (A.loadImbalance() < (1.0 + epsilon_))
-                    break;
+                if (A.loadImbalance() < (1.0 + epsilon_)) break;
             }
             if (A.loadImbalance() > (1.0 + epsilon_)) {
                 JWLogError << "Cannot find valid initial distribution. eps = "
@@ -185,7 +183,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
         TIdx netsToConsider = 1;
         while (netsToConsider < maximumNetCount) {
             for (TIdx i = 0; i < iters; ++i) {
-                this->refineWithIterations(hyperGraph_->getVertexCount(), 0, netsToConsider);
+                this->refineWithIterations(hyperGraph_->getVertexCount(), 0,
+                                           netsToConsider);
             }
             netsToConsider *= 2;
         }
@@ -193,7 +192,8 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     }
 
     virtual TMatrix& refineWithIterations(TIdx iters, TIdx maximumNetSize = 0,
-                                          TIdx netsToConsider = 0, bool randomize = false) {
+                                          TIdx netsToConsider = 0,
+                                          bool randomize = false) {
         // initial partitioning
         TIdx r = 1;
         TIdx i = 0;
@@ -212,8 +212,7 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
 
             for (TIdx j = 0; j < hyperGraph_->getVertexCount(); ++j) {
                 auto v = j;
-                if (randomize)
-                    v = X[j];
+                if (randomize) v = X[j];
 
                 auto w = [](double peers, double size) {
                     static const auto control = 0.99;
@@ -236,24 +235,21 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
                 }
 
                 i++;
-                if (i >= iters)
-                    break;
+                if (i >= iters) break;
             }
         }
 
         return A_;
     }
 
-    TMatrix& refine(TMatrix& A) override {
+    TMatrix& refine(TMatrix&) override {
         refineWithIterations(default_number_iterations);
         return A_;
     }
 
-    void cleanMatrix() {
-        hyperGraph_->clean();
-    }
+    void cleanMatrix() { hyperGraph_->clean(); }
 
-  private:
+   private:
     bool initialized_ = false;
     TMatrix& A_;
 
@@ -267,4 +263,4 @@ class PulpPartitioner : Zee::IterativePartitioner<TMatrix> {
     std::vector<std::vector<TIdx>> neighbourCount;
 };
 
-} // namespace Zee
+}  // namespace Zee

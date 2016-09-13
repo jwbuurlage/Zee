@@ -13,11 +13,11 @@ License, or (at your option) any later version.
 
 #pragma once
 
-#include <map>
 #include <atomic>
+#include <condition_variable>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <condition_variable>
 
 #include <sys/stat.h>
 
@@ -27,27 +27,25 @@ using std::make_pair;
 using std::unique_ptr;
 
 template <typename T>
-    class counted_set :
-        public std::map<T, T>
-{
-    public:
-        counted_set() : std::map<T, T>() { }
+class counted_set : public std::map<T, T> {
+   public:
+    counted_set() : std::map<T, T>() {}
 
-        void raise(T key) {
-            if (this->find(key) != this->end()) {
-                (*this)[key] += 1;
-            } else {
-                this->insert(make_pair(key, 1));
-            }
+    void raise(T key) {
+        if (this->find(key) != this->end()) {
+            (*this)[key] += 1;
+        } else {
+            this->insert(make_pair(key, 1));
         }
+    }
 
-        void lower(T key) {
-            if ((*this)[key] > 1) {
-                (*this)[key] -= 1;
-            } else {
-                this->erase(key);
-            }
+    void lower(T key) {
+        if ((*this)[key] > 1) {
+            (*this)[key] -= 1;
+        } else {
+            this->erase(key);
         }
+    }
 };
 
 // When atomic is used in a nested vector, it is constructed in 2 phases if
@@ -55,47 +53,32 @@ template <typename T>
 // deleted, this does not compile. This wrapper simply adds copy/move ctors, but
 // these are *not* atomic, and thus not thread-safe. Use with caution.
 template <typename T>
-class atomic_wrapper
-{
-    public:
+class atomic_wrapper {
+   public:
+    atomic_wrapper() : a(0) {}
 
-        atomic_wrapper() : a(0) { }
+    atomic_wrapper(const std::atomic<T>& a_) : a(a_.load()) {}
 
-        atomic_wrapper(const std::atomic<T>& a)
-            : a(a.load()) {}
+    atomic_wrapper(const atomic_wrapper& other) : a(other.a.load()) {}
 
-        atomic_wrapper(const atomic_wrapper& other)
-            : a(other.a.load()) {}
+    void operator=(const atomic_wrapper& other) { a.store(other.a.load()); }
 
-        void operator=(const atomic_wrapper& other)
-        {
-            a.store(other.a.load());
-        }
+    void operator=(const T& other) { a = other; }
 
-        void operator=(const T& other)
-        {
-            a = other;
-        }
-
-        std::atomic<T> a;
+    std::atomic<T> a;
 };
 
 //* General factory class */
-template<class TPart>
-class Factory
-{
-    public:
-        Factory() { };
-        ~Factory() { };
+template <class TPart>
+class Factory {
+   public:
+    Factory(){};
+    ~Factory(){};
 
-        unique_ptr<TPart> make()
-        {
-            return unique_ptr<TPart>(new TPart());
-        }
+    unique_ptr<TPart> make() { return unique_ptr<TPart>(new TPart()); }
 };
 
-inline bool fileExists(std::string path)
-{
+inline bool fileExists(std::string path) {
     struct stat fileInfo;
     return stat(path.c_str(), &fileInfo) == 0;
 }
@@ -103,27 +86,25 @@ inline bool fileExists(std::string path)
 // FIXME move to center
 template <typename TIdx>
 class Barrier {
-    public:
-        Barrier (TIdx procs = 0)
-            : procs_(procs) {}
+   public:
+    Barrier(TIdx procs = 0) : procs_(procs) {}
 
-        inline void sync()
-        {
-            std::unique_lock<std::mutex> lock(mtx);
-            count_++;
-            if (count_ == procs_) {
-                cv.notify_all();
-                count_ = 0;
-            } else {
-                cv.wait(lock);
-            }
+    inline void sync() {
+        std::unique_lock<std::mutex> lock(mtx);
+        count_++;
+        if (count_ == procs_) {
+            cv.notify_all();
+            count_ = 0;
+        } else {
+            cv.wait(lock);
         }
+    }
 
-    private:
-        std::mutex mtx;
-        std::condition_variable cv;
-        TIdx procs_ = 0;
-        TIdx count_ = 0;
+   private:
+    std::mutex mtx;
+    std::condition_variable cv;
+    TIdx procs_ = 0;
+    TIdx count_ = 0;
 };
 
-} // namespace Zee
+}  // namespace Zee

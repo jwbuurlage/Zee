@@ -13,8 +13,8 @@ License, or (at your option) any later version.
 
 #pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
 namespace Zee {
 
@@ -30,20 +30,14 @@ namespace colors {
 // Brown       0;33     Yellow        1;33
 // Light Gray  0;37     White         1;37
 
-static std::map<std::string, std::string> start =
-{
-    {"darkgray", "\033[1;30m"},
-    {"blue", "\033[1;34m"},
-    {"green", "\033[1;32m"},
-    {"cyan", "\033[1;36m"},
-    {"red", "\033[1;31m"},
-    {"purple", "\033[1;35m"},
-    {"yellow", "\033[1;33m"},
-    {"white", "\033[1;37m"},
+static std::map<std::string, std::string> start = {
+    {"darkgray", "\033[1;30m"}, {"blue", "\033[1;34m"},
+    {"green", "\033[1;32m"},    {"cyan", "\033[1;36m"},
+    {"red", "\033[1;31m"},      {"purple", "\033[1;35m"},
+    {"yellow", "\033[1;33m"},   {"white", "\033[1;37m"},
 };
 
 static std::string end = "\033[0m";
 
-} // namespace colors
-
+}  // namespace colors
 }

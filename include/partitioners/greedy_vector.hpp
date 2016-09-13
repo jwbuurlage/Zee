@@ -1,7 +1,7 @@
-#include <zee.hpp>
-
-#include <vector>
 #include <algorithm>
+#include <vector>
+
+#include "vector_partitioner.hpp"
 
 namespace Zee {
 
@@ -9,7 +9,7 @@ template <class TMatrix = DSparseMatrix<>, class TVector = DVector<>>
 class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
     using TIdx = typename TMatrix::index_type;
 
-  public:
+   public:
     GreedyVectorPartitioner(TMatrix& A, TVector& v, TVector& u)
         : VectorPartitioner<TMatrix, TVector>(A, v, u) {}
 
@@ -70,7 +70,7 @@ class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
                 u.reassign(i, diagonalTargets[i]);
                 elementCount[diagonalTargets[i]]++;
             } else {
-                std::set<TIdx> lookUpSet; //intersection or union
+                std::set<TIdx> lookUpSet;  // intersection or union
                 std::set_intersection(
                     processorsInRow[i].begin(), processorsInRow[i].end(),
                     processorsInCol[i].begin(), processorsInCol[i].end(),
@@ -96,4 +96,4 @@ class GreedyVectorPartitioner : public VectorPartitioner<TMatrix, TVector> {
     };
 };
 
-} // namespace Zee
+}  // namespace Zee

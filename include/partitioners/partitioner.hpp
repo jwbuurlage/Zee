@@ -26,12 +26,15 @@ using std::vector;
 /**
  * This class (re)partitions a sparse matrix.
  * FIXME: CRT for factory?
+ * FIXME: Either initialize with A if we want a stateful partitioner, or
+ * consistently pass it to the appropriate refinement functions. Doing both
+ * makes no sense.
  */
 template <class TMatrix = DSparseMatrix<double>>
 class Partitioner {
     using TIdx = typename TMatrix::index_type;
 
-  public:
+   public:
     Partitioner() {}
 
     virtual ~Partitioner(){};
@@ -40,14 +43,14 @@ class Partitioner {
     // TODO: Is this possible to do "in-place?"
     virtual TMatrix& partition(TMatrix& A) = 0;
 
-    virtual void initialize(TMatrix& A) {}
+    virtual void initialize(TMatrix&) {}
 
     /** Set the number of processors
       * @param procs Number of processors _after_ partitioning.
       * */
     void setProcs(TIdx procs) { procs_ = procs; }
 
-  protected:
+   protected:
     /* The number of processors _after_ partitioning */
     TIdx procs_ = 0;
 
@@ -58,7 +61,7 @@ class Partitioner {
 
 template <class TMatrix = DSparseMatrix<double>>
 class IterativePartitioner : public Partitioner<TMatrix> {
-  public:
+   public:
     IterativePartitioner(){};
     virtual ~IterativePartitioner(){};
 
@@ -74,7 +77,7 @@ enum CyclicType { row, column, element_wise };
 
 template <class TMatrix = DSparseMatrix<double>>
 class CyclicPartitioner : public Partitioner<TMatrix> {
-  public:
+   public:
     CyclicPartitioner() { this->procs_ = 1; }
 
     CyclicPartitioner(int procs) { this->procs_ = procs; }
@@ -117,7 +120,7 @@ class CyclicPartitioner : public Partitioner<TMatrix> {
         return A;
     }
 
-  private:
+   private:
     CyclicType type_ = CyclicType::row;
 };
 }

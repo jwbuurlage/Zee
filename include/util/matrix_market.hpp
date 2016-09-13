@@ -73,11 +73,11 @@ void loadMatrix(int info, std::istream& fs,
         TVal value = (TVal)1;
 
         std::getline(fs, line);
-        std::stringstream line_stream(line);
-        line_stream >> row >> col;
+        std::stringstream coordinate_stream(line);
+        coordinate_stream >> row >> col;
 
         if (!(info & matrix_market::info::pattern)) {
-            line_stream >> value;
+            coordinate_stream >> value;
         }
 
         coefficients.push_back(Triplet<TVal, TIdx>(row - 1, col - 1, value));
@@ -140,8 +140,8 @@ void loadMatrix(int info, std::istream& fs, DMatrix<TVal, TIdx>& target) {
             TVal value = (TVal)1;
 
             std::getline(fs, line);
-            std::stringstream line_stream(line);
-            line_stream >> value;
+            std::stringstream value_stream(line);
+            value_stream >> value;
 
             values[i * N + j] = value;
         }

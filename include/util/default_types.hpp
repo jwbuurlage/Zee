@@ -18,4 +18,4 @@ namespace Zee {
 using default_scalar_type = float;
 using default_index_type = uint32_t;
 
-} // namespace Zee
+}  // namespace Zee

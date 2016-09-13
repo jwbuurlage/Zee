@@ -14,7 +14,8 @@ License, or (at your option) any later version.
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
     BinaryOperation<operation::type::product, DSparseMatrix<TVal, TIdx>,
-                    DVector<TVal, TIdx>> op) {
+                    DVector<TVal, TIdx>>
+        op) {
     using TImage = typename DSparseMatrix<TVal, TIdx>::image_type;
 
     const auto& A = op.getLHS();
@@ -58,9 +59,10 @@ DVector<TVal, TIdx> perform_operation(
 }
 
 template <typename TVal, typename TIdx>
-DMatrix<TVal, TIdx>
-perform_operation(BinaryOperation<operation::type::product, DMatrix<TVal, TIdx>,
-                                  DMatrix<TVal, TIdx>> op) {
+DMatrix<TVal, TIdx> perform_operation(
+    BinaryOperation<operation::type::product, DMatrix<TVal, TIdx>,
+                    DMatrix<TVal, TIdx>>
+        op) {
     const auto& A = op.getLHS();
     const auto& B = op.getRHS();
     DMatrix<TVal, TIdx> C(A.getRows(), B.getCols());

@@ -65,8 +65,7 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density) {
             i++;
         }
 
-        if (i >= m)
-            break;
+        if (i >= m) break;
     }
 
     DSparseMatrix<double, TIdx> A(m, n);
@@ -77,4 +76,4 @@ DSparseMatrix<double, TIdx> rand(TIdx m, TIdx n, TIdx procs, double density) {
     return A;
 }
 
-} // namespace Zee
+}  // namespace Zee

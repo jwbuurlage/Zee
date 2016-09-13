@@ -29,11 +29,11 @@ TEST_CASE("special matrices", "[loading matrices]") {
         unsigned int procs = 1;
         auto id = Zee::eye(n, procs);
 
-        using TVal = decltype(id)::value_type;
-        using TIdx = decltype(id)::index_type;
+        using Val = decltype(id)::value_type;
+        using Idx = decltype(id)::index_type;
 
-        Zee::DVector<TVal, TIdx> x(n, 0);
-        Zee::DVector<TVal, TIdx> y(n, 0);
+        Zee::DVector<Val, Idx> x(n, 0);
+        Zee::DVector<Val, Idx> y(n, 0);
         Zee::GreedyVectorPartitioner<decltype(id), decltype(x)> part_vector(
             id, x, y);
         part_vector.partition();
@@ -73,12 +73,14 @@ TEST_CASE("dense matrices", "[loading matrices]") {
 
 TEST_CASE("matrix market", "[loading matrices]") {
     SECTION("sparse") {
-        Zee::DSparseMatrix<> matrix{"test/mtx/sparse_example.mtx", 1};
-        REQUIRE(matrix.nonZeros() == 3);
+        SECTION("basic loading") {
+            Zee::DSparseMatrix<> matrix{"test/mtx/sparse_example.mtx", 1};
+            REQUIRE(matrix.nonZeros() == 3);
 
-        Zee::DSparseMatrix<> square_matrix{"test/mtx/square_sparse_example.mtx",
-                                           1};
-        REQUIRE(square_matrix.nonZeros() == 4);
+            Zee::DSparseMatrix<> square_matrix{
+                "test/mtx/square_sparse_example.mtx", 1};
+            REQUIRE(square_matrix.nonZeros() == 4);
+        }
 
         SECTION("symmetric") {
             Zee::DSparseMatrix<> symmetric_matrix{

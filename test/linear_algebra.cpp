@@ -63,9 +63,7 @@ Zee::DMatrix<TVal, TIdx> C = B;
 Zee::DMatrix<TVal, TIdx> D{4, 4};
 
 TEST_CASE("matrix operations", "[linear algebra]") {
-    SECTION("we can test sparse matrices for equality") {
-        CHECK(A == A);
-    }
+    SECTION("we can test sparse matrices for equality") { CHECK(A == A); }
 
     SECTION("we can load matrix market format") {
         REQUIRE(A.getRows() == 3);

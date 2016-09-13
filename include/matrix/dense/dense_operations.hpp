@@ -15,10 +15,9 @@ License, or (at your option) any later version.
 
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::addition,
-        DVector<TVal, TIdx>,
-        DVector<TVal, TIdx>> operation)
-{
+    BinaryOperation<operation::type::addition, DVector<TVal, TIdx>,
+                    DVector<TVal, TIdx>>
+        operation) {
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
@@ -34,10 +33,9 @@ DVector<TVal, TIdx> perform_operation(
 
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::subtraction,
-        DVector<TVal, TIdx>,
-        DVector<TVal, TIdx>> operation)
-{
+    BinaryOperation<operation::type::subtraction, DVector<TVal, TIdx>,
+                    DVector<TVal, TIdx>>
+        operation) {
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
@@ -53,10 +51,8 @@ DVector<TVal, TIdx> perform_operation(
 
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::scalar_product,
-        DVector<TVal, TIdx>,
-        TVal> operation)
-{
+    BinaryOperation<operation::type::scalar_product, DVector<TVal, TIdx>, TVal>
+        operation) {
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
@@ -70,10 +66,8 @@ DVector<TVal, TIdx> perform_operation(
 
 template <typename TVal, typename TIdx>
 DVector<TVal, TIdx> perform_operation(
-        BinaryOperation<operation::type::scalar_division,
-        DVector<TVal, TIdx>,
-        TVal> operation)
-{
+    BinaryOperation<operation::type::scalar_division, DVector<TVal, TIdx>, TVal>
+        operation) {
     auto& lhs = operation.getLHS();
     auto& rhs = operation.getRHS();
 
